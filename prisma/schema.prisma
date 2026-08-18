@@ -1,0 +1,1113 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Rol {
+  SUPERADMIN
+  ADMIN
+  ENCARGADO_MANTENIMIENTO
+  ENCARGADO_COMPRAS
+  MECANICO_INTERNO
+  CHOFER
+  GERENTE
+  CONTADOR
+  GUARDIA
+}
+
+enum TipoVehiculo {
+  CAMION
+  ACOPLADO
+  UTILITARIO
+  OTRO
+}
+
+enum EntidadDocumento {
+  VEHICULO
+  CHOFER
+}
+
+enum AplicaADocumento {
+  VEHICULO
+  CHOFER
+  AMBOS
+}
+
+enum TipoIntervaloPlan {
+  KM
+  TIEMPO
+  HORAS
+  AMBOS
+}
+
+enum OrigenOT {
+  PREVENTIVO
+  CHECKLIST
+  EVENTO_RUTA
+  MANUAL
+}
+
+enum OrigenCompra {
+  STOCK_MINIMO
+  MANUAL
+}
+
+enum EstadoCompra {
+  PENDIENTE
+  REALIZADA
+  DOCUMENTADA
+  CANCELADA
+}
+
+enum EstadoOT {
+  PENDIENTE_APROBACION
+  APROBADA
+  EN_PROGRESO
+  DERIVADA_EXTERNO
+  COMPLETADA
+  CANCELADA
+}
+
+enum PrioridadOT {
+  BAJA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+enum AreaReparacionOT {
+  FRENOS
+  SUSPENSION
+  ESTRUCTURA
+  MOTOR
+  ELECTRICO
+  NEUMATICOS
+  OTRO
+}
+
+enum EstadoConfirmacionReparacion {
+  PENDIENTE
+  CONFIRMADA
+  RECHAZADA
+}
+
+enum EstadoDerivacionExterna {
+  ENVIADO
+  PRESUPUESTADO
+  EN_REPARACION
+  COMPLETADO
+}
+
+enum ResultadoChecklistItem {
+  OK
+  FALLA
+  NO_APLICA
+}
+
+enum ResultadoItemPreventivo {
+  PENDIENTE
+  OK
+  REPARADO
+}
+
+enum ResultadoChecklistGeneral {
+  OK
+  CON_FALLAS
+}
+
+enum CategoriaChecklistItem {
+  LUCES
+  FRENOS
+  NEUMATICOS
+  FLUIDOS
+  DOCUMENTACION
+  OTRO
+}
+
+enum TipoEventoRuta {
+  DESPERFECTO
+  INCIDENTE
+  OBSERVACION
+}
+
+enum TipoGasto {
+  PEAJE
+  VIATICO
+  REPARACION_MENOR
+  OTRO
+}
+
+enum EstadoGasto {
+  PENDIENTE_REVISION
+  APROBADO
+  RECHAZADO
+}
+
+enum TipoNotificacion {
+  VENCIMIENTO_DOCUMENTO_CHOFER
+  VENCIMIENTO_DOCUMENTO_VEHICULO
+  NUEVA_ORDEN_COMPRA
+  OT_COMPLETADA_CONFIRMACION
+  COMPRA_REALIZADA
+  OT_GENERADA_CHOFER
+  CHECKLIST_NO_REALIZADO
+  RESUMEN_VEHICULOS_OPERATIVOS
+  DEVOLUCION_ENVIADA
+  DEVOLUCION_SIN_ENVIAR
+  COMPRA_PENDIENTE_AUTORIZACION
+  PRESUPUESTO_SUBIDO
+  COMPRA_AUTORIZADA
+}
+
+enum CanalNotificacion {
+  WHATSAPP
+  EMAIL
+  EN_APP
+}
+
+// ---------------------------------------------------------------------------
+// Empresas (tenants) — SUPERADMIN da de alta cada una junto con su primer
+// usuario ADMIN. Todo el resto de los modelos de negocio queda scoped a una
+// empresa; SUPERADMIN es el único usuario sin empresaId.
+// ---------------------------------------------------------------------------
+
+model Empresa {
+  id                      String   @id @default(cuid())
+  nombre                  String
+  activo                  Boolean  @default(true)
+  emailContacto           String?
+  telefono                String?
+  direccion               String?
+  contactoNombre          String?
+  // Monto máximo (ARS) por debajo del cual una orden de compra no requiere
+  // autorización de gerencia. null = función desactivada, ninguna OC requiere
+  // autorización sin importar el monto.
+  montoAutorizacionCompra Decimal? @db.Decimal(12, 2)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  usuarios                    Usuario[]
+  vehiculos                   Vehiculo[]
+  documentos                  Documento[]
+  planesMantenimiento         PlanMantenimiento[]
+  planesMantenimientoEstandar PlanMantenimientoEstandarItem[]
+  talleresExternos            TallerExterno[]
+  ordenesDeTrabajo            OrdenDeTrabajo[]
+  otRepuestos                 OTRepuesto[]
+  facturas                    Factura[]
+  articulosPanol              ArticuloPanol[]
+  ordenesCompra               OrdenCompra[]
+  cargasCombustible           CargaCombustible[]
+  gastos                      Gasto[]
+  eventosRuta                 EventoRuta[]
+  checklistTemplates          ChecklistTemplate[]
+  tiposDocumentoConfig        TipoDocumentoConfig[]
+  archivos                    Archivo[]
+  reglasNotificacion          ReglaNotificacion[]
+  disponibilidadSnapshots     DisponibilidadSnapshot[]
+  notificaciones              Notificacion[]
+  otItemsPreventivos          OTItemPreventivo[]
+  observacionesGuardia        ObservacionGuardia[]
+  diasNoOperados              DiaNoOperado[]
+  devoluciones                Devolucion[]
+}
+
+// Mantenedor de notificaciones: cada empresa decide qué roles reciben cada
+// tipo de aviso y por qué canal (email, en la app y —si en algún momento se
+// conecta un proveedor— WhatsApp). Algunos tipos (VENCIMIENTO_DOCUMENTO_CHOFER,
+// OT_COMPLETADA_CONFIRMACION, COMPRA_REALIZADA) siempre avisan además al
+// destinatario directamente afectado — eso no es configurable acá, roles son
+// destinatarios *adicionales*.
+model ReglaNotificacion {
+  id        String              @id @default(cuid())
+  empresaId String
+  empresa   Empresa             @relation(fields: [empresaId], references: [id])
+  tipo      TipoNotificacion
+  roles     Rol[]
+  canales   CanalNotificacion[] @default([EMAIL, EN_APP])
+  // Solo aplica a VENCIMIENTO_DOCUMENTO_CHOFER/VEHICULO: a cuántos días antes
+  // del vencimiento se avisa. Sin uso en los demás tipos (disparados por un
+  // evento, no por una fecha límite).
+  diasAviso Int[]               @default([15, 7])
+  // Solo aplica a RESUMEN_VEHICULOS_OPERATIVOS: hora del día (0-23, huso
+  // horario Argentina) en la que se manda el resumen diario. El cron corre
+  // cada hora y compara contra esto (ver app/api/cron/resumen-operativos).
+  horaEnvio Int?
+  activo    Boolean             @default(true)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@unique([empresaId, tipo])
+}
+
+// Notificación in-app por usuario (canal EN_APP): se crea una fila por cada
+// destinatario, se muestra como popup una única vez (mostradaEn) y queda en
+// el listado del campanita hasta que el usuario la marca como leída.
+model Notificacion {
+  id         String           @id @default(cuid())
+  empresaId  String
+  empresa    Empresa          @relation(fields: [empresaId], references: [id])
+  usuarioId  String
+  usuario    Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  tipo       TipoNotificacion
+  titulo     String
+  mensaje    String
+  href       String?
+  leida      Boolean          @default(false)
+  mostradaEn DateTime?
+  createdAt  DateTime         @default(now())
+
+  @@index([usuarioId, leida])
+  @@index([empresaId])
+}
+
+// ---------------------------------------------------------------------------
+// Usuarios
+// ---------------------------------------------------------------------------
+
+model Usuario {
+  id              String    @id @default(cuid())
+  empresaId       String?
+  empresa         Empresa?  @relation(fields: [empresaId], references: [id])
+  email           String    @unique
+  dni             String?   @unique
+  passwordHash    String
+  nombre          String
+  telefono        String?
+  rol             Rol
+  activo          Boolean   @default(true)
+  observacionBaja String?
+  fechaBaja       DateTime?
+  eliminadoEn     DateTime?
+  eliminadoPorId  String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  perfilChofer PerfilChofer?
+
+  archivosSubidos      Archivo[]
+  checklistsRealizados ChecklistRealizado[]
+  eventosRuta          EventoRuta[]
+  cargasCombustible    CargaCombustible[]
+  gastos               Gasto[]
+
+  otCreadas            OrdenDeTrabajo[]    @relation("OTCreadaPor")
+  otAprobadas          OrdenDeTrabajo[]    @relation("OTAprobadaPor")
+  otAsignadas          OrdenDeTrabajo[]    @relation("OTAsignadaA")
+  otHistorial          OTHistorialEstado[]
+  facturasCargadas     Factura[]
+  ordenesCompraCreadas OrdenCompra[]
+  notificaciones       Notificacion[]
+
+  observacionesGuardia    ObservacionGuardia[]
+  devolucionesComoChofer  Devolucion[]         @relation("DevolucionChofer")
+  devolucionesRegistradas Devolucion[]         @relation("DevolucionRegistradoPor")
+  devolucionesEnviadas    Devolucion[]         @relation("DevolucionEnviadoPor")
+
+  comprasAutorizadas  OrdenCompra[]       @relation("CompraAutorizadaPor")
+  presupuestosSubidos PresupuestoCompra[]
+
+  diasNoOperadosComoChofer DiaNoOperado[] @relation("DiaNoOperadoChofer")
+  diasNoOperadosMarcados   DiaNoOperado[] @relation("DiaNoOperadoMarcadoPor")
+
+  @@index([rol])
+  @@index([empresaId])
+}
+
+model PerfilChofer {
+  id                String    @id @default(cuid())
+  usuarioId         String    @unique
+  usuario           Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  numeroLicencia    String?
+  categoriaLicencia String?
+  legajo            String?
+  fechaIngreso      DateTime?
+}
+
+// ---------------------------------------------------------------------------
+// Vehiculos
+// ---------------------------------------------------------------------------
+
+model Vehiculo {
+  id                         String       @id @default(cuid())
+  empresaId                  String
+  empresa                    Empresa      @relation(fields: [empresaId], references: [id])
+  patente                    String       @unique
+  marca                      String
+  modelo                     String
+  anio                       Int?
+  tipo                       TipoVehiculo @default(CAMION)
+  numeroInterno              String?
+  kmActual                   Int          @default(0)
+  horasEquipoFrio            Int?
+  tipoCarroceria             String?
+  equipoFrioTipo             String?
+  activo                     Boolean      @default(true)
+  observacionBaja            String?
+  fechaBaja                  DateTime?
+  disponible                 Boolean      @default(true)
+  disponibleActualizadoEn    DateTime?
+  disponibleActualizadoPorId String?
+  motivoNoOperativo          String?
+  eliminadoEn                DateTime?
+  eliminadoPorId             String?
+  fechaAltaFlota             DateTime     @default(now())
+  createdAt                  DateTime     @default(now())
+  updatedAt                  DateTime     @updatedAt
+
+  planesMantenimiento     PlanMantenimiento[]
+  ordenesDeTrabajo        OrdenDeTrabajo[]
+  cargasCombustible       CargaCombustible[]
+  checklistsRealizados    ChecklistRealizado[]
+  eventosRuta             EventoRuta[]
+  gastos                  Gasto[]
+  disponibilidadSnapshots DisponibilidadSnapshot[]
+  observacionesGuardia    ObservacionGuardia[]
+  diasNoOperados          DiaNoOperado[]
+
+  @@index([activo])
+  @@index([empresaId])
+}
+
+// Un snapshot por vehículo por día (cron diario), con la disponibilidad
+// efectiva (Vehiculo.disponible && no derivado a taller externo) — arranca a
+// registrarse desde que se creó este modelo, sin historial retroactivo, para
+// poder calcular después un % de disponibilidad mensual real de la flota.
+model DisponibilidadSnapshot {
+  id         String   @id @default(cuid())
+  empresaId  String
+  empresa    Empresa  @relation(fields: [empresaId], references: [id])
+  vehiculoId String
+  vehiculo   Vehiculo @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
+  fecha      DateTime @db.Date
+  disponible Boolean
+  createdAt  DateTime @default(now())
+
+  @@unique([vehiculoId, fecha])
+  @@index([empresaId, fecha])
+}
+
+// ---------------------------------------------------------------------------
+// Documentacion y habilitaciones (polimorfico Vehiculo/Chofer)
+// ---------------------------------------------------------------------------
+
+model TipoDocumentoConfig {
+  id                String           @id @default(cuid())
+  empresaId         String
+  empresa           Empresa          @relation(fields: [empresaId], references: [id])
+  codigo            String
+  nombre            String
+  aplicaA           AplicaADocumento
+  diasAlertaDefault Int[]            @default([30, 15, 7])
+  activo            Boolean          @default(true)
+
+  documentos Documento[]
+
+  @@unique([empresaId, codigo])
+}
+
+model Documento {
+  id                   String              @id @default(cuid())
+  empresaId            String
+  empresa              Empresa             @relation(fields: [empresaId], references: [id])
+  entidadTipo          EntidadDocumento
+  entidadId            String
+  tipoDocumentoId      String
+  tipoDocumento        TipoDocumentoConfig @relation(fields: [tipoDocumentoId], references: [id])
+  numeroDocumento      String?
+  fechaEmision         DateTime?
+  fechaVencimiento     DateTime
+  archivoId            String?
+  archivo              Archivo?            @relation(fields: [archivoId], references: [id])
+  observaciones        String?
+  activo               Boolean             @default(true)
+  // Qué umbrales de "días antes del vencimiento" (configurables en
+  // ReglaNotificacion.diasAviso) ya generaron un aviso para este documento —
+  // reemplaza los antiguos notificado15DiasEn/notificado7DiasEn fijos, para
+  // no atarse a un conjunto de días hardcodeado.
+  diasAvisoNotificados Int[]               @default([])
+  eliminadoEn          DateTime?
+  eliminadoPorId       String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  @@index([entidadTipo, entidadId, tipoDocumentoId])
+  @@index([fechaVencimiento])
+  @@index([empresaId])
+}
+
+// ---------------------------------------------------------------------------
+// Mantenimiento preventivo
+// ---------------------------------------------------------------------------
+
+model PlanMantenimiento {
+  id                 String            @id @default(cuid())
+  empresaId          String
+  empresa            Empresa           @relation(fields: [empresaId], references: [id])
+  vehiculoId         String
+  vehiculo           Vehiculo          @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
+  nombre             String
+  categoria          String?
+  tipoIntervalo      TipoIntervaloPlan
+  intervaloKm        Int?
+  intervaloDias      Int?
+  intervaloHoras     Int?
+  kmUltimoService    Int?
+  fechaUltimoService DateTime?
+  horasUltimoService Int?
+  activo             Boolean           @default(true)
+  eliminadoEn        DateTime?
+  eliminadoPorId     String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  ordenesDeTrabajo OrdenDeTrabajo[]
+  itemsPreventivo  OTItemPreventivo[]
+
+  @@index([vehiculoId, activo])
+  @@index([empresaId])
+}
+
+// Catálogo estándar editable de mantenimiento preventivo (el "mantenedor"):
+// se aplica automáticamente como PlanMantenimiento a cada vehículo nuevo.
+// Separado de PlanMantenimiento porque este vive a nivel empresa (plantilla),
+// no por vehículo.
+model PlanMantenimientoEstandarItem {
+  id             String            @id @default(cuid())
+  empresaId      String
+  empresa        Empresa           @relation(fields: [empresaId], references: [id])
+  categoria      String
+  nombre         String
+  tipoIntervalo  TipoIntervaloPlan
+  intervaloKm    Int?
+  intervaloDias  Int?
+  intervaloHoras Int?
+  activo         Boolean           @default(true)
+  eliminadoEn    DateTime?
+  eliminadoPorId String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([empresaId])
+}
+
+// ---------------------------------------------------------------------------
+// Talleres externos (sin login)
+// ---------------------------------------------------------------------------
+
+model TallerExterno {
+  id             String    @id @default(cuid())
+  empresaId      String
+  empresa        Empresa   @relation(fields: [empresaId], references: [id])
+  nombre         String
+  contactoNombre String?
+  telefono       String?
+  email          String?
+  direccion      String?
+  especialidad   String?
+  activo         Boolean   @default(true)
+  eliminadoEn    DateTime?
+  eliminadoPorId String?
+
+  derivaciones OTDerivacionExterna[]
+
+  @@index([empresaId])
+}
+
+// ---------------------------------------------------------------------------
+// Ordenes de trabajo
+// ---------------------------------------------------------------------------
+
+model OrdenDeTrabajo {
+  id                        String            @id @default(cuid())
+  empresaId                 String
+  empresa                   Empresa           @relation(fields: [empresaId], references: [id])
+  numero                    String
+  vehiculoId                String
+  vehiculo                  Vehiculo          @relation(fields: [vehiculoId], references: [id])
+  origen                    OrigenOT
+  estado                    EstadoOT          @default(PENDIENTE_APROBACION)
+  prioridad                 PrioridadOT       @default(MEDIA)
+  titulo                    String
+  descripcion               String?
+  fechaLimite               DateTime?
+  ordenSecuencia            Int?
+  areaReparacion            AreaReparacionOT?
+  fechaEstimadaFinalizacion DateTime?
+
+  creadoPorId   String?
+  creadoPor     Usuario? @relation("OTCreadaPor", fields: [creadoPorId], references: [id])
+  aprobadoPorId String?
+  aprobadoPor   Usuario? @relation("OTAprobadaPor", fields: [aprobadoPorId], references: [id])
+  asignadoAId   String?
+  asignadoA     Usuario? @relation("OTAsignadaA", fields: [asignadoAId], references: [id])
+
+  planMantenimientoId  String?
+  planMantenimiento    PlanMantenimiento?  @relation(fields: [planMantenimientoId], references: [id])
+  checklistRealizadoId String?
+  checklistRealizado   ChecklistRealizado? @relation(fields: [checklistRealizadoId], references: [id])
+  eventoRutaId         String?             @unique
+  eventoRuta           EventoRuta?         @relation(fields: [eventoRutaId], references: [id])
+
+  tiempoInsumidoMinutos            Int?
+  observacionesMecanico            String?
+  fotoReparacionId                 String?
+  fotoReparacion                   Archivo?                      @relation("OTFotoReparacion", fields: [fotoReparacionId], references: [id])
+  fechaInicio                      DateTime?
+  fechaFin                         DateTime?
+  confirmacionReparacion           EstadoConfirmacionReparacion?
+  confirmacionReparacionComentario String?
+  eliminadoEn                      DateTime?
+  eliminadoPorId                   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  historial         OTHistorialEstado[]
+  repuestos         OTRepuesto[]
+  facturas          Factura[]
+  archivos          Archivo[]
+  derivacionExterna OTDerivacionExterna?
+  comprasAsignadas  OrdenCompra[]        @relation("CompraAsignadaOT")
+  itemsPreventivos  OTItemPreventivo[]
+
+  @@unique([empresaId, numero])
+  @@index([estado])
+  @@index([vehiculoId])
+  @@index([asignadoAId])
+  @@index([empresaId])
+}
+
+model OTHistorialEstado {
+  id               String         @id @default(cuid())
+  ordenDeTrabajoId String
+  ordenDeTrabajo   OrdenDeTrabajo @relation(fields: [ordenDeTrabajoId], references: [id], onDelete: Cascade)
+  actorId          String?
+  actor            Usuario?       @relation(fields: [actorId], references: [id])
+  estadoAnterior   EstadoOT?
+  estadoNuevo      EstadoOT
+  comentario       String?
+  createdAt        DateTime       @default(now())
+
+  @@index([ordenDeTrabajoId])
+}
+
+// Un ítem individual de mantenimiento preventivo dentro de una OT en lote: una
+// sola OT preventiva agrupa todos los planes que vencieron juntos para un
+// mismo vehículo (en vez de 1 OT por plan), y el mecánico va resolviendo cada
+// ítem por separado (OK / Reparado) con su propia observación y foto. El
+// título se copia del plan al momento de generarse el ítem para que quede
+// fijo aunque el plan cambie de nombre después.
+model OTItemPreventivo {
+  id                  String                  @id @default(cuid())
+  empresaId           String
+  empresa             Empresa                 @relation(fields: [empresaId], references: [id])
+  ordenDeTrabajoId    String
+  ordenDeTrabajo      OrdenDeTrabajo          @relation(fields: [ordenDeTrabajoId], references: [id], onDelete: Cascade)
+  planMantenimientoId String
+  planMantenimiento   PlanMantenimiento       @relation(fields: [planMantenimientoId], references: [id])
+  titulo              String
+  categoria           String?
+  resultado           ResultadoItemPreventivo @default(PENDIENTE)
+  observacion         String?
+  archivoId           String?
+  archivo             Archivo?                @relation("OTItemPreventivoFoto", fields: [archivoId], references: [id])
+  completadoEn        DateTime?
+  createdAt           DateTime                @default(now())
+
+  ordenesCompra OrdenCompra[]
+  repuestos     OTRepuesto[]
+
+  @@index([ordenDeTrabajoId])
+  @@index([empresaId])
+}
+
+model OTRepuesto {
+  id                 String            @id @default(cuid())
+  empresaId          String
+  empresa            Empresa           @relation(fields: [empresaId], references: [id])
+  ordenDeTrabajoId   String
+  ordenDeTrabajo     OrdenDeTrabajo    @relation(fields: [ordenDeTrabajoId], references: [id], onDelete: Cascade)
+  articuloPanolId    String?
+  articuloPanol      ArticuloPanol?    @relation(fields: [articuloPanolId], references: [id])
+  descripcion        String
+  cantidad           Int               @default(1)
+  costoUnitario      Decimal?          @db.Decimal(12, 2)
+  otItemPreventivoId String?
+  otItemPreventivo   OTItemPreventivo? @relation(fields: [otItemPreventivoId], references: [id])
+  eliminadoEn        DateTime?
+  eliminadoPorId     String?
+  createdAt          DateTime          @default(now())
+
+  @@index([empresaId])
+  @@index([otItemPreventivoId])
+}
+
+// Factura cargada por el encargado de mantenimiento (foto + monto) asociada a una OT.
+// El monto se sugiere por OCR en el cliente, pero siempre queda editable antes de confirmar.
+model Factura {
+  id               String         @id @default(cuid())
+  empresaId        String
+  empresa          Empresa        @relation(fields: [empresaId], references: [id])
+  ordenDeTrabajoId String
+  ordenDeTrabajo   OrdenDeTrabajo @relation(fields: [ordenDeTrabajoId], references: [id], onDelete: Cascade)
+  archivoId        String
+  archivo          Archivo        @relation(fields: [archivoId], references: [id])
+  monto            Decimal        @db.Decimal(12, 2)
+  observaciones    String?
+  cargadoPorId     String?
+  cargadoPor       Usuario?       @relation(fields: [cargadoPorId], references: [id])
+  eliminadoEn      DateTime?
+  eliminadoPorId   String?
+  createdAt        DateTime       @default(now())
+
+  @@index([ordenDeTrabajoId])
+  @@index([empresaId])
+}
+
+model OTDerivacionExterna {
+  id                   String                  @id @default(cuid())
+  ordenDeTrabajoId     String                  @unique
+  ordenDeTrabajo       OrdenDeTrabajo          @relation(fields: [ordenDeTrabajoId], references: [id], onDelete: Cascade)
+  tallerExternoId      String
+  tallerExterno        TallerExterno           @relation(fields: [tallerExternoId], references: [id])
+  estadoExterno        EstadoDerivacionExterna @default(ENVIADO)
+  fechaEnvio           DateTime                @default(now())
+  presupuestoMonto     Decimal?                @db.Decimal(12, 2)
+  fechaEstimadaEntrega DateTime?
+  resultado            String?
+  adjuntoPresupuestoId String?
+  adjuntoPresupuesto   Archivo?                @relation(fields: [adjuntoPresupuestoId], references: [id])
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Pañol de repuestos y compras
+// ---------------------------------------------------------------------------
+
+model ArticuloPanol {
+  id             String    @id @default(cuid())
+  empresaId      String
+  empresa        Empresa   @relation(fields: [empresaId], references: [id])
+  nombre         String
+  descripcion    String?
+  unidadMedida   String?
+  stockActual    Int       @default(0)
+  stockMinimo    Int       @default(0)
+  activo         Boolean   @default(true)
+  eliminadoEn    DateTime?
+  eliminadoPorId String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  itemsOrdenCompra OrdenCompraItem[]
+  repuestosUsados  OTRepuesto[]
+
+  @@index([activo])
+  @@index([empresaId])
+}
+
+// Orden de compra: se dispara sola cuando un artículo del pañol llega a su
+// stock mínimo (origen STOCK_MINIMO), o la carga el encargado manualmente
+// para pedir cualquier otra cosa (origen MANUAL). Es una cabecera: los
+// repuestos pedidos viven en OrdenCompraItem (una OC puede agrupar varios).
+model OrdenCompra {
+  id                 String            @id @default(cuid())
+  empresaId          String
+  empresa            Empresa           @relation(fields: [empresaId], references: [id])
+  numero             String
+  origen             OrigenCompra
+  estado             EstadoCompra      @default(PENDIENTE)
+  creadoPorId        String?
+  creadoPor          Usuario?          @relation(fields: [creadoPorId], references: [id])
+  fechaSolicitud     DateTime          @default(now())
+  montoEstimado      Decimal?          @db.Decimal(12, 2)
+  montoTotal         Decimal?          @db.Decimal(12, 2)
+  proveedor          String?
+  fechaCompra        DateTime?
+  observaciones      String?
+  facturaArchivoId   String?
+  facturaArchivo     Archivo?          @relation("OrdenCompraFactura", fields: [facturaArchivoId], references: [id])
+  ordenDeTrabajoId   String?
+  ordenDeTrabajo     OrdenDeTrabajo?   @relation("CompraAsignadaOT", fields: [ordenDeTrabajoId], references: [id])
+  otItemPreventivoId String?
+  otItemPreventivo   OTItemPreventivo? @relation(fields: [otItemPreventivoId], references: [id])
+
+  // Autorización de gerencia cuando montoEstimado supera
+  // Empresa.montoAutorizacionCompra (ver lib/notificaciones.ts).
+  estadoAutorizacion    EstadoAutorizacionCompra @default(NO_REQUERIDA)
+  autorizadoPorId       String?
+  autorizadoPor         Usuario?                 @relation("CompraAutorizadaPor", fields: [autorizadoPorId], references: [id])
+  autorizadoEn          DateTime?
+  presupuestoAprobadoId String?                  @unique
+  presupuestoAprobado   PresupuestoCompra?       @relation("PresupuestoAprobado", fields: [presupuestoAprobadoId], references: [id])
+
+  eliminadoEn    DateTime?
+  eliminadoPorId String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  items        OrdenCompraItem[]
+  presupuestos PresupuestoCompra[] @relation("PresupuestosDeLaCompra")
+
+  @@unique([empresaId, numero])
+  @@index([estado])
+  @@index([empresaId])
+  @@index([ordenDeTrabajoId])
+  @@index([otItemPreventivoId])
+  @@index([estadoAutorizacion])
+}
+
+// Un repuesto pedido dentro de una OC (una OC puede tener varios, ej. varias
+// piezas de una misma reparación de frenos) con su foto de referencia
+// opcional para el encargado de compras.
+model OrdenCompraItem {
+  id                 String         @id @default(cuid())
+  ordenCompraId      String
+  ordenCompra        OrdenCompra    @relation(fields: [ordenCompraId], references: [id], onDelete: Cascade)
+  descripcion        String
+  cantidadSolicitada Int?
+  cantidadRecibida   Int?
+  articuloPanolId    String?
+  articuloPanol      ArticuloPanol? @relation(fields: [articuloPanolId], references: [id])
+  archivoId          String?
+  archivo            Archivo?       @relation("OrdenCompraItemFoto", fields: [archivoId], references: [id])
+
+  @@index([ordenCompraId])
+  @@index([articuloPanolId])
+}
+
+enum EstadoAutorizacionCompra {
+  NO_REQUERIDA
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+}
+
+// Presupuesto/cotización que el encargado de compras sube para una OC
+// pendiente de autorización — la gerencia elige cuál aprobar (o aprueba
+// directo sin elegir ninguno, ver OrdenCompra.presupuestoAprobadoId).
+model PresupuestoCompra {
+  id            String      @id @default(cuid())
+  ordenCompraId String
+  ordenCompra   OrdenCompra @relation("PresupuestosDeLaCompra", fields: [ordenCompraId], references: [id], onDelete: Cascade)
+  archivoId     String
+  archivo       Archivo     @relation("PresupuestoArchivo", fields: [archivoId], references: [id])
+  monto         Decimal?    @db.Decimal(12, 2)
+  proveedor     String?
+  subidoPorId   String
+  subidoPor     Usuario     @relation(fields: [subidoPorId], references: [id])
+  createdAt     DateTime    @default(now())
+
+  ordenCompraAprobada OrdenCompra? @relation("PresupuestoAprobado")
+
+  @@index([ordenCompraId])
+}
+
+// ---------------------------------------------------------------------------
+// Checklist pre-salida
+// ---------------------------------------------------------------------------
+
+model ChecklistTemplate {
+  id        String        @id @default(cuid())
+  empresaId String
+  empresa   Empresa       @relation(fields: [empresaId], references: [id])
+  nombre    String
+  aplicaA   TipoVehiculo?
+  activo    Boolean       @default(true)
+  version   Int           @default(1)
+
+  items      ChecklistItem[]
+  realizados ChecklistRealizado[]
+
+  @@index([empresaId])
+}
+
+model ChecklistItem {
+  id                         String                 @id @default(cuid())
+  templateId                 String
+  template                   ChecklistTemplate      @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  orden                      Int
+  texto                      String
+  categoria                  CategoriaChecklistItem @default(OTRO)
+  requiereObservacionSiFalla Boolean                @default(true)
+
+  respuestas ChecklistRespuesta[]
+
+  @@index([templateId])
+}
+
+model ChecklistRealizado {
+  id               String                    @id @default(cuid())
+  templateId       String
+  template         ChecklistTemplate         @relation(fields: [templateId], references: [id])
+  vehiculoId       String
+  vehiculo         Vehiculo                  @relation(fields: [vehiculoId], references: [id])
+  choferId         String
+  chofer           Usuario                   @relation(fields: [choferId], references: [id])
+  kmAlMomento      Int?
+  fechaHora        DateTime                  @default(now())
+  resultadoGeneral ResultadoChecklistGeneral @default(OK)
+  latitud          Float?
+  longitud         Float?
+
+  respuestas       ChecklistRespuesta[]
+  ordenesDeTrabajo OrdenDeTrabajo[]
+
+  @@index([vehiculoId])
+  @@index([choferId])
+}
+
+model ChecklistRespuesta {
+  id                   String                 @id @default(cuid())
+  checklistRealizadoId String
+  checklistRealizado   ChecklistRealizado     @relation(fields: [checklistRealizadoId], references: [id], onDelete: Cascade)
+  checklistItemId      String
+  checklistItem        ChecklistItem          @relation(fields: [checklistItemId], references: [id])
+  resultado            ResultadoChecklistItem
+  observacion          String?
+  archivoId            String?
+  archivo              Archivo?               @relation(fields: [archivoId], references: [id])
+
+  @@index([checklistRealizadoId])
+}
+
+// ---------------------------------------------------------------------------
+// Eventos de ruta
+// ---------------------------------------------------------------------------
+
+model EventoRuta {
+  id          String         @id @default(cuid())
+  empresaId   String
+  empresa     Empresa        @relation(fields: [empresaId], references: [id])
+  vehiculoId  String
+  vehiculo    Vehiculo       @relation(fields: [vehiculoId], references: [id])
+  choferId    String
+  chofer      Usuario        @relation(fields: [choferId], references: [id])
+  tipo        TipoEventoRuta
+  descripcion String
+  fechaHora   DateTime       @default(now())
+  kmAlMomento Int?
+  latitud     Float?
+  longitud    Float?
+  archivoId   String?
+  archivo     Archivo?       @relation(fields: [archivoId], references: [id])
+  tanqueLleno Boolean?
+
+  ordenDeTrabajo OrdenDeTrabajo?
+
+  @@index([vehiculoId])
+  @@index([choferId])
+  @@index([empresaId])
+}
+
+// ---------------------------------------------------------------------------
+// Combustible y km
+// ---------------------------------------------------------------------------
+
+model CargaCombustible {
+  id               String   @id @default(cuid())
+  empresaId        String
+  empresa          Empresa  @relation(fields: [empresaId], references: [id])
+  vehiculoId       String
+  vehiculo         Vehiculo @relation(fields: [vehiculoId], references: [id])
+  choferId         String
+  chofer           Usuario  @relation(fields: [choferId], references: [id])
+  fechaHora        DateTime @default(now())
+  kmOdometro       Int
+  litrosCargados   Decimal  @db.Decimal(10, 2)
+  montoTotal       Decimal  @db.Decimal(12, 2)
+  precioLitro      Decimal? @db.Decimal(10, 2)
+  estacionServicio String?
+  archivoTicketId  String
+  archivoTicket    Archivo  @relation(fields: [archivoTicketId], references: [id])
+
+  kmRecorridosDesdeUltimaCarga Int?
+  consumoL100km                Decimal? @db.Decimal(10, 2)
+
+  eliminadoEn    DateTime?
+  eliminadoPorId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([vehiculoId, fechaHora])
+  @@index([empresaId])
+}
+
+// ---------------------------------------------------------------------------
+// Gastos de choferes
+// ---------------------------------------------------------------------------
+
+model Gasto {
+  id                   String      @id @default(cuid())
+  empresaId            String
+  empresa              Empresa     @relation(fields: [empresaId], references: [id])
+  choferId             String
+  chofer               Usuario     @relation(fields: [choferId], references: [id])
+  vehiculoId           String
+  vehiculo             Vehiculo    @relation(fields: [vehiculoId], references: [id])
+  tipo                 TipoGasto
+  monto                Decimal     @db.Decimal(12, 2)
+  fecha                DateTime    @default(now())
+  descripcion          String?
+  archivoComprobanteId String?
+  archivoComprobante   Archivo?    @relation(fields: [archivoComprobanteId], references: [id])
+  estado               EstadoGasto @default(PENDIENTE_REVISION)
+  eliminadoEn          DateTime?
+  eliminadoPorId       String?
+  createdAt            DateTime    @default(now())
+
+  @@index([choferId])
+  @@index([estado])
+  @@index([empresaId])
+}
+
+// ---------------------------------------------------------------------------
+// Archivos (adjuntos genericos)
+// ---------------------------------------------------------------------------
+
+model Archivo {
+  id             String   @id @default(cuid())
+  empresaId      String
+  empresa        Empresa  @relation(fields: [empresaId], references: [id])
+  url            String
+  nombreOriginal String?
+  mimeType       String?
+  tamanioBytes   Int?
+  subidoPorId    String?
+  subidoPor      Usuario? @relation(fields: [subidoPorId], references: [id])
+  createdAt      DateTime @default(now())
+
+  documentos           Documento[]
+  checklistRespuestas  ChecklistRespuesta[]
+  eventosRuta          EventoRuta[]
+  cargasCombustible    CargaCombustible[]
+  gastos               Gasto[]
+  ordenesDeTrabajo     OrdenDeTrabajo[]
+  ordenesTrabajoFoto   OrdenDeTrabajo[]      @relation("OTFotoReparacion")
+  derivacionesExternas OTDerivacionExterna[]
+  facturas             Factura[]
+  ordenesCompraFactura OrdenCompra[]         @relation("OrdenCompraFactura")
+  itemsPreventivoFoto  OTItemPreventivo[]    @relation("OTItemPreventivoFoto")
+  ordenCompraItemsFoto OrdenCompraItem[]     @relation("OrdenCompraItemFoto")
+  presupuestosCompra   PresupuestoCompra[]   @relation("PresupuestoArchivo")
+
+  @@index([empresaId])
+}
+
+// ---------------------------------------------------------------------------
+// Portería (guardia): control de checklist/cierre de ruta + devoluciones
+// ---------------------------------------------------------------------------
+
+enum EtapaObservacionGuardia {
+  SALIDA
+  REGRESO
+}
+
+// Nota del guardia sobre un vehículo en una fecha/etapa dada, independiente
+// de si el chofer ya hizo el checklist pre-salida o el cierre de ruta de ese
+// día — por eso no cuelga de ChecklistRealizado/EventoRuta (que pueden no
+// existir todavía) sino de vehiculo+fecha+etapa directamente.
+model ObservacionGuardia {
+  id          String                  @id @default(cuid())
+  empresaId   String
+  empresa     Empresa                 @relation(fields: [empresaId], references: [id])
+  vehiculoId  String
+  vehiculo    Vehiculo                @relation(fields: [vehiculoId], references: [id])
+  etapa       EtapaObservacionGuardia
+  fecha       DateTime                @db.Date
+  observacion String
+  guardiaId   String
+  guardia     Usuario                 @relation(fields: [guardiaId], references: [id])
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+
+  @@unique([empresaId, vehiculoId, fecha, etapa])
+  @@index([empresaId])
+}
+
+// El guardia marca que un vehículo no salió a reparto en el día (no hizo
+// checklist ni cierre de ruta porque no operó, no porque haya un
+// incumplimiento) — el chofer lo elige el guardia porque no hay una
+// asignación fija chofer-vehículo en el sistema. Ese día queda excluido de
+// las estadísticas de cumplimiento de ESE chofer (ver lib/estadisticas-guardia.ts).
+model DiaNoOperado {
+  id           String   @id @default(cuid())
+  empresaId    String
+  empresa      Empresa  @relation(fields: [empresaId], references: [id])
+  vehiculoId   String
+  vehiculo     Vehiculo @relation(fields: [vehiculoId], references: [id])
+  choferId     String?
+  chofer       Usuario? @relation("DiaNoOperadoChofer", fields: [choferId], references: [id])
+  fecha        DateTime @db.Date
+  motivo       String?
+  marcadoPorId String
+  marcadoPor   Usuario  @relation("DiaNoOperadoMarcadoPor", fields: [marcadoPorId], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@unique([empresaId, vehiculoId, fecha])
+  @@index([empresaId])
+  @@index([choferId, fecha])
+}
+
+// Devolución registrada por el guardia: datos generales + productos que
+// vuelven a guardarse en el frigorífico + productos que se cambiaron a otro
+// cliente. Cada devolución puede tener varios de cada uno (listas aparte).
+model Devolucion {
+  id              String    @id @default(cuid())
+  empresaId       String
+  empresa         Empresa   @relation(fields: [empresaId], references: [id])
+  fecha           DateTime  @db.Date
+  choferId        String
+  chofer          Usuario   @relation("DevolucionChofer", fields: [choferId], references: [id])
+  cliente         String
+  remito          String
+  registradoPorId String
+  registradoPor   Usuario   @relation("DevolucionRegistradoPor", fields: [registradoPorId], references: [id])
+  createdAt       DateTime  @default(now())
+  enviadoEn       DateTime?
+  enviadoPorId    String?
+  enviadoPor      Usuario?  @relation("DevolucionEnviadoPor", fields: [enviadoPorId], references: [id])
+
+  productos ProductoDevuelto[]
+  cambios   CambioDevolucion[]
+
+  @@index([empresaId])
+}
+
+model ProductoDevuelto {
+  id                String     @id @default(cuid())
+  devolucionId      String
+  devolucion        Devolucion @relation(fields: [devolucionId], references: [id], onDelete: Cascade)
+  producto          String
+  correlativo       String
+  ubicacionGuardado String
+  observacion       String?
+
+  @@index([devolucionId])
+}
+
+model CambioDevolucion {
+  id               String     @id @default(cuid())
+  devolucionId     String
+  devolucion       Devolucion @relation(fields: [devolucionId], references: [id], onDelete: Cascade)
+  clienteEntregado String
+  producto         String
+  correlativo      String
+  autoriz          String
+  observacion      String?
+
+  @@index([devolucionId])
+}

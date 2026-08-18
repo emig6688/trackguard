@@ -1,0 +1,38 @@
+CONFIGURACION INICIAL
+*revisar base de camiones km y horas
+*deifnir criterio para disparar mantenimietno preventivo en mentenedor-plan preventivo (dias+km/horas)
+*revisar choferes. faltan algunos. completar nro tel y mail correcto, licencias y doc con sus vencimientos
+*dar de alta talleres externos
+
+PENDIENTES
+*traer kilometros de geomov - ver endpoint esteban:
+OkHttpClient client = new OkHttpClient().newBuilder()
+              .build();
+            MediaType mediaType = MediaType.parse("text/plain");
+//            RequestBody body = RequestBody.create(mediaType, null);
+            Request request = new Request.Builder()
+              .url("https://www.geomov.com/apiserver/webapi/wsrest/apiminfo?geokey="+accso)
+              .method("GET", null)
+              .build();
+            Response response = client.newCall(request).execute();
+
+api key/variable acceso: E07B215D9888C69CDE7B1C9A5A8670C96EBAC01AD6651D3996F38F05A757
+consulta por java. consultar datos descargados y ver si trae info de odometro o kilometros recorridas de cada vehiculo
+agregar a endpoint dato de km recorridos por dia y acumulado por mes. 
+Este dato es importante ya que debemos tomarlo de forma diaria para tener actualizdo los km de cada camion. esto sirve para el calculo de combustible (gasto combustible en ticket cargados / km recorridos anotados cuando cargamos el gasto. comparar ese cociente con gasto combustible el ticket cargados/ km recorridos traido en endpoint de geomov). Ademas el kilometraje actual de cada camion es importante para que se disparen los mantenimientos preventivos correspondientes por km transcurridos.
+
+*revisar si funciona offline para chofer - NO funciona offline. VALE LA PENA MODIFICARLO?
+*ver como recibir notificaciones en el celular cuando la app esta cerrada
+*revisar notificaciones por mail
+*se genero modulo de notificaciones ya que mensajeria por whapp es con cargo y para configurar el mail outlook 365 tiene resricciones a ver con minato.
+
+
+SUBIR A WEB
+*colgar a web
+*There is a vercel.json already in the project (I added it earlier for the cron jobs — vencimientos de documentación, mantenimiento preventivo), which means the app is prepared to deploy to Vercel, but that step hasn't happened. To go from "local only" to something real staff could actually use, you'd need:
+A real hosted Postgres database (e.g. Neon, Supabase, or Vercel Postgres).
+A Vercel (or similar) deployment connected to that database.
+Environment variables (DATABASE_URL, AUTH_SECRET, etc.) configured on that hosting platform.
+Let me know if you want help planning or setting that up — it's a meaningful step (an actual deployment, not just local dev) so I'd want to walk through it with you rather than just doing it.
+ crear un Blob store en Vercel y setear BLOB_READ_WRITE_TOKEN — el código ya está listo para levantarlo sin tocar nada más.
+

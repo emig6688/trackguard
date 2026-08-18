@@ -1,0 +1,131 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { requireRole, ROLES_MOBILE_CHOFER } from "@/lib/permisos";
+import { guardarArchivo } from "@/lib/storage";
+import { generarNumeroOT } from "@/app/_actions/ordenesTrabajo";
+import { clasificarAreaReparacion, AREA_REPARACION_LABEL } from "@/lib/clasificador-averias";
+import { notificarOTGeneradaChofer } from "@/lib/notificaciones";
+import { buscarOTAbiertaMismoProblema } from "@/lib/ot";
+import { verificarChecklistDelDia } from "@/lib/checklist";
+
+const PRIORIDAD_POR_TIPO = {
+  DESPERFECTO: "ALTA",
+  INCIDENTE: "URGENTE",
+  OBSERVACION: "MEDIA",
+} as const;
+
+export async function registrarEventoRuta(formData: FormData) {
+  const { user: chofer, prisma } = await requireRole(ROLES_MOBILE_CHOFER);
+  const empresaId = chofer.empresaId!;
+
+  const chequeo = await verificarChecklistDelDia(prisma, empresaId, chofer);
+  if (chequeo.bloqueado) throw new Error(chequeo.motivo);
+
+  const vehiculoId = formData.get("vehiculoId");
+  const tipo = formData.get("tipo");
+  const descripcion = formData.get("descripcion");
+  if (typeof vehiculoId !== "string" || !vehiculoId) throw new Error("Elegí un vehículo.");
+  if (typeof tipo !== "string" || !(tipo in PRIORIDAD_POR_TIPO)) throw new Error("Elegí un tipo de evento.");
+  if (typeof descripcion !== "string" || !descripcion.trim()) throw new Error("Describí el evento.");
+
+  const kmRaw = formData.get("kmAlMomento");
+  const kmAlMomento = typeof kmRaw === "string" && kmRaw !== "" ? Number(kmRaw) : undefined;
+
+  const file = formData.get("archivo");
+  const archivo =
+    file instanceof File && file.size > 0 ? await guardarArchivo(prisma, empresaId, file, chofer.id) : null;
+
+  const evento = await prisma.eventoRuta.create({
+    data: {
+      empresaId,
+      vehiculoId,
+      choferId: chofer.id,
+      tipo: tipo as "DESPERFECTO" | "INCIDENTE" | "OBSERVACION",
+      descripcion: descripcion.trim(),
+      kmAlMomento,
+      archivoId: archivo?.id,
+      tanqueLleno: formData.get("tanqueLleno") === "on",
+    },
+  });
+
+  const areaReparacion = clasificarAreaReparacion(descripcion);
+  const vehiculo = await prisma.vehiculo.findUniqueOrThrow({ where: { id: vehiculoId }, select: { patente: true } });
+
+  // Si ya hay una OT abierta que suena al mismo problema (misma área Y
+  // alguna palabra clave en común, no solo la misma área), se agrega la
+  // observación ahí en vez de duplicar la OT (ver lib/ot.ts).
+  const otAbierta = await buscarOTAbiertaMismoProblema(prisma, vehiculoId, areaReparacion, descripcion);
+
+  if (otAbierta) {
+    const fecha = new Date().toLocaleDateString("es-AR");
+    await prisma.ordenDeTrabajo.update({
+      where: { id: otAbierta.id },
+      data: {
+        descripcion: `${otAbierta.descripcion ?? ""}\n\n[Reiterado ${fecha} por ${chofer.nombre}] ${descripcion.trim()}`.trim(),
+      },
+    });
+    await notificarOTGeneradaChofer(prisma, empresaId, {
+      id: otAbierta.id,
+      numero: otAbierta.numero,
+      titulo: otAbierta.titulo,
+      patente: vehiculo.patente,
+      reiterada: true,
+    });
+  } else {
+    const numero = await generarNumeroOT(prisma, empresaId);
+    const titulo = `Evento de ruta: ${AREA_REPARACION_LABEL[areaReparacion]}`;
+    const otCreada = await prisma.ordenDeTrabajo.create({
+      data: {
+        empresaId,
+        numero,
+        vehiculoId,
+        origen: "EVENTO_RUTA",
+        estado: "PENDIENTE_APROBACION",
+        prioridad: PRIORIDAD_POR_TIPO[tipo as keyof typeof PRIORIDAD_POR_TIPO],
+        areaReparacion,
+        titulo,
+        descripcion: descripcion.trim(),
+        eventoRutaId: evento.id,
+        creadoPorId: chofer.id,
+        historial: {
+          create: { actorId: chofer.id, estadoAnterior: null, estadoNuevo: "PENDIENTE_APROBACION" },
+        },
+      },
+    });
+    await notificarOTGeneradaChofer(prisma, empresaId, { id: otCreada.id, numero, titulo, patente: vehiculo.patente });
+  }
+
+  redirect("/mobile/evento/listo");
+}
+
+/**
+ * Cierre de ruta rápido cuando no hay nada para reportar. A diferencia de
+ * registrarEventoRuta, no genera una OT — queda solo como constancia de que
+ * el chofer confirmó activamente que no tuvo novedades (no es lo mismo que
+ * el silencio). El vehículo sigue siendo obligatorio: chofer y patente
+ * siempre van juntos en todo lo que carga el chofer.
+ */
+export async function cerrarRutaSinNovedades(formData: FormData) {
+  const { user: chofer, prisma } = await requireRole(ROLES_MOBILE_CHOFER);
+  const empresaId = chofer.empresaId!;
+
+  const chequeo = await verificarChecklistDelDia(prisma, empresaId, chofer);
+  if (chequeo.bloqueado) throw new Error(chequeo.motivo);
+
+  const vehiculoId = formData.get("vehiculoId");
+  if (typeof vehiculoId !== "string" || !vehiculoId) throw new Error("Elegí un vehículo.");
+
+  await prisma.eventoRuta.create({
+    data: {
+      empresaId,
+      vehiculoId,
+      choferId: chofer.id,
+      tipo: "OBSERVACION",
+      descripcion: "Cierre de ruta sin novedades.",
+      tanqueLleno: formData.get("tanqueLleno") === "on",
+    },
+  });
+
+  redirect("/mobile/evento/listo?sinNovedades=1");
+}

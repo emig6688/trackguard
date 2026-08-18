@@ -1,0 +1,1 @@
+ALTER TABLE "DiaNoOperado" ALTER COLUMN "choferId" DROP NOT NULL;
