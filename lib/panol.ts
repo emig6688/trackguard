@@ -1,6 +1,7 @@
 import "server-only";
 import type { ScopedPrismaClient } from "@/lib/tenant-prisma";
 import { obtenerReglaNotificacion, enviarPorCanalesConfigurados } from "@/lib/notificaciones";
+import { usuariosDeEmpresaPorRol } from "@/lib/permisos";
 
 /**
  * Se basa en el número más alto ya usado (no en un count()): si se borra
@@ -34,9 +35,7 @@ export async function notificarNuevaOrdenCompra(
   const regla = await obtenerReglaNotificacion(prisma, empresaId, "NUEVA_ORDEN_COMPRA");
   if (regla.roles.length === 0 || regla.canales.length === 0) return;
 
-  const destinatarios = await prisma.usuario.findMany({
-    where: { rol: { in: regla.roles }, activo: true, eliminadoEn: null },
-  });
+  const destinatarios = await usuariosDeEmpresaPorRol(prisma, empresaId, regla.roles);
   const mensaje = `Nueva orden de compra ${compra.numero}: ${compra.descripcion}${
     compra.cantidadSolicitada ? ` x${compra.cantidadSolicitada}` : ""
   }`;

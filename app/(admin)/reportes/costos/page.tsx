@@ -37,7 +37,7 @@ export default async function CostosPage({
     vehiculoMensual?: string;
   }>;
 }) {
-  const { prisma } = await requireEmpresa();
+  const { user, prisma } = await requireEmpresa();
   const { desde, hasta, tipoMensual, vehiculoMensual } = await searchParams;
   const filtro = {
     desde: desde ? new Date(desde) : undefined,
@@ -50,7 +50,7 @@ export default async function CostosPage({
 
   const [porVehiculo, porChofer, vehiculos, costosMensuales] = await Promise.all([
     calcularCostosPorVehiculo(prisma, filtro),
-    calcularCostosPorChofer(prisma, filtro),
+    calcularCostosPorChofer(prisma, user.empresaId!, filtro),
     prisma.vehiculo.findMany({
       where: { eliminadoEn: null },
       select: { id: true, patente: true },

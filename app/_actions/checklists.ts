@@ -25,6 +25,13 @@ export async function registrarChecklist(formData: FormData) {
   if (typeof vehiculoId !== "string" || !vehiculoId) throw new Error("Elegí un vehículo.");
   if (typeof templateId !== "string" || !templateId) throw new Error("Falta el template de checklist.");
 
+  const [vehiculoValido, templateValido] = await Promise.all([
+    prisma.vehiculo.findUnique({ where: { id: vehiculoId }, select: { id: true } }),
+    prisma.checklistTemplate.findUnique({ where: { id: templateId }, select: { id: true } }),
+  ]);
+  if (!vehiculoValido) throw new Error("Vehículo inválido.");
+  if (!templateValido) throw new Error("Template de checklist inválido.");
+
   const kmAlMomento = optionalInt().parse(formData.get("kmAlMomento"));
 
   const items = await prisma.checklistItem.findMany({ where: { templateId } });

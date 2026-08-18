@@ -1,6 +1,7 @@
 import "server-only";
 import type { ScopedPrismaClient } from "@/lib/tenant-prisma";
 import { obtenerReglaNotificacion, enviarPorCanalesConfigurados } from "@/lib/notificaciones";
+import { usuariosDeEmpresaPorRol } from "@/lib/permisos";
 
 export function inicioDeHoy(): Date {
   const ahora = new Date();
@@ -35,9 +36,7 @@ export async function verificarChecklistDelDia(
   if (yaHizo) return { bloqueado: false };
 
   if (regla.roles.length > 0 && regla.canales.length > 0) {
-    const destinatarios = await prisma.usuario.findMany({
-      where: { rol: { in: regla.roles }, activo: true, eliminadoEn: null },
-    });
+    const destinatarios = await usuariosDeEmpresaPorRol(prisma, empresaId, regla.roles);
     await enviarPorCanalesConfigurados(
       prisma,
       empresaId,

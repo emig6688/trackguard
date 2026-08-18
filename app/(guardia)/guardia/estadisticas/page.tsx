@@ -36,11 +36,11 @@ export default async function EstadisticasGuardiaPage({
 }: {
   searchParams: Promise<{ choferId?: string; granularidad?: string; anio?: string; mes?: string }>;
 }) {
-  const { prisma } = await requireEmpresa(ROLES_GUARDIA);
+  const { user, prisma } = await requireEmpresa(ROLES_GUARDIA);
   const params = await searchParams;
 
   const choferes = await prisma.usuario.findMany({
-    where: { rol: "CHOFER", activo: true, eliminadoEn: null },
+    where: { empresaId: user.empresaId!, rol: "CHOFER", activo: true, eliminadoEn: null },
     orderBy: { nombre: "asc" },
     select: { id: true, nombre: true },
   });

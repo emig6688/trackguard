@@ -29,6 +29,9 @@ export async function registrarEventoRuta(formData: FormData) {
   if (typeof tipo !== "string" || !(tipo in PRIORIDAD_POR_TIPO)) throw new Error("Elegí un tipo de evento.");
   if (typeof descripcion !== "string" || !descripcion.trim()) throw new Error("Describí el evento.");
 
+  const vehiculo = await prisma.vehiculo.findUnique({ where: { id: vehiculoId }, select: { patente: true } });
+  if (!vehiculo) throw new Error("Vehículo inválido.");
+
   const kmRaw = formData.get("kmAlMomento");
   const kmAlMomento = typeof kmRaw === "string" && kmRaw !== "" ? Number(kmRaw) : undefined;
 
@@ -50,7 +53,6 @@ export async function registrarEventoRuta(formData: FormData) {
   });
 
   const areaReparacion = clasificarAreaReparacion(descripcion);
-  const vehiculo = await prisma.vehiculo.findUniqueOrThrow({ where: { id: vehiculoId }, select: { patente: true } });
 
   // Si ya hay una OT abierta que suena al mismo problema (misma área Y
   // alguna palabra clave en común, no solo la misma área), se agrega la
@@ -115,6 +117,8 @@ export async function cerrarRutaSinNovedades(formData: FormData) {
 
   const vehiculoId = formData.get("vehiculoId");
   if (typeof vehiculoId !== "string" || !vehiculoId) throw new Error("Elegí un vehículo.");
+  const vehiculo = await prisma.vehiculo.findUnique({ where: { id: vehiculoId } });
+  if (!vehiculo) throw new Error("Vehículo inválido.");
 
   await prisma.eventoRuta.create({
     data: {

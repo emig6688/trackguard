@@ -72,6 +72,11 @@ export async function crearDevolucion(
     }
   }
 
+  const chofer = await prisma.usuario.findFirst({
+    where: { id: parsed.data.choferId, empresaId: user.empresaId!, rol: "CHOFER" },
+  });
+  if (!chofer) return { error: "Chofer inválido." };
+
   const devolucion = await prisma.devolucion.create({
     data: {
       empresaId: user.empresaId!,

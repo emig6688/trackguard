@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { scopedPrisma } from "@/lib/tenant-prisma";
+import type { ScopedPrismaClient } from "@/lib/tenant-prisma";
 import type { Session } from "next-auth";
 import type { Rol } from "@/app/generated/prisma/client";
 
@@ -84,4 +85,18 @@ export async function requireSuperadmin() {
     throw new AutorizacionError();
   }
   return { user: session.user, prisma };
+}
+
+/**
+ * Usuario NO está en MODELOS_CON_EMPRESA (ver tenant-prisma.ts — su email/dni
+ * tienen que seguir siendo únicos en toda la tabla), así que el cliente
+ * scoped no lo filtra solo. Cualquier `prisma.usuario.findMany` que busque
+ * destinatarios por rol tiene que pasar por acá — de lo contrario devuelve
+ * usuarios de TODAS las empresas, no solo la del que dispara la acción.
+ */
+export async function usuariosDeEmpresaPorRol(prisma: ScopedPrismaClient, empresaId: string, roles: Rol[]) {
+  if (roles.length === 0) return [];
+  return prisma.usuario.findMany({
+    where: { empresaId, rol: { in: roles }, activo: true, eliminadoEn: null },
+  });
 }

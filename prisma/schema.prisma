@@ -335,6 +335,18 @@ model PerfilChofer {
   fechaIngreso      DateTime?
 }
 
+/// Registro de intentos de login fallidos, para el rate limiting en
+/// auth.ts. Sin empresaId (igual que Usuario): el login todavía no sabe a
+/// qué empresa pertenece el que intenta entrar.
+model IntentoLogin {
+  id            String   @id @default(cuid())
+  identificador String
+  ip            String
+  createdAt     DateTime @default(now())
+
+  @@index([identificador, ip, createdAt])
+}
+
 // ---------------------------------------------------------------------------
 // Vehiculos
 // ---------------------------------------------------------------------------

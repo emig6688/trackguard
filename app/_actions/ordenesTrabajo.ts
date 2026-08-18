@@ -3,7 +3,14 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireRole, requireSession, AutorizacionError, ROLES_ADMIN_MANTENIMIENTO, ROLES_MOBILE_CHOFER } from "@/lib/permisos";
+import {
+  requireRole,
+  requireSession,
+  AutorizacionError,
+  ROLES_ADMIN_MANTENIMIENTO,
+  ROLES_MOBILE_CHOFER,
+  usuariosDeEmpresaPorRol,
+} from "@/lib/permisos";
 import { puedeTransicionar } from "@/lib/ot-state-machine";
 import { puedeMecanicoAccionar, ESTADOS_OT_REQUIEREN_FECHA_ESTIMADA } from "@/lib/ot";
 import { optionalInt, optionalNumber } from "@/lib/zod-helpers";
@@ -447,9 +454,7 @@ export async function completarOT(
 
     const regla = await obtenerReglaNotificacion(prisma, user.empresaId!, "OT_COMPLETADA_CONFIRMACION");
     if (regla.roles.length > 0 && regla.canales.length > 0) {
-      const destinatariosExtra = await prisma.usuario.findMany({
-        where: { rol: { in: regla.roles }, activo: true, eliminadoEn: null },
-      });
+      const destinatariosExtra = await usuariosDeEmpresaPorRol(prisma, user.empresaId!, regla.roles);
       await enviarPorCanalesConfigurados(
         prisma,
         user.empresaId!,
@@ -636,6 +641,14 @@ export async function agregarRepuesto(
   formData: FormData
 ): Promise<AgregarRepuestoState> {
   const { user, prisma } = await requireSession();
+
+  const ot = await prisma.ordenDeTrabajo.findUniqueOrThrow({ where: { id: otId } });
+  const puedeGestionar = user.rol === "ADMIN" || user.rol === "ENCARGADO_MANTENIMIENTO";
+  const puedeAccionar = puedeGestionar || (user.rol === "MECANICO_INTERNO" && puedeMecanicoAccionar(ot, user.id));
+  if (!puedeAccionar || ot.estado === "COMPLETADA" || ot.estado === "CANCELADA") {
+    throw new AutorizacionError("No podés modificar los repuestos de esta orden de trabajo.");
+  }
+
   const parsed = repuestoSchema.parse(Object.fromEntries(formData));
   const articuloPanolId = parsed.articuloPanolId || undefined;
   const otItemPreventivoId = parsed.otItemPreventivoId || undefined;
@@ -678,6 +691,13 @@ export async function eliminarRepuestoUsado(otId: string, repuestoId: string) {
 
   const repuesto = await prisma.oTRepuesto.findUniqueOrThrow({ where: { id: repuestoId } });
   if (repuesto.ordenDeTrabajoId !== otId) throw new AutorizacionError();
+
+  const ot = await prisma.ordenDeTrabajo.findUniqueOrThrow({ where: { id: otId } });
+  const puedeGestionar = user.rol === "ADMIN" || user.rol === "ENCARGADO_MANTENIMIENTO";
+  const puedeAccionar = puedeGestionar || (user.rol === "MECANICO_INTERNO" && puedeMecanicoAccionar(ot, user.id));
+  if (!puedeAccionar || ot.estado === "COMPLETADA" || ot.estado === "CANCELADA") {
+    throw new AutorizacionError("No podés modificar los repuestos de esta orden de trabajo.");
+  }
 
   await prisma.oTRepuesto.update({
     where: { id: repuestoId },

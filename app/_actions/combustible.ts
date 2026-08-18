@@ -25,6 +25,8 @@ export async function registrarCargaCombustible(
 
   const vehiculoId = formData.get("vehiculoId");
   if (typeof vehiculoId !== "string" || !vehiculoId) return { error: "Elegí un vehículo." };
+  const vehiculo = await prisma.vehiculo.findUnique({ where: { id: vehiculoId } });
+  if (!vehiculo) return { error: "Vehículo inválido." };
 
   const kmOdometro = Number(formData.get("kmOdometro"));
   const litrosCargados = Number(formData.get("litrosCargados"));
