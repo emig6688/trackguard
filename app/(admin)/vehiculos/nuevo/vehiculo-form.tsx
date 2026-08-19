@@ -111,6 +111,10 @@ export function VehiculoForm({
             placeholder="Horómetro del motor auxiliar"
             defaultValue={defaultValues?.horasEquipoFrio ?? ""}
           />
+          <p className="text-xs text-muted-foreground">
+            Se suma solo automáticamente con cada checklist pre-salida → cierre del chofer. Editar
+            acá corrige el valor a mano, pero no reemplaza esa carga automática.
+          </p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="equipoFrioTipo">Tipo de equipo de frío</Label>

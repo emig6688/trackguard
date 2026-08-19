@@ -115,7 +115,7 @@ export async function GET(request: Request) {
             tipo: "RESUMEN_VEHICULOS_OPERATIVOS" as const,
             canal: f.canal,
             destinatario: f.destinatario?.trim() || "(sin dato)",
-            motivo: f.resultado.enviado ? "" : f.resultado.motivo,
+            motivo: f.resultado.enviado ? "" : (f.resultado.detalle ?? f.resultado.motivo),
           })),
         });
       }

@@ -56,7 +56,6 @@ const PALABRAS_CLAVE: Record<Exclude<AreaReparacionOT, "OTRO">, string[]> = {
     "humea",
     "humo",
     "sobrecalient",
-    "temperatura",
     "correa",
     "turbo",
     "inyector",
@@ -64,7 +63,6 @@ const PALABRAS_CLAVE: Record<Exclude<AreaReparacionOT, "OTRO">, string[]> = {
     "no arranca",
     "pierde potencia",
     "radiador",
-    "refrigerante",
     "anticongelante",
     "recalent",
   ],
@@ -91,6 +89,34 @@ const PALABRAS_CLAVE: Record<Exclude<AreaReparacionOT, "OTRO">, string[]> = {
     "llanta",
     "presion de aire",
     "rin",
+  ],
+  // Equipo de frío (unidad de refrigeración de la caja), no el motor del
+  // camión — "temperatura"/"refrigerante" se sacaron de MOTOR porque en un
+  // reparto de cadena de frío casi siempre se refieren a esto.
+  EQUIPO_FRIO: [
+    "equipo de frio",
+    "unidad de frio",
+    "termo king",
+    "thermo king",
+    "termoking",
+    "carrier",
+    "reefer",
+    "no enfria",
+    "no frigorifica",
+    "camara no enfria",
+    "caja no enfria",
+    "setpoint",
+    "set point",
+    "evaporador",
+    "condensador",
+    "compresor de frio",
+    "motor auxiliar",
+    "cadena de frio",
+    "termografo",
+    "la termo",
+    "descongela",
+    "temperatura",
+    "refrigerante",
   ],
 };
 
@@ -154,5 +180,6 @@ export const AREA_REPARACION_LABEL: Record<AreaReparacionOT, string> = {
   MOTOR: "Motor",
   ELECTRICO: "Eléctrico",
   NEUMATICOS: "Neumáticos",
+  EQUIPO_FRIO: "Equipo de frío",
   OTRO: "Otro",
 };

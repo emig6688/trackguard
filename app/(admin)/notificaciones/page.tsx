@@ -67,7 +67,7 @@ export default async function NotificacionesPage() {
                       ? "sin dato de contacto"
                       : f.motivo === "proveedor_no_configurado"
                         ? "proveedor no configurado"
-                        : "error del proveedor"}
+                        : f.motivo}
                   </span>
                   <span className="ml-auto text-xs text-muted-foreground">
                     {f.createdAt.toLocaleString("es-AR")}

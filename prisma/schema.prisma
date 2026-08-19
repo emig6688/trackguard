@@ -93,6 +93,7 @@ enum AreaReparacionOT {
   MOTOR
   ELECTRICO
   NEUMATICOS
+  EQUIPO_FRIO
   OTRO
 }
 
@@ -895,6 +896,10 @@ model ChecklistRealizado {
   kmAlMomento      Int?
   fechaHora        DateTime                  @default(now())
   resultadoGeneral ResultadoChecklistGeneral @default(OK)
+  // PRESALIDA (default, comportamiento histórico) o CIERRE — el par
+  // pre-salida/cierre del mismo día y vehículo es lo que alimenta
+  // Vehiculo.horasEquipoFrio (ver lib/checklist.ts).
+  momento          MomentoChecklist          @default(PRESALIDA)
   latitud          Float?
   longitud         Float?
 
@@ -903,6 +908,11 @@ model ChecklistRealizado {
 
   @@index([vehiculoId])
   @@index([choferId])
+}
+
+enum MomentoChecklist {
+  PRESALIDA
+  CIERRE
 }
 
 model ChecklistRespuesta {

@@ -28,6 +28,7 @@ const AREA_LABEL: Record<AreaReparacionOT, string> = {
   MOTOR: "Motor",
   ELECTRICO: "Eléctrico",
   NEUMATICOS: "Neumáticos",
+  EQUIPO_FRIO: "Equipo de frío",
   OTRO: "Otro",
 };
 

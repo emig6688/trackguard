@@ -9,6 +9,7 @@ import { optionalInt } from "@/lib/zod-helpers";
 import { notificarOTGeneradaChofer } from "@/lib/notificaciones";
 import { buscarOTAbiertaMismoProblema } from "@/lib/ot";
 import { clasificarAreaReparacion } from "@/lib/clasificador-averias";
+import { registrarHorasEquipoFrioSiCorresponde } from "@/lib/checklist";
 
 const respuestaSchema = z.object({
   checklistItemId: z.string(),
@@ -22,6 +23,7 @@ export async function registrarChecklist(formData: FormData) {
 
   const vehiculoId = formData.get("vehiculoId");
   const templateId = formData.get("templateId");
+  const momento = formData.get("momento") === "CIERRE" ? "CIERRE" : "PRESALIDA";
   if (typeof vehiculoId !== "string" || !vehiculoId) throw new Error("Elegí un vehículo.");
   if (typeof templateId !== "string" || !templateId) throw new Error("Falta el template de checklist.");
 
@@ -53,6 +55,7 @@ export async function registrarChecklist(formData: FormData) {
       choferId: chofer.id,
       kmAlMomento,
       resultadoGeneral: hayFallas ? "CON_FALLAS" : "OK",
+      momento,
       respuestas: { create: respuestas },
     },
   });
@@ -64,6 +67,15 @@ export async function registrarChecklist(formData: FormData) {
     });
   }
 
+  if (momento === "CIERRE") {
+    await registrarHorasEquipoFrioSiCorresponde(prisma, {
+      vehiculoId,
+      choferId: chofer.id,
+      cierreId: checklist.id,
+      cierreFechaHora: checklist.fechaHora,
+    });
+  }
+
   if (hayFallas) {
     const itemsPorId = new Map(items.map((i) => [i.id, i.texto]));
     const detalle = respuestas
@@ -71,7 +83,8 @@ export async function registrarChecklist(formData: FormData) {
       .map((r) => `- ${itemsPorId.get(r.checklistItemId)}${r.observacion ? `: ${r.observacion}` : ""}`)
       .join("\n");
 
-    const titulo = "Fallas detectadas en checklist pre-salida";
+    const titulo =
+      momento === "CIERRE" ? "Fallas detectadas en checklist de cierre" : "Fallas detectadas en checklist pre-salida";
     const areaReparacion = clasificarAreaReparacion(detalle);
     const vehiculo = await prisma.vehiculo.findUniqueOrThrow({ where: { id: vehiculoId }, select: { patente: true } });
 

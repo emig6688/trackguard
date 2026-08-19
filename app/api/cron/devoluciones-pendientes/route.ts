@@ -100,7 +100,7 @@ export async function GET(request: Request) {
             tipo: "DEVOLUCION_SIN_ENVIAR" as const,
             canal: f.canal,
             destinatario: f.destinatario?.trim() || "(sin dato)",
-            motivo: f.resultado.enviado ? "" : f.resultado.motivo,
+            motivo: f.resultado.enviado ? "" : (f.resultado.detalle ?? f.resultado.motivo),
           })),
         });
       }

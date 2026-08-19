@@ -2,7 +2,7 @@ import "server-only";
 
 export type EnvioWhatsappResultado =
   | { enviado: true }
-  | { enviado: false; motivo: "sin_telefono" | "proveedor_no_configurado" };
+  | { enviado: false; motivo: "sin_telefono" | "proveedor_no_configurado"; detalle?: string };
 
 /**
  * Todavía no hay un proveedor de WhatsApp conectado (se definirá más

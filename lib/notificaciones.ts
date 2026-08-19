@@ -186,7 +186,7 @@ export async function enviarPorCanalesConfigurados(
       fallos.push({
         canal: envio.canal,
         destinatario: envio.destinatario?.trim() || "(sin dato)",
-        motivo: envio.resultado.motivo,
+        motivo: envio.resultado.detalle ?? envio.resultado.motivo,
       });
     }
   }

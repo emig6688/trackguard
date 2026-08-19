@@ -113,7 +113,7 @@ const otManualSchema = z.object({
   prioridad: z.enum(["BAJA", "MEDIA", "ALTA", "URGENTE"]),
   areaReparacion: z.preprocess(
     (v) => (v === "" ? undefined : v),
-    z.enum(["FRENOS", "SUSPENSION", "ESTRUCTURA", "MOTOR", "ELECTRICO", "NEUMATICOS", "OTRO"]).optional()
+    z.enum(["FRENOS", "SUSPENSION", "ESTRUCTURA", "MOTOR", "ELECTRICO", "NEUMATICOS", "EQUIPO_FRIO", "OTRO"]).optional()
   ),
   fechaLimite: z
     .string()
@@ -241,7 +241,7 @@ export async function crearOTDesdePlan(planId: string, redirectPath: string) {
 
 const aprobarSchema = z.object({
   prioridad: z.enum(["BAJA", "MEDIA", "ALTA", "URGENTE"]),
-  areaReparacion: z.enum(["FRENOS", "SUSPENSION", "ESTRUCTURA", "MOTOR", "ELECTRICO", "NEUMATICOS", "OTRO"]),
+  areaReparacion: z.enum(["FRENOS", "SUSPENSION", "ESTRUCTURA", "MOTOR", "ELECTRICO", "NEUMATICOS", "EQUIPO_FRIO", "OTRO"]),
   fechaLimite: z
     .string()
     .min(1, "Elegí una fecha límite")
