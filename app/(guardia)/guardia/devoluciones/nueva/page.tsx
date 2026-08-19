@@ -2,10 +2,10 @@ import { requireEmpresa, ROLES_GUARDIA } from "@/lib/permisos";
 import { DevolucionForm } from "./devolucion-form";
 
 export default async function NuevaDevolucionPage() {
-  const { prisma } = await requireEmpresa(ROLES_GUARDIA);
+  const { user, prisma } = await requireEmpresa(ROLES_GUARDIA);
 
   const choferes = await prisma.usuario.findMany({
-    where: { rol: "CHOFER", activo: true, eliminadoEn: null },
+    where: { empresaId: user.empresaId!, rol: "CHOFER", activo: true, eliminadoEn: null },
     orderBy: { nombre: "asc" },
   });
 

@@ -6,6 +6,9 @@ import { ReporteCostosDocument } from "@/lib/pdf/reporte-costos";
 
 const TIPOS_VALIDOS: TipoCostoMensual[] = ["TOTAL", "COMBUSTIBLE", "GASTOS"];
 
+// Render de PDF con gráfico puede acercarse al límite por defecto.
+export const maxDuration = 60;
+
 export async function GET(request: Request) {
   const { prisma } = await requireSession();
 

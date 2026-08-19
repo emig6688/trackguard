@@ -3,6 +3,8 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { requireSession } from "@/lib/permisos";
 import { ReporteOTDocument } from "@/lib/pdf/reporte-ot";
 
+export const maxDuration = 60;
+
 export async function GET(request: Request) {
   const { prisma } = await requireSession();
 

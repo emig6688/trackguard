@@ -28,6 +28,8 @@ export async function registrarGasto(formData: FormData) {
   // El vehículo nunca es opcional: todo lo que carga el chofer queda
   // identificado con chofer + patente juntos.
   if (typeof vehiculoId !== "string" || !vehiculoId) throw new Error("Elegí un vehículo.");
+  const vehiculo = await prisma.vehiculo.findUnique({ where: { id: vehiculoId } });
+  if (!vehiculo) throw new Error("Vehículo inválido.");
 
   const descripcionTrim = typeof descripcion === "string" ? descripcion.trim() : "";
   if (tipo === "OTRO" && !descripcionTrim) {

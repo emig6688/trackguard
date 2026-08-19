@@ -10,6 +10,12 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // El CLI (migrate/introspect) necesita la conexión DIRECTA, no la que pasa
+    // por un connection pooler (ej. el Supavisor de Supabase en modo
+    // transacción) — ese pooler no soporta los prepared statements que usa
+    // Prisma Migrate. La app en runtime (lib/prisma.ts) sí usa DATABASE_URL
+    // pooleada. En desarrollo local, sin pooler de por medio, no hace falta
+    // definir DIRECT_URL: cae de nuevo a DATABASE_URL.
+    url: process.env["DIRECT_URL"] || process.env["DATABASE_URL"],
   },
 });

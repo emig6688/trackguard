@@ -63,7 +63,7 @@ async function resolverDestinatarios(doc: { empresaId: string; entidadTipo: stri
  */
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
@@ -73,47 +73,70 @@ export async function GET(request: Request) {
   });
 
   const notificados: string[] = [];
+  const errores: string[] = [];
 
   for (const doc of documentos) {
-    const diasRestantes = diasHastaVencimiento(doc.fechaVencimiento);
-    const { tipo, entidadLabel, destinatarios, diasAviso, canales } = await resolverDestinatarios(doc);
+    try {
+      const diasRestantes = diasHastaVencimiento(doc.fechaVencimiento);
+      const { tipo, entidadLabel, destinatarios, diasAviso, canales } = await resolverDestinatarios(doc);
 
-    const umbral = diasAviso.find((d) => d === diasRestantes && !doc.diasAvisoNotificados.includes(d));
-    if (umbral === undefined) continue;
+      const umbral = diasAviso.find((d) => d === diasRestantes && !doc.diasAvisoNotificados.includes(d));
+      if (umbral === undefined) continue;
 
-    const asunto = `Aviso de vencimiento: ${doc.tipoDocumento.nombre}`;
-    const mensaje =
-      `Aviso de vencimiento: ${doc.tipoDocumento.nombre} de ${entidadLabel} vence en ${diasRestantes} ` +
-      `días (${doc.fechaVencimiento.toLocaleDateString("es-AR")}).`;
+      const asunto = `Aviso de vencimiento: ${doc.tipoDocumento.nombre}`;
+      const mensaje =
+        `Aviso de vencimiento: ${doc.tipoDocumento.nombre} de ${entidadLabel} vence en ${diasRestantes} ` +
+        `días (${doc.fechaVencimiento.toLocaleDateString("es-AR")}).`;
 
-    await Promise.all([
-      ...destinatarios.flatMap((u) => [
-        ...(canales.includes("WHATSAPP") ? [enviarWhatsapp(u.telefono, mensaje)] : []),
-        ...(canales.includes("EMAIL") ? [enviarEmail(u.email, asunto, mensaje)] : []),
-      ]),
-      ...(canales.includes("EN_APP") && destinatarios.length > 0
-        ? [
-            prisma.notificacion.createMany({
-              data: destinatarios.map((u) => ({
-                empresaId: doc.empresaId,
-                usuarioId: u.id,
-                tipo,
-                titulo: asunto,
-                mensaje,
-                href: "/documentos",
-              })),
-            }),
-          ]
-        : []),
-    ]);
+      const envios = destinatarios.flatMap((u) => [
+        ...(canales.includes("WHATSAPP")
+          ? [enviarWhatsapp(u.telefono, mensaje).then((resultado) => ({ canal: "WHATSAPP" as const, destinatario: u.telefono, resultado }))]
+          : []),
+        ...(canales.includes("EMAIL")
+          ? [enviarEmail(u.email, asunto, mensaje).then((resultado) => ({ canal: "EMAIL" as const, destinatario: u.email, resultado }))]
+          : []),
+      ]);
+      const [resultadosEnvio] = await Promise.all([
+        Promise.all(envios),
+        ...(canales.includes("EN_APP") && destinatarios.length > 0
+          ? [
+              prisma.notificacion.createMany({
+                data: destinatarios.map((u) => ({
+                  empresaId: doc.empresaId,
+                  usuarioId: u.id,
+                  tipo,
+                  titulo: asunto,
+                  mensaje,
+                  href: "/documentos",
+                })),
+              }),
+            ]
+          : []),
+      ]);
+      const fallos = resultadosEnvio.filter((r) => !r.resultado.enviado);
+      if (fallos.length > 0) {
+        await prisma.notificacionFallo.createMany({
+          data: fallos.map((f) => ({
+            empresaId: doc.empresaId,
+            tipo,
+            canal: f.canal,
+            destinatario: f.destinatario?.trim() || "(sin dato)",
+            motivo: f.resultado.enviado ? "" : (f.resultado.detalle ?? f.resultado.motivo),
+          })),
+        });
+      }
 
-    await prisma.documento.update({
-      where: { id: doc.id },
-      data: { diasAvisoNotificados: { push: umbral } },
-    });
+      await prisma.documento.update({
+        where: { id: doc.id },
+        data: { diasAvisoNotificados: { push: umbral } },
+      });
 
-    notificados.push(doc.id);
+      notificados.push(doc.id);
+    } catch (error) {
+      console.error(`[cron/vencimientos-documentacion] documento=${doc.id}`, error);
+      errores.push(doc.id);
+    }
   }
 
-  return NextResponse.json({ notificados });
+  return NextResponse.json({ notificados, errores });
 }

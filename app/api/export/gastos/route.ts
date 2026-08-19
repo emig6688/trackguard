@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/permisos";
 import { generarCsv } from "@/lib/csv";
+import { rangoExportPorDefecto } from "@/lib/export-rango";
 
 export async function GET(request: Request) {
   const { prisma } = await requireSession();
@@ -8,12 +9,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const chofer = searchParams.get("chofer") ?? undefined;
   const vehiculo = searchParams.get("vehiculo") ?? undefined;
-  const desde = searchParams.get("desde") ?? undefined;
-  const hasta = searchParams.get("hasta") ?? undefined;
-  const rangoFecha =
-    desde || hasta
-      ? { ...(desde ? { gte: new Date(desde) } : {}), ...(hasta ? { lte: new Date(hasta) } : {}) }
-      : undefined;
+  const { desde, hasta } = rangoExportPorDefecto(searchParams);
 
   const gastos = await prisma.gasto.findMany({
     where: {
@@ -21,7 +17,7 @@ export async function GET(request: Request) {
       eliminadoEn: null,
       ...(chofer ? { chofer: { nombre: { equals: chofer, mode: "insensitive" } } } : {}),
       ...(vehiculo ? { vehiculo: { patente: { equals: vehiculo, mode: "insensitive" } } } : {}),
-      ...(rangoFecha ? { fecha: rangoFecha } : {}),
+      fecha: { gte: desde, lte: hasta },
     },
     include: { chofer: true, vehiculo: true },
     orderBy: { fecha: "desc" },

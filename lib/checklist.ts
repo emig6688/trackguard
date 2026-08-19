@@ -1,6 +1,7 @@
 import "server-only";
 import type { ScopedPrismaClient } from "@/lib/tenant-prisma";
 import { obtenerReglaNotificacion, enviarPorCanalesConfigurados } from "@/lib/notificaciones";
+import { usuariosDeEmpresaPorRol } from "@/lib/permisos";
 
 export function inicioDeHoy(): Date {
   const ahora = new Date();
@@ -9,9 +10,95 @@ export function inicioDeHoy(): Date {
 
 export async function choferHizoChecklistHoy(prisma: ScopedPrismaClient, choferId: string): Promise<boolean> {
   const checklist = await prisma.checklistRealizado.findFirst({
-    where: { choferId, fechaHora: { gte: inicioDeHoy() } },
+    where: { choferId, momento: "PRESALIDA", fechaHora: { gte: inicioDeHoy() } },
   });
   return checklist != null;
+}
+
+/**
+ * Suma a Vehiculo.horasEquipoFrio la duración entre el checklist pre-salida
+ * de hoy y el checklist de cierre que se acaba de completar, para el mismo
+ * chofer+vehículo. Si falta el pre-salida de hoy, o si ya se sumó un cierre
+ * hoy (evita doble conteo si el chofer completa el cierre dos veces), la
+ * medición se descarta sin sumar nada — nunca se adivina un valor.
+ */
+export async function registrarHorasEquipoFrioSiCorresponde(
+  prisma: ScopedPrismaClient,
+  params: { vehiculoId: string; choferId: string; cierreId: string; cierreFechaHora: Date }
+) {
+  const { vehiculoId, choferId, cierreId, cierreFechaHora } = params;
+
+  const presalida = await prisma.checklistRealizado.findFirst({
+    where: { choferId, vehiculoId, momento: "PRESALIDA", fechaHora: { gte: inicioDeHoy() } },
+    orderBy: { fechaHora: "asc" },
+  });
+  if (!presalida) {
+    console.log(`[horasEquipoFrio] descartada: sin checklist pre-salida hoy (chofer=${choferId}, vehiculo=${vehiculoId})`);
+    return;
+  }
+
+  const otroCierreHoy = await prisma.checklistRealizado.findFirst({
+    where: { choferId, vehiculoId, momento: "CIERRE", fechaHora: { gte: inicioDeHoy() }, id: { not: cierreId } },
+  });
+  if (otroCierreHoy) {
+    console.log(`[horasEquipoFrio] descartada: ya se registró un cierre hoy (chofer=${choferId}, vehiculo=${vehiculoId})`);
+    return;
+  }
+
+  const horas = (cierreFechaHora.getTime() - presalida.fechaHora.getTime()) / (1000 * 60 * 60);
+  if (horas <= 0) {
+    console.log(`[horasEquipoFrio] descartada: el cierre es anterior o igual al pre-salida (chofer=${choferId}, vehiculo=${vehiculoId})`);
+    return;
+  }
+
+  const vehiculo = await prisma.vehiculo.findUniqueOrThrow({
+    where: { id: vehiculoId },
+    select: { horasEquipoFrio: true },
+  });
+  await prisma.vehiculo.update({
+    where: { id: vehiculoId },
+    data: { horasEquipoFrio: (vehiculo.horasEquipoFrio ?? 0) + Math.round(horas) },
+  });
+}
+
+/**
+ * Recalcula, para el reporte de trazabilidad, las horas de equipo de frío
+ * acumuladas en un período — Vehiculo.horasEquipoFrio es un total corrido
+ * sin desglose por fecha, así que para un período arbitrario hay que
+ * volver a armar los pares pre-salida/cierre (por día+chofer) a partir de
+ * los checklists de esa ventana. Mismo criterio de descarte que
+ * registrarHorasEquipoFrioSiCorresponde: sin ambos checklists del día, esa
+ * jornada no suma.
+ */
+export async function horasEquipoFrioEnPeriodo(
+  prisma: ScopedPrismaClient,
+  vehiculoId: string,
+  desde: Date,
+  hasta: Date
+): Promise<number> {
+  const checklists = await prisma.checklistRealizado.findMany({
+    where: { vehiculoId, fechaHora: { gte: desde, lte: hasta } },
+    orderBy: { fechaHora: "asc" },
+    select: { momento: true, fechaHora: true, choferId: true },
+  });
+
+  const porDiaChofer = new Map<string, { presalida?: Date; cierre?: Date }>();
+  for (const c of checklists) {
+    const dia = c.fechaHora.toISOString().slice(0, 10);
+    const clave = `${dia}_${c.choferId}`;
+    const entrada = porDiaChofer.get(clave) ?? {};
+    if (c.momento === "PRESALIDA" && !entrada.presalida) entrada.presalida = c.fechaHora;
+    if (c.momento === "CIERRE" && !entrada.cierre) entrada.cierre = c.fechaHora;
+    porDiaChofer.set(clave, entrada);
+  }
+
+  let totalHoras = 0;
+  for (const { presalida, cierre } of porDiaChofer.values()) {
+    if (presalida && cierre && cierre > presalida) {
+      totalHoras += (cierre.getTime() - presalida.getTime()) / (1000 * 60 * 60);
+    }
+  }
+  return Math.round(totalHoras);
 }
 
 export type ResultadoChecklistObligatorio = { bloqueado: false } | { bloqueado: true; motivo: string };
@@ -35,9 +122,7 @@ export async function verificarChecklistDelDia(
   if (yaHizo) return { bloqueado: false };
 
   if (regla.roles.length > 0 && regla.canales.length > 0) {
-    const destinatarios = await prisma.usuario.findMany({
-      where: { rol: { in: regla.roles }, activo: true, eliminadoEn: null },
-    });
+    const destinatarios = await usuariosDeEmpresaPorRol(prisma, empresaId, regla.roles);
     await enviarPorCanalesConfigurados(
       prisma,
       empresaId,

@@ -12,6 +12,12 @@ const ACCESOS = [
     icon: ClipboardCheck,
   },
   {
+    href: "/mobile/checklist?momento=CIERRE",
+    label: "Checklist de cierre",
+    desc: "Al terminar el reparto — suma horas del equipo de frío",
+    icon: ClipboardCheck,
+  },
+  {
     href: "/mobile/combustible",
     label: "Cargar combustible",
     desc: "Foto del ticket + km actual",

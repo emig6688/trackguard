@@ -183,12 +183,16 @@ export async function calcularCostosMensuales(
 
 export async function calcularCostosPorChofer(
   prisma: ScopedPrismaClient,
+  empresaId: string,
   filtro: FiltroPeriodo
 ): Promise<CostoPorChofer[]> {
   const fecha = rangoFecha(filtro);
 
   const [choferes, combustible, gastos] = await Promise.all([
-    prisma.usuario.findMany({ where: { rol: "CHOFER", eliminadoEn: null }, orderBy: { nombre: "asc" } }),
+    prisma.usuario.findMany({
+      where: { empresaId, rol: "CHOFER", eliminadoEn: null },
+      orderBy: { nombre: "asc" },
+    }),
     prisma.cargaCombustible.groupBy({
       by: ["choferId"],
       _sum: { montoTotal: true },

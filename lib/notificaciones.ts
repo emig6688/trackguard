@@ -1,5 +1,6 @@
 import "server-only";
 import type { ScopedPrismaClient } from "@/lib/tenant-prisma";
+import { usuariosDeEmpresaPorRol } from "@/lib/permisos";
 import { enviarWhatsapp } from "@/lib/whatsapp";
 import { enviarEmail } from "@/lib/email";
 import type { CanalNotificacion, Rol, TipoNotificacion } from "@/app/generated/prisma/client";
@@ -72,7 +73,8 @@ export const CATALOGO_NOTIFICACIONES: Partial<Record<TipoNotificacion, InfoTipoN
   },
   RESUMEN_VEHICULOS_OPERATIVOS: {
     label: "Resumen diario de vehículos operativos",
-    disparador: "Todos los días, a la hora que elijas abajo, un resumen de cuántos vehículos están operativos.",
+    disparador:
+      "Una vez al día, un resumen de cuántos vehículos están operativos. Elegir una hora abajo activa este aviso — con el plan actual de Vercel (crons diarios, no horarios) se manda una vez al día a una hora fija del sistema, no necesariamente la que elijas.",
     destinatarioFijo: null,
     usaDiasAviso: false,
     usaHoraEnvio: true,
@@ -80,7 +82,7 @@ export const CATALOGO_NOTIFICACIONES: Partial<Record<TipoNotificacion, InfoTipoN
   DEVOLUCION_SIN_ENVIAR: {
     label: "Devoluciones sin enviar",
     disparador:
-      "Todos los días, a la hora que elijas abajo, si todavía hay devoluciones cargadas por el guardia sin enviar.",
+      "Una vez al día, si todavía hay devoluciones cargadas por el guardia sin enviar. Elegir una hora abajo activa este aviso — con el plan actual de Vercel (crons diarios, no horarios) se manda una vez al día a una hora fija del sistema, no necesariamente la que elijas.",
     destinatarioFijo: null,
     usaDiasAviso: false,
     usaHoraEnvio: true,
@@ -149,11 +151,17 @@ export async function enviarPorCanalesConfigurados(
   mensaje: string,
   href?: string
 ) {
-  await Promise.all([
-    ...destinatarios.flatMap((u) => [
-      ...(canales.includes("WHATSAPP") ? [enviarWhatsapp(u.telefono, mensaje)] : []),
-      ...(canales.includes("EMAIL") ? [enviarEmail(u.email, asuntoEmail, mensaje)] : []),
-    ]),
+  const envios = destinatarios.flatMap((u) => [
+    ...(canales.includes("WHATSAPP")
+      ? [enviarWhatsapp(u.telefono, mensaje).then((resultado) => ({ canal: "WHATSAPP" as const, destinatario: u.telefono, resultado }))]
+      : []),
+    ...(canales.includes("EMAIL")
+      ? [enviarEmail(u.email, asuntoEmail, mensaje).then((resultado) => ({ canal: "EMAIL" as const, destinatario: u.email, resultado }))]
+      : []),
+  ]);
+
+  const [resultadosEnvio] = await Promise.all([
+    Promise.all(envios),
     ...(canales.includes("EN_APP") && destinatarios.length > 0
       ? [
           prisma.notificacion.createMany({
@@ -169,6 +177,25 @@ export async function enviarPorCanalesConfigurados(
         ]
       : []),
   ]);
+
+  // enviarWhatsapp/enviarEmail son best-effort y nunca tiran excepción — sin
+  // esto, un fallo (sin proveedor configurado, sin teléfono/email, error del
+  // proveedor) quedaba solo en el log del servidor y nadie se enteraba.
+  const fallos: { canal: CanalNotificacion; destinatario: string; motivo: string }[] = [];
+  for (const envio of resultadosEnvio) {
+    if (!envio.resultado.enviado) {
+      fallos.push({
+        canal: envio.canal,
+        destinatario: envio.destinatario?.trim() || "(sin dato)",
+        motivo: envio.resultado.detalle ?? envio.resultado.motivo,
+      });
+    }
+  }
+  if (fallos.length > 0) {
+    await prisma.notificacionFallo.createMany({
+      data: fallos.map((f) => ({ empresaId, tipo, ...f })),
+    });
+  }
 }
 
 /**
@@ -194,9 +221,7 @@ export async function notificarOTGeneradaChofer(
   const asunto = ot.reiterada ? `OT sin resolver, reiterada: ${ot.numero}` : `Nueva OT de chofer: ${ot.numero}`;
   const href = `/ordenes-trabajo/${ot.id}`;
 
-  const encargados = await prisma.usuario.findMany({
-    where: { rol: "ENCARGADO_MANTENIMIENTO", activo: true, eliminadoEn: null },
-  });
+  const encargados = await usuariosDeEmpresaPorRol(prisma, empresaId, ["ENCARGADO_MANTENIMIENTO"]);
   await enviarPorCanalesConfigurados(
     prisma,
     empresaId,
@@ -211,9 +236,7 @@ export async function notificarOTGeneradaChofer(
   const regla = await obtenerReglaNotificacion(prisma, empresaId, "OT_GENERADA_CHOFER");
   const rolesExtra = regla.roles.filter((r) => r !== "ENCARGADO_MANTENIMIENTO");
   if (rolesExtra.length > 0 && regla.canales.length > 0) {
-    const destinatariosExtra = await prisma.usuario.findMany({
-      where: { rol: { in: rolesExtra }, activo: true, eliminadoEn: null },
-    });
+    const destinatariosExtra = await usuariosDeEmpresaPorRol(prisma, empresaId, rolesExtra);
     await enviarPorCanalesConfigurados(
       prisma,
       empresaId,
@@ -245,9 +268,7 @@ export async function notificarCompraPendienteAutorizacion(
   const asunto = `Compra pendiente de autorización: ${compra.numero}`;
   const href = "/autorizaciones";
 
-  const gerentes = await prisma.usuario.findMany({
-    where: { rol: "GERENTE", activo: true, eliminadoEn: null },
-  });
+  const gerentes = await usuariosDeEmpresaPorRol(prisma, empresaId, ["GERENTE"]);
   await enviarPorCanalesConfigurados(
     prisma,
     empresaId,
@@ -262,9 +283,7 @@ export async function notificarCompraPendienteAutorizacion(
   const regla = await obtenerReglaNotificacion(prisma, empresaId, "COMPRA_PENDIENTE_AUTORIZACION");
   const rolesExtra = regla.roles.filter((r) => r !== "GERENTE");
   if (rolesExtra.length > 0 && regla.canales.length > 0) {
-    const destinatariosExtra = await prisma.usuario.findMany({
-      where: { rol: { in: rolesExtra }, activo: true, eliminadoEn: null },
-    });
+    const destinatariosExtra = await usuariosDeEmpresaPorRol(prisma, empresaId, rolesExtra);
     await enviarPorCanalesConfigurados(
       prisma,
       empresaId,
@@ -292,9 +311,7 @@ export async function notificarPresupuestoSubido(
   const asunto = `Presupuesto subido: ${compra.numero}`;
   const href = "/autorizaciones";
 
-  const gerentes = await prisma.usuario.findMany({
-    where: { rol: "GERENTE", activo: true, eliminadoEn: null },
-  });
+  const gerentes = await usuariosDeEmpresaPorRol(prisma, empresaId, ["GERENTE"]);
   await enviarPorCanalesConfigurados(
     prisma,
     empresaId,
@@ -309,9 +326,7 @@ export async function notificarPresupuestoSubido(
   const regla = await obtenerReglaNotificacion(prisma, empresaId, "PRESUPUESTO_SUBIDO");
   const rolesExtra = regla.roles.filter((r) => r !== "GERENTE");
   if (rolesExtra.length > 0 && regla.canales.length > 0) {
-    const destinatariosExtra = await prisma.usuario.findMany({
-      where: { rol: { in: rolesExtra }, activo: true, eliminadoEn: null },
-    });
+    const destinatariosExtra = await usuariosDeEmpresaPorRol(prisma, empresaId, rolesExtra);
     await enviarPorCanalesConfigurados(
       prisma,
       empresaId,
@@ -342,9 +357,7 @@ export async function notificarCompraAutorizada(
   const asunto = `Compra autorizada: ${compra.numero}`;
   const href = "/compras";
 
-  const destinatariosFijos = await prisma.usuario.findMany({
-    where: { rol: { in: ROLES_FIJOS_COMPRA_AUTORIZADA }, activo: true, eliminadoEn: null },
-  });
+  const destinatariosFijos = await usuariosDeEmpresaPorRol(prisma, empresaId, ROLES_FIJOS_COMPRA_AUTORIZADA);
   await enviarPorCanalesConfigurados(
     prisma,
     empresaId,
@@ -359,9 +372,7 @@ export async function notificarCompraAutorizada(
   const regla = await obtenerReglaNotificacion(prisma, empresaId, "COMPRA_AUTORIZADA");
   const rolesExtra = regla.roles.filter((r) => !ROLES_FIJOS_COMPRA_AUTORIZADA.includes(r));
   if (rolesExtra.length > 0 && regla.canales.length > 0) {
-    const destinatariosExtra = await prisma.usuario.findMany({
-      where: { rol: { in: rolesExtra }, activo: true, eliminadoEn: null },
-    });
+    const destinatariosExtra = await usuariosDeEmpresaPorRol(prisma, empresaId, rolesExtra);
     await enviarPorCanalesConfigurados(
       prisma,
       empresaId,

@@ -11,7 +11,7 @@ import { disponibilidadEfectiva } from "@/lib/disponibilidad";
  */
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
@@ -31,21 +31,27 @@ export async function GET(request: Request) {
   const fecha = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate()));
 
   let registrados = 0;
+  const errores: string[] = [];
   for (const vehiculo of vehiculos) {
-    await prisma.disponibilidadSnapshot.upsert({
-      where: { vehiculoId_fecha: { vehiculoId: vehiculo.id, fecha } },
-      create: {
-        empresaId: vehiculo.empresaId,
-        vehiculoId: vehiculo.id,
-        fecha,
-        disponible: disponibilidadEfectiva(vehiculo, enTaller.has(vehiculo.id)),
-      },
-      update: {
-        disponible: disponibilidadEfectiva(vehiculo, enTaller.has(vehiculo.id)),
-      },
-    });
-    registrados++;
+    try {
+      await prisma.disponibilidadSnapshot.upsert({
+        where: { vehiculoId_fecha: { vehiculoId: vehiculo.id, fecha } },
+        create: {
+          empresaId: vehiculo.empresaId,
+          vehiculoId: vehiculo.id,
+          fecha,
+          disponible: disponibilidadEfectiva(vehiculo, enTaller.has(vehiculo.id)),
+        },
+        update: {
+          disponible: disponibilidadEfectiva(vehiculo, enTaller.has(vehiculo.id)),
+        },
+      });
+      registrados++;
+    } catch (error) {
+      console.error(`[cron/snapshot-disponibilidad] vehiculo=${vehiculo.id}`, error);
+      errores.push(vehiculo.id);
+    }
   }
 
-  return NextResponse.json({ registrados });
+  return NextResponse.json({ registrados, errores });
 }

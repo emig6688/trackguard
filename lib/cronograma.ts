@@ -129,6 +129,10 @@ async function planesPrevistos(prisma: ScopedPrismaClient, hasta: Date): Promise
       vehiculoId: plan.vehiculoId,
     };
 
+    // Sin "continue" entre bloques: un plan AMBOS tiene intervaloDias E
+    // intervaloKm a la vez, así que hay que evaluar los dos drivers, no
+    // frenar en el primero que tenga valor (mismo criterio que planVencido()
+    // en app/api/cron/planes-mantenimiento/route.ts).
     if (plan.intervaloDias != null) {
       const inicio = plan.fechaUltimoService ?? plan.createdAt;
       const proxima = new Date(inicio);
@@ -141,7 +145,6 @@ async function planesPrevistos(prisma: ScopedPrismaClient, hasta: Date): Promise
           avance: null,
         });
       }
-      continue;
     }
 
     if (plan.intervaloKm != null && plan.kmUltimoService != null) {
@@ -154,7 +157,6 @@ async function planesPrevistos(prisma: ScopedPrismaClient, hasta: Date): Promise
           avance,
         });
       }
-      continue;
     }
 
     if (plan.intervaloHoras != null && plan.horasUltimoService != null && plan.vehiculo.horasEquipoFrio != null) {

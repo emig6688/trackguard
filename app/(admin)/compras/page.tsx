@@ -104,7 +104,7 @@ export default async function ComprasPage({
       orderBy: { patente: "asc" },
     }),
     prisma.usuario.findMany({
-      where: { rol: "CHOFER", activo: true, eliminadoEn: null },
+      where: { empresaId: session.empresaId!, rol: "CHOFER", activo: true, eliminadoEn: null },
       select: { id: true, nombre: true },
       orderBy: { nombre: "asc" },
     }),

@@ -8,6 +8,7 @@ import { BackButton } from "@/components/back-button";
 import { EliminarButton } from "@/components/eliminar-button";
 import { DisponibilidadToggle } from "@/components/vehiculos/disponibilidad-toggle";
 import { vehiculosEnTallerExterno } from "@/lib/disponibilidad";
+import { buttonVariants } from "@/components/ui/button";
 import { VehiculoForm } from "../nuevo/vehiculo-form";
 
 export default async function VehiculoDetallePage({
@@ -32,6 +33,12 @@ export default async function VehiculoDetallePage({
             {vehiculo.patente} — {vehiculo.marca} {vehiculo.modelo}
           </h1>
           <div className="flex items-center gap-2">
+            <a
+              href={`/api/export/trazabilidad-pdf?vehiculoId=${vehiculo.id}`}
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              Reporte de trazabilidad
+            </a>
             <DisponibilidadToggle
               vehiculoId={vehiculo.id}
               disponible={vehiculo.disponible}

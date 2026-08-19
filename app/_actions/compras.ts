@@ -9,6 +9,7 @@ import {
   ROLES_CREAR_COMPRA,
   ROLES_AUTORIZAR_COMPRA,
   AutorizacionError,
+  usuariosDeEmpresaPorRol,
 } from "@/lib/permisos";
 import { optionalNumber } from "@/lib/zod-helpers";
 import { generarNumeroCompra, notificarNuevaOrdenCompra } from "@/lib/panol";
@@ -411,9 +412,7 @@ async function notificarCompraRealizada(
 
   const regla = await obtenerReglaNotificacion(prisma, empresaId, "COMPRA_REALIZADA");
   if (regla.roles.length > 0 && regla.canales.length > 0) {
-    const destinatariosExtra = await prisma.usuario.findMany({
-      where: { rol: { in: regla.roles }, activo: true, eliminadoEn: null },
-    });
+    const destinatariosExtra = await usuariosDeEmpresaPorRol(prisma, empresaId, regla.roles);
     await enviarPorCanalesConfigurados(
       prisma,
       empresaId,

@@ -36,3 +36,14 @@ Environment variables (DATABASE_URL, AUTH_SECRET, etc.) configured on that hosti
 Let me know if you want help planning or setting that up — it's a meaningful step (an actual deployment, not just local dev) so I'd want to walk through it with you rather than just doing it.
  crear un Blob store en Vercel y setear BLOB_READ_WRITE_TOKEN — el código ya está listo para levantarlo sin tocar nada más.
 
+
+ANOCHE
+Needs your decision before deploying
+1-Which Vercel plan (confirm current cron-count limits for Hobby)
+2-A domain verified in Resend for real email delivery
+3-Creating the Vercel Blob store manually (dashboard step)
+4-npm audit flagged 20 vulnerabilities in transitive deps — worth a deliberate look, not a blind --force fix
+
+The branch isn't merged to master yet — let me know if you want that done now or want to review the diff first.
+
+FALTABAN 3 Y 4

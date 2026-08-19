@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { requireEmpresa } from "@/lib/permisos";
 import { construirCondicionOTCompra } from "@/lib/compras-filtro";
+import { rangoExportPorDefecto } from "@/lib/export-rango";
+
+// Armar el workbook con varias hojas puede acercarse al límite por defecto.
+export const maxDuration = 60;
 
 const SIN_CAMION = "Sin camión asignado";
 const SIN_CHOFER = "Sin chofer identificado";
@@ -19,6 +23,7 @@ export async function GET(request: Request) {
   const filtroVehiculoId = searchParams.get("vehiculoId") ?? undefined;
   const filtroChoferId = searchParams.get("choferId") ?? undefined;
   const filtroBusqueda = searchParams.get("busqueda") ?? undefined;
+  const { desde, hasta } = rangoExportPorDefecto(searchParams);
 
   const condicionOT = construirCondicionOTCompra({ vehiculoId: filtroVehiculoId, choferId: filtroChoferId });
 
@@ -26,6 +31,7 @@ export async function GET(request: Request) {
     where: {
       eliminadoEn: null,
       montoTotal: { not: null },
+      fechaCompra: { gte: desde, lte: hasta },
       ...(filtroEstado
         ? { estado: filtroEstado as "PENDIENTE" | "REALIZADA" | "DOCUMENTADA" | "CANCELADA" }
         : {}),
