@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { BellRing, BellOff } from "lucide-react";
+import { BellRing, BellOff, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   obtenerVapidPublicKey,
   guardarPushSubscription,
   eliminarPushSubscription,
+  enviarPushDePrueba,
 } from "@/app/_actions/pushSubscriptions";
 
 type Estado = "cargando" | "no-soportado" | "requiere-instalar-ios" | "inactivo" | "activo";
@@ -119,9 +120,27 @@ export function PushToggle() {
   }
 
   return (
-    <Button variant="ghost" size="icon" onClick={estado === "activo" ? desactivar : activar}>
-      {estado === "activo" ? <BellRing className="size-5 text-primary" /> : <BellOff className="size-5" />}
-      <span className="sr-only">{estado === "activo" ? "Desactivar notificaciones push" : "Activar notificaciones push"}</span>
-    </Button>
+    <>
+      {estado === "activo" && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            toast.promise(enviarPushDePrueba(), {
+              loading: "Enviando notificación de prueba…",
+              success: "Enviada. Debería llegarte en unos segundos.",
+              error: "No se pudo enviar la notificación de prueba.",
+            });
+          }}
+        >
+          <Send className="size-4" />
+          <span className="sr-only">Enviar notificación de prueba</span>
+        </Button>
+      )}
+      <Button variant="ghost" size="icon" onClick={estado === "activo" ? desactivar : activar}>
+        {estado === "activo" ? <BellRing className="size-5 text-primary" /> : <BellOff className="size-5" />}
+        <span className="sr-only">{estado === "activo" ? "Desactivar notificaciones push" : "Activar notificaciones push"}</span>
+      </Button>
+    </>
   );
 }

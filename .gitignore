@@ -44,3 +44,6 @@ next-env.d.ts
 
 # archivos subidos en desarrollo (storage local, ver lib/storage.ts)
 /storage/uploads
+
+.vercel
+.env*

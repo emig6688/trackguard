@@ -1,6 +1,7 @@
 "use server";
 
 import { requireSession } from "@/lib/permisos";
+import { enviarPush } from "@/lib/push";
 
 export async function obtenerVapidPublicKey(): Promise<string | null> {
   return process.env.VAPID_PUBLIC_KEY ?? null;
@@ -42,4 +43,18 @@ export async function guardarPushSubscription(subscription: PushSubscriptionInpu
 export async function eliminarPushSubscription(endpoint: string) {
   const { user, prisma } = await requireSession();
   await prisma.pushSubscription.deleteMany({ where: { endpoint, usuarioId: user.id } });
+}
+
+/**
+ * Manda un push de prueba al propio usuario logueado, contra sus
+ * suscripciones activas — para que cualquiera pueda confirmar por su cuenta
+ * que le llega, sin depender de que ocurra un aviso real del sistema.
+ */
+export async function enviarPushDePrueba() {
+  const { user, prisma } = await requireSession();
+  await enviarPush(prisma, user.id, {
+    title: "TruckGuard",
+    body: "Notificación de prueba — si ves esto, el push funciona.",
+    url: "/dashboard",
+  });
 }
