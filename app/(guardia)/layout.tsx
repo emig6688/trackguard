@@ -3,6 +3,7 @@ import { requireEmpresa, ROLES_GUARDIA } from "@/lib/permisos";
 import { Logo } from "@/components/brand/logo";
 import { LogoutButton } from "@/components/logout-button";
 import { NotificationBell } from "@/components/notificaciones/notification-bell";
+import { PushToggle } from "@/components/notificaciones/push-toggle";
 
 export default async function GuardiaLayout({ children }: { children: React.ReactNode }) {
   const { user: session } = await requireEmpresa(ROLES_GUARDIA);
@@ -18,6 +19,7 @@ export default async function GuardiaLayout({ children }: { children: React.Reac
             </span>
           </div>
           <div className="flex items-center gap-1">
+            <PushToggle />
             <NotificationBell />
             <LogoutButton />
           </div>

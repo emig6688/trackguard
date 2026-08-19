@@ -4,6 +4,7 @@ import { LogoutButton } from "@/components/logout-button";
 import { Logo } from "@/components/brand/logo";
 import { MobileBackLink } from "@/components/mobile-back-link";
 import { NotificationBell } from "@/components/notificaciones/notification-bell";
+import { PushToggle } from "@/components/notificaciones/push-toggle";
 
 export default async function MobileLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -18,6 +19,7 @@ export default async function MobileLayout({ children }: { children: React.React
             <p className="text-sm font-semibold">{session.user.nombre}</p>
             <p className="text-xs text-sidebar-foreground/70">{session.user.rol}</p>
           </div>
+          <PushToggle />
           <NotificationBell />
           <LogoutButton />
         </div>

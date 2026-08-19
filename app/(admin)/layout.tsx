@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { type NavEntry, type NavLink } from "@/components/admin-nav";
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { NotificationBell } from "@/components/notificaciones/notification-bell";
+import { PushToggle } from "@/components/notificaciones/push-toggle";
 import { Badge } from "@/components/ui/badge";
 import { ROL_LABEL } from "@/lib/roles";
 import type { Rol } from "@/app/generated/prisma/client";
@@ -122,6 +123,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <PushToggle />
             <NotificationBell />
           </div>
         </header>

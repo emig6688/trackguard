@@ -219,6 +219,7 @@ model Empresa {
   disponibilidadSnapshots     DisponibilidadSnapshot[]
   notificaciones              Notificacion[]
   notificacionesFallos        NotificacionFallo[]
+  pushSubscriptions           PushSubscription[]
   otItemsPreventivos          OTItemPreventivo[]
   observacionesGuardia        ObservacionGuardia[]
   diasNoOperados              DiaNoOperado[]
@@ -296,6 +297,26 @@ model NotificacionFallo {
   @@index([empresaId, createdAt])
 }
 
+// Suscripción de Web Push de un usuario en un dispositivo/navegador puntual
+// (un usuario puede tener varias, una por dispositivo). enviarPorCanalesConfigurados
+// manda un push a cada una cuando crea una Notificacion — el push es 1:1 con
+// "En la app", no un canal configurable aparte (ver lib/push.ts).
+model PushSubscription {
+  id        String   @id @default(cuid())
+  empresaId String
+  empresa   Empresa  @relation(fields: [empresaId], references: [id])
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([usuarioId])
+  @@index([empresaId])
+}
+
 // ---------------------------------------------------------------------------
 // Usuarios
 // ---------------------------------------------------------------------------
@@ -333,6 +354,7 @@ model Usuario {
   facturasCargadas     Factura[]
   ordenesCompraCreadas OrdenCompra[]
   notificaciones       Notificacion[]
+  pushSubscriptions    PushSubscription[]
 
   observacionesGuardia    ObservacionGuardia[]
   devolucionesComoChofer  Devolucion[]         @relation("DevolucionChofer")

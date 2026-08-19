@@ -22,28 +22,24 @@ agregar a endpoint dato de km recorridos por dia y acumulado por mes.
 Este dato es importante ya que debemos tomarlo de forma diaria para tener actualizdo los km de cada camion. esto sirve para el calculo de combustible (gasto combustible en ticket cargados / km recorridos anotados cuando cargamos el gasto. comparar ese cociente con gasto combustible el ticket cargados/ km recorridos traido en endpoint de geomov). Ademas el kilometraje actual de cada camion es importante para que se disparen los mantenimientos preventivos correspondientes por km transcurridos.
 
 *revisar si funciona offline para chofer - NO funciona offline. VALE LA PENA MODIFICARLO?
-*ver como recibir notificaciones en el celular cuando la app esta cerrada
-*revisar notificaciones por mail
-*se genero modulo de notificaciones ya que mensajeria por whapp es con cargo y para configurar el mail outlook 365 tiene resricciones a ver con minato.
+*ver porque tengo en cronograma un monton de ot pendientes de generar si supuestamente arranque de cero sin informacion vieja
+*ver reporte de trazabilidad (se debe poder elegir periodo). porque veo info vieja de julio si supuestametne no subimos esa informacion ni tengo ot abiertas
+Módulo de trazabilidad — dos huecos de datos (Alto). La sección "documentación vigente" del PDF no filtra por fecha de vencimiento: trae todos los documentos activos sin evaluar si están vencidos, a diferencia de la pantalla /documentos que sí calcula el estado. Un documento vencido aparece en el reporte de auditoría como si estuviera en regla — justo el escenario que este módulo se supone que tiene que prevenir de cara a una aseguradora o a SENASA. Y la tabla de planes preventivos del PDF no incluye horasUltimoService, así que para los planes tipo HORAS (el driver central del equipo de frío) el reporte no muestra ningún dato de último service, aunque el campo existe en la base.
+* verificar
+Discrepancia a verificar de forma urgente — límite real de cron jobs en plan Hobby. DEPLOY.md justifica tener 5 crons activos citando que "Vercel levantó el límite a 100 cron jobs por proyecto en todos los planes desde enero de 2026". No pude confirmar esa cifra de forma independiente en esta revisión, y contradice lo que fue durante mucho tiempo el límite conocido de Hobby (2 cron jobs). Con dos empresas ya operando en producción, esto no es un detalle: si el límite real es menor a 5, puede haber crons hoy inactivos sin que nadie lo note hasta que falte, por ejemplo, un aviso de vencimiento de documentación. Es el primer punto de la checklist de la sección 4.
+*resuleve esto costos-pdf ignora el acotamiento de fechas que sí tiene su hermano CSV. app/api/export/costos-pdf/route.tsx llama a calcularCostosPorVehiculo con un filtro vacío, así que la tabla "por vehículo" de ese PDF consulta todo el historial sin límite (a diferencia de app/api/export/costos/route.ts, el CSV equivalente, que sí aplica el rango). Es justo la ruta que ya se identificó como pesada (tiene maxDuration = 60), y el acotamiento que se aplicó en las otras cuatro rutas se quedó afuera de esta. Con datos reales acumulándose mes a mes, es una bomba de tiempo de performance, no un problema hoy.
+*revisar esto DEPLOY.md no menciona DIRECT_URL. El código (prisma.config.ts) sí usa y necesita DIRECT_URL para que prisma migrate deploy funcione contra un Postgres con connection pooler (Supabase, el ejemplo que da el propio .env.example) — pero la guía de deploy no la lista entre las variables a configurar. Si ya está seteada a mano en Vercel, esto es solo un gap de documentación; si no lo está, la próxima migración puede fallar en el peor momento. Vale la pena confirmarlo cuanto antes, dado que ya hay producción real.
+*Checklist de verificación manual (solo posible desde el dashboard de Vercel/Resend, no desde el código)
+Cron Jobs: confirmar en el dashboard de Vercel que los 5 crons aparecen activos y con corridas recientes registradas — esto resuelve de una vez la duda del límite de Hobby.
+Plan del proyecto: confirmar si es Hobby o Pro contra la documentación vigente de Vercel al momento de leer esto.
+Variables de entorno en Vercel: DATABASE_URL, AUTH_SECRET, CRON_SECRET, BLOB_READ_WRITE_TOKEN, RESEND_API_KEY, RESEND_FROM_EMAIL, y DIRECT_URL si la base tiene pooler.
+Dominio verificado en Resend: confirmar SPF/DKIM en el dashboard de Resend (no alcanza con que la app "funcione" en general — confirmar que un email llega a un destinatario externo real, no solo a la cuenta dueña de la API key).
+Blob Store: confirmar que existe y que el token corresponde, subiendo un archivo de prueba real.
+Logs recientes: revisar si hubo 401/500 en /api/cron/* en los últimos días que indiquen algo mal configurado silenciosamente.
+Confirmar que prisma migrate deploy corrió en el último deploy con migraciones nuevas (las 6 migraciones de esta ronda: intento_login, regla_notificacion_ultimo_envio, notificacion_fallo, checklist_momento, area_reparacion_equipo_frio, y la que agrega los campos de horas).
+5. Prioridad recomendada para la próxima ronda
 
+Primero, lo que ya está en riesgo con datos reales: confirmar el límite de crons en el dashboard (punto 1 del checklist) y arreglar el bypass del rate limiting de login (sección 3.2) — es el único de los 12 fixes de la noche anterior que no se sostiene, y el login es superficie de ataque directa contra una app ya en producción. Segundo, el bug de zona horaria en horas de equipo de frío (sección 3.3): es silencioso, así que puede estar perdiendo mediciones todos los días sin que se note hasta que un plan de mantenimiento por horas nunca dispare. Tercero, los dos huecos de datos del PDF de trazabilidad (documentos vencidos mostrados como vigentes, horas de último service faltantes) — importa especialmente si ese PDF ya se está usando o se va a usar pronto de cara a una aseguradora o inspección real. El resto (transacción de stock, idempotencia de vencimientos-documentacion, costos-pdf sin acotar, DIRECT_URL en la documentación, npm audit) puede esperar a la siguiente iteración sin urgencia.
 
-SUBIR A WEB
-*colgar a web
-*There is a vercel.json already in the project (I added it earlier for the cron jobs — vencimientos de documentación, mantenimiento preventivo), which means the app is prepared to deploy to Vercel, but that step hasn't happened. To go from "local only" to something real staff could actually use, you'd need:
-A real hosted Postgres database (e.g. Neon, Supabase, or Vercel Postgres).
-A Vercel (or similar) deployment connected to that database.
-Environment variables (DATABASE_URL, AUTH_SECRET, etc.) configured on that hosting platform.
-Let me know if you want help planning or setting that up — it's a meaningful step (an actual deployment, not just local dev) so I'd want to walk through it with you rather than just doing it.
- crear un Blob store en Vercel y setear BLOB_READ_WRITE_TOKEN — el código ya está listo para levantarlo sin tocar nada más.
-
-
-ANOCHE
-Needs your decision before deploying
-1-Which Vercel plan (confirm current cron-count limits for Hobby)
-2-A domain verified in Resend for real email delivery
-3-Creating the Vercel Blob store manually (dashboard step)
-4-npm audit flagged 20 vulnerabilities in transitive deps — worth a deliberate look, not a blind --force fix
-
-The branch isn't merged to master yet — let me know if you want that done now or want to review the diff first.
-
-FALTABAN 3 Y 4
+*mejora version mobile.  visual, look and feel para que sea mobile responsive
+*eliminar checklist de cierre no se porque se fenero ese modulo (suma de horas del equipo de frio). se deberia tomar como inicio checklist presalida y como finalizacion el cierre de ruta (utilizado para reportar desperfectos) o bien el cierre de ruta sin novedades. 

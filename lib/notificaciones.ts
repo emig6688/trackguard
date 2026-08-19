@@ -3,6 +3,7 @@ import type { ScopedPrismaClient } from "@/lib/tenant-prisma";
 import { usuariosDeEmpresaPorRol } from "@/lib/permisos";
 import { enviarWhatsapp } from "@/lib/whatsapp";
 import { enviarEmail } from "@/lib/email";
+import { enviarPush } from "@/lib/push";
 import type { CanalNotificacion, Rol, TipoNotificacion } from "@/app/generated/prisma/client";
 
 export type InfoTipoNotificacion = {
@@ -174,6 +175,12 @@ export async function enviarPorCanalesConfigurados(
               href,
             })),
           }),
+          // El push va 1:1 con "En la app": mismos destinatarios, sin canal
+          // ni configuración aparte — es solo la versión que llega aunque el
+          // usuario tenga la app cerrada (ver lib/push.ts).
+          ...destinatarios.map((u) =>
+            enviarPush(prisma, u.id, { title: asuntoEmail, body: mensaje, url: href })
+          ),
         ]
       : []),
   ]);

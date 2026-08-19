@@ -21,6 +21,7 @@ const raleway = Raleway({
 export const metadata: Metadata = {
   title: "TruckGuard",
   description: "Software de gestión y mantenimiento de flota",
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({
