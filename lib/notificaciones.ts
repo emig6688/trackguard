@@ -73,7 +73,8 @@ export const CATALOGO_NOTIFICACIONES: Partial<Record<TipoNotificacion, InfoTipoN
   },
   RESUMEN_VEHICULOS_OPERATIVOS: {
     label: "Resumen diario de vehículos operativos",
-    disparador: "Todos los días, a la hora que elijas abajo, un resumen de cuántos vehículos están operativos.",
+    disparador:
+      "Una vez al día, un resumen de cuántos vehículos están operativos. Elegir una hora abajo activa este aviso — con el plan actual de Vercel (crons diarios, no horarios) se manda una vez al día a una hora fija del sistema, no necesariamente la que elijas.",
     destinatarioFijo: null,
     usaDiasAviso: false,
     usaHoraEnvio: true,
@@ -81,7 +82,7 @@ export const CATALOGO_NOTIFICACIONES: Partial<Record<TipoNotificacion, InfoTipoN
   DEVOLUCION_SIN_ENVIAR: {
     label: "Devoluciones sin enviar",
     disparador:
-      "Todos los días, a la hora que elijas abajo, si todavía hay devoluciones cargadas por el guardia sin enviar.",
+      "Una vez al día, si todavía hay devoluciones cargadas por el guardia sin enviar. Elegir una hora abajo activa este aviso — con el plan actual de Vercel (crons diarios, no horarios) se manda una vez al día a una hora fija del sistema, no necesariamente la que elijas.",
     destinatarioFijo: null,
     usaDiasAviso: false,
     usaHoraEnvio: true,

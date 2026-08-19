@@ -3,17 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { enviarWhatsapp } from "@/lib/whatsapp";
 import { enviarEmail } from "@/lib/email";
 
-// Argentina no tiene horario de verano desde 2009: UTC-3 todo el año.
-const OFFSET_ARGENTINA_HORAS = 3;
-
 /**
- * Corre cada hora (ver vercel.json). Para cada empresa con la regla
- * DEVOLUCION_SIN_ENVIAR activa cuya hora configurada (horaEnvio, en huso
- * horario Argentina) coincide con la hora UTC actual, si todavía hay
- * devoluciones cargadas por el guardia sin enviar, avisa a los roles/canales
- * configurados en /notificaciones — se repite todos los días a esa hora
- * hasta que se resuelva (mismo criterio que el resto de los avisos
- * recurrentes).
+ * Corre una vez al día (ver vercel.json — el plan Hobby de Vercel no permite
+ * crons horarios, solo diarios). Por eso NO se compara horaEnvio contra la
+ * hora actual: cualquier empresa con la regla DEVOLUCION_SIN_ENVIAR activa y
+ * una hora configurada (el campo sigue sirviendo como "encendido/apagado" de
+ * este aviso) recibe el aviso en esta única corrida diaria si todavía hay
+ * devoluciones sin enviar, protegido por idempotencia de "una vez por día"
+ * más abajo. Si el proyecto pasa a un plan que soporte crons horarios, se
+ * puede volver a comparar horaEnvio contra la hora UTC actual para precisión
+ * de horario real.
  */
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -22,11 +21,9 @@ export async function GET(request: Request) {
   }
 
   const ahora = new Date();
-  const horaUTCActual = ahora.getUTCHours();
-  // Arranque de la franja horaria actual: sirve para el chequeo de
-  // idempotencia de abajo (un reintento de Vercel dentro de la misma hora no
-  // debe duplicar el envío).
-  const inicioHora = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate(), horaUTCActual));
+  // Arranque del día actual (UTC): sirve para el chequeo de idempotencia de
+  // abajo (un reintento de Vercel el mismo día no debe duplicar el envío).
+  const inicioDelDia = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate()));
 
   const reglas = await prisma.reglaNotificacion.findMany({
     where: { tipo: "DEVOLUCION_SIN_ENVIAR", activo: true },
@@ -38,8 +35,6 @@ export async function GET(request: Request) {
   for (const regla of reglas) {
     try {
       if (regla.horaEnvio == null) continue;
-      const horaUTCConfigurada = (regla.horaEnvio + OFFSET_ARGENTINA_HORAS) % 24;
-      if (horaUTCConfigurada !== horaUTCActual) continue;
       if (regla.roles.length === 0 || regla.canales.length === 0) continue;
 
       const pendientes = await prisma.devolucion.count({
@@ -52,11 +47,11 @@ export async function GET(request: Request) {
       });
       if (destinatarios.length === 0) continue;
 
-      // Idempotencia: reclama la franja horaria antes de mandar. Si otra
-      // invocación (reintento de Vercel) ya la reclamó, count da 0 y no se
-      // duplica el aviso.
+      // Idempotencia: reclama el día antes de mandar. Si otra invocación
+      // (reintento de Vercel) ya lo reclamó, count da 0 y no se duplica el
+      // aviso.
       const claim = await prisma.reglaNotificacion.updateMany({
-        where: { id: regla.id, OR: [{ ultimoEnvioEn: null }, { ultimoEnvioEn: { lt: inicioHora } }] },
+        where: { id: regla.id, OR: [{ ultimoEnvioEn: null }, { ultimoEnvioEn: { lt: inicioDelDia } }] },
         data: { ultimoEnvioEn: ahora },
       });
       if (claim.count === 0) continue;

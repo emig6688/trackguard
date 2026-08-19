@@ -4,6 +4,9 @@ import { requireSession } from "@/lib/permisos";
 import { horasEquipoFrioEnPeriodo } from "@/lib/checklist";
 import { ReporteTrazabilidadDocument } from "@/lib/pdf/reporte-trazabilidad";
 
+// Render de PDF con varias secciones puede acercarse al límite por defecto.
+export const maxDuration = 60;
+
 // Sin rango explícito, se acota al último año — evitar exports sin límite
 // sobre vehículos con años de historial.
 function rangoPorDefecto(searchParams: URLSearchParams) {
