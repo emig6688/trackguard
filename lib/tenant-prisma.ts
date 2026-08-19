@@ -26,6 +26,7 @@ const MODELOS_CON_EMPRESA = new Set([
   "ReglaNotificacion",
   "DisponibilidadSnapshot",
   "Notificacion",
+  "NotificacionFallo",
   "OTItemPreventivo",
   "ObservacionGuardia",
   "Devolucion",

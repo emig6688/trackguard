@@ -217,6 +217,7 @@ model Empresa {
   reglasNotificacion          ReglaNotificacion[]
   disponibilidadSnapshots     DisponibilidadSnapshot[]
   notificaciones              Notificacion[]
+  notificacionesFallos        NotificacionFallo[]
   otItemsPreventivos          OTItemPreventivo[]
   observacionesGuardia        ObservacionGuardia[]
   diasNoOperados              DiaNoOperado[]
@@ -245,6 +246,10 @@ model ReglaNotificacion {
   // cada hora y compara contra esto (ver app/api/cron/resumen-operativos).
   horaEnvio Int?
   activo    Boolean             @default(true)
+  // Solo aplica a los avisos horarios recurrentes (RESUMEN_VEHICULOS_OPERATIVOS,
+  // DEVOLUCION_SIN_ENVIAR): última vez que efectivamente se mandó, para que un
+  // reintento de Vercel dentro de la misma franja horaria no duplique el aviso.
+  ultimoEnvioEn DateTime?
   createdAt DateTime            @default(now())
   updatedAt DateTime            @updatedAt
 
@@ -270,6 +275,24 @@ model Notificacion {
 
   @@index([usuarioId, leida])
   @@index([empresaId])
+}
+
+// Registro de intentos de envío por WhatsApp/Email que fallaron (proveedor
+// no configurado, sin teléfono/email, error del proveedor) — enviarPorCanalesConfigurados
+// los descartaba en silencio antes; esto le da visibilidad al admin en
+// /notificaciones sin convertir Notificacion (que alimenta la campanita) en
+// un log de canales que no son EN_APP.
+model NotificacionFallo {
+  id           String            @id @default(cuid())
+  empresaId    String
+  empresa      Empresa           @relation(fields: [empresaId], references: [id])
+  tipo         TipoNotificacion
+  canal        CanalNotificacion
+  destinatario String
+  motivo       String
+  createdAt    DateTime          @default(now())
+
+  @@index([empresaId, createdAt])
 }
 
 // ---------------------------------------------------------------------------

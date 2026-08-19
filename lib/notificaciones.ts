@@ -150,11 +150,17 @@ export async function enviarPorCanalesConfigurados(
   mensaje: string,
   href?: string
 ) {
-  await Promise.all([
-    ...destinatarios.flatMap((u) => [
-      ...(canales.includes("WHATSAPP") ? [enviarWhatsapp(u.telefono, mensaje)] : []),
-      ...(canales.includes("EMAIL") ? [enviarEmail(u.email, asuntoEmail, mensaje)] : []),
-    ]),
+  const envios = destinatarios.flatMap((u) => [
+    ...(canales.includes("WHATSAPP")
+      ? [enviarWhatsapp(u.telefono, mensaje).then((resultado) => ({ canal: "WHATSAPP" as const, destinatario: u.telefono, resultado }))]
+      : []),
+    ...(canales.includes("EMAIL")
+      ? [enviarEmail(u.email, asuntoEmail, mensaje).then((resultado) => ({ canal: "EMAIL" as const, destinatario: u.email, resultado }))]
+      : []),
+  ]);
+
+  const [resultadosEnvio] = await Promise.all([
+    Promise.all(envios),
     ...(canales.includes("EN_APP") && destinatarios.length > 0
       ? [
           prisma.notificacion.createMany({
@@ -170,6 +176,25 @@ export async function enviarPorCanalesConfigurados(
         ]
       : []),
   ]);
+
+  // enviarWhatsapp/enviarEmail son best-effort y nunca tiran excepción — sin
+  // esto, un fallo (sin proveedor configurado, sin teléfono/email, error del
+  // proveedor) quedaba solo en el log del servidor y nadie se enteraba.
+  const fallos: { canal: CanalNotificacion; destinatario: string; motivo: string }[] = [];
+  for (const envio of resultadosEnvio) {
+    if (!envio.resultado.enviado) {
+      fallos.push({
+        canal: envio.canal,
+        destinatario: envio.destinatario?.trim() || "(sin dato)",
+        motivo: envio.resultado.motivo,
+      });
+    }
+  }
+  if (fallos.length > 0) {
+    await prisma.notificacionFallo.createMany({
+      data: fallos.map((f) => ({ empresaId, tipo, ...f })),
+    });
+  }
 }
 
 /**

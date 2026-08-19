@@ -62,9 +62,17 @@ export async function descontarStockYVerificarMinimo(
   articuloPanolId: string,
   cantidadUsada: number
 ) {
-  const articulo = await prisma.articuloPanol.update({
-    where: { id: articuloPanolId },
-    data: { stockActual: { decrement: cantidadUsada } },
+  const articulo = await prisma.$transaction(async (tx) => {
+    const actual = await tx.articuloPanol.findUniqueOrThrow({ where: { id: articuloPanolId } });
+    if (actual.stockActual < cantidadUsada) {
+      throw new Error(
+        `No hay stock suficiente de "${actual.nombre}": quedan ${actual.stockActual}, se pidieron ${cantidadUsada}.`
+      );
+    }
+    return tx.articuloPanol.update({
+      where: { id: articuloPanolId },
+      data: { stockActual: { decrement: cantidadUsada } },
+    });
   });
 
   if (articulo.stockActual > articulo.stockMinimo) return;

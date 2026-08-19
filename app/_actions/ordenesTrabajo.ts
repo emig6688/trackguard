@@ -653,6 +653,15 @@ export async function agregarRepuesto(
   const articuloPanolId = parsed.articuloPanolId || undefined;
   const otItemPreventivoId = parsed.otItemPreventivoId || undefined;
 
+  // Si el repuesto sale del pañol, se descuenta el stock ANTES de crear el
+  // registro: si no hay stock suficiente, descontarStockYVerificarMinimo
+  // tira error y no queda un OTRepuesto huérfano sin stock descontado.
+  let mensaje: string | undefined;
+  if (articuloPanolId) {
+    await descontarStockYVerificarMinimo(prisma, user.empresaId!, articuloPanolId, parsed.cantidad);
+    mensaje = `Se usó ${parsed.cantidad} de ${parsed.descripcion} del pañol.`;
+  }
+
   await prisma.oTRepuesto.create({
     data: {
       empresaId: user.empresaId!,
@@ -664,12 +673,6 @@ export async function agregarRepuesto(
       otItemPreventivoId,
     },
   });
-
-  let mensaje: string | undefined;
-  if (articuloPanolId) {
-    await descontarStockYVerificarMinimo(prisma, user.empresaId!, articuloPanolId, parsed.cantidad);
-    mensaje = `Se usó ${parsed.cantidad} de ${parsed.descripcion} del pañol.`;
-  }
 
   revalidatePath(`/ordenes-trabajo/${otId}`);
   revalidatePath("/panol");
