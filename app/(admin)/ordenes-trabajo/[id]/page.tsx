@@ -266,7 +266,15 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
 
       {!soloLectura && (
         <OTAcciones
-          ot={ot}
+          ot={{
+            id: ot.id,
+            estado: ot.estado,
+            asignadoAId: ot.asignadoAId,
+            origen: ot.origen,
+            prioridad: ot.prioridad,
+            areaReparacion: ot.areaReparacion,
+            fechaEstimadaFinalizacion: ot.fechaEstimadaFinalizacion,
+          }}
           rol={session.rol}
           userId={session.id}
           mecanicos={mecanicos}
@@ -277,7 +285,24 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
       {ot.itemsPreventivos.length > 0 && (
         <ItemsPreventivosForm
           otId={ot.id}
-          items={ot.itemsPreventivos}
+          items={ot.itemsPreventivos.map((item) => ({
+            id: item.id,
+            titulo: item.titulo,
+            categoria: item.categoria,
+            resultado: item.resultado,
+            observacion: item.observacion,
+            archivo: item.archivo ? { url: item.archivo.url } : null,
+            ordenesCompra: item.ordenesCompra.map((oc) => ({
+              id: oc.id,
+              numero: oc.numero,
+              items: oc.items.map((i) => ({ descripcion: i.descripcion })),
+            })),
+            repuestos: item.repuestos.map((r) => ({
+              id: r.id,
+              descripcion: r.descripcion,
+              cantidad: r.cantidad,
+            })),
+          }))}
           puedeGenerarOC={puedeGenerarOC}
           articulosPanol={articulosPanol}
           montoAutorizacionCompra={empresa.montoAutorizacionCompra?.toString() ?? null}
