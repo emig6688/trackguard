@@ -141,12 +141,32 @@ export async function horasEquipoFrioEnPeriodo(
 
 export type ResultadoChecklistObligatorio = { bloqueado: false } | { bloqueado: true; motivo: string };
 
+export const MOTIVO_CHECKLIST_PENDIENTE =
+  "Tenés que completar el checklist pre-salida de hoy antes de continuar.";
+
 /**
- * Si la empresa activó "checklist obligatorio" (regla CHECKLIST_NO_REALIZADO
- * activa en /notificaciones) y el chofer todavía no hizo el checklist
- * pre-salida de hoy, bloquea la acción y avisa a los roles configurados —
- * así el encargado se entera de que alguien intentó saltearse el checklist.
- * Si la regla no está activa, nunca bloquea (comportamiento actual).
+ * true si la empresa activó "checklist obligatorio" (regla
+ * CHECKLIST_NO_REALIZADO activa en /notificaciones) y el chofer todavía no
+ * hizo el checklist pre-salida de hoy. Sin efectos secundarios — para
+ * gatear la UI (mostrar las demás opciones deshabilitadas, impedir cargar
+ * un formulario) antes de que el chofer llegue a intentar la acción.
+ */
+export async function checklistObligatorioPendiente(
+  prisma: ScopedPrismaClient,
+  empresaId: string,
+  choferId: string
+): Promise<boolean> {
+  const regla = await obtenerReglaNotificacion(prisma, empresaId, "CHECKLIST_NO_REALIZADO");
+  if (!regla.activo) return false;
+  return !(await choferHizoChecklistHoy(prisma, choferId));
+}
+
+/**
+ * Mismo chequeo que checklistObligatorioPendiente, pero además avisa a los
+ * roles configurados cuando bloquea — pensado como último resguardo dentro
+ * de la propia acción del servidor (por si el chofer la dispara sin pasar
+ * por la UI ya gateada, o la regla cambió mientras tenía la página
+ * abierta), no como el mecanismo principal para evitar el intento.
  */
 export async function verificarChecklistDelDia(
   prisma: ScopedPrismaClient,
@@ -175,6 +195,6 @@ export async function verificarChecklistDelDia(
 
   return {
     bloqueado: true,
-    motivo: "Tenés que completar el checklist pre-salida de hoy antes de continuar. Volvé al inicio y hacé el checklist primero.",
+    motivo: `${MOTIVO_CHECKLIST_PENDIENTE} Volvé al inicio y hacé el checklist primero.`,
   };
 }

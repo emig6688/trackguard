@@ -5,8 +5,28 @@ import { CircleCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cerrarRutaSinNovedades } from "@/app/_actions/eventosRuta";
 
-export function SinNovedadesForm({ vehiculos }: { vehiculos: { id: string; patente: string }[] }) {
+export function SinNovedadesForm({
+  vehiculos,
+  bloqueado,
+  motivo,
+}: {
+  vehiculos: { id: string; patente: string }[];
+  bloqueado?: boolean;
+  motivo?: string;
+}) {
   const [state, formAction, pending] = useActionState(cerrarRutaSinNovedades, undefined);
+
+  if (bloqueado) {
+    return (
+      <div className="space-y-2 rounded-lg border border-warning/40 bg-warning/5 p-4 text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <CircleCheck className="size-5 shrink-0 opacity-50" strokeWidth={2} />
+          <p className="font-medium opacity-50">Cerrar ruta sin novedades</p>
+        </div>
+        <p className="text-sm">{motivo}</p>
+      </div>
+    );
+  }
 
   return (
     <form
