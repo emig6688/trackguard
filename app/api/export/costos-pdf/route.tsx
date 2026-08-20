@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { requireSession } from "@/lib/permisos";
 import { calcularCostosMensuales, calcularCostosPorVehiculo, type TipoCostoMensual } from "@/lib/costos";
+import { rangoExportPorDefecto } from "@/lib/export-rango";
 import { ReporteCostosDocument } from "@/lib/pdf/reporte-costos";
 
 const TIPOS_VALIDOS: TipoCostoMensual[] = ["TOTAL", "COMBUSTIBLE", "GASTOS"];
@@ -18,11 +19,12 @@ export async function GET(request: Request) {
     ? (tipoRaw as TipoCostoMensual)
     : "TOTAL";
   const vehiculoId = searchParams.get("vehiculo") || undefined;
+  const filtro = rangoExportPorDefecto(searchParams);
 
   const [serieMensual, vehiculo, porVehiculo] = await Promise.all([
     calcularCostosMensuales(prisma, { tipo, vehiculoId }),
     vehiculoId ? prisma.vehiculo.findUnique({ where: { id: vehiculoId } }) : Promise.resolve(null),
-    calcularCostosPorVehiculo(prisma, {}),
+    calcularCostosPorVehiculo(prisma, filtro),
   ]);
 
   const buffer = await renderToBuffer(
@@ -31,6 +33,7 @@ export async function GET(request: Request) {
       vehiculoPatente={vehiculo?.patente ?? null}
       serieMensual={serieMensual}
       porVehiculo={porVehiculo}
+      periodo={filtro}
     />
   );
 

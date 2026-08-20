@@ -39,6 +39,10 @@ function formatearMoneda(n: number) {
   return `$${Math.round(n).toLocaleString("es-AR")}`;
 }
 
+function formatearFecha(fecha: Date) {
+  return fecha.toLocaleDateString("es-AR");
+}
+
 function formatearMes(mes: string) {
   const [anio, mesNum] = mes.split("-").map(Number);
   const fecha = new Date(anio, mesNum - 1, 1);
@@ -70,11 +74,13 @@ export function ReporteCostosDocument({
   vehiculoPatente,
   serieMensual,
   porVehiculo,
+  periodo,
 }: {
   tipo: TipoCostoMensual;
   vehiculoPatente: string | null;
   serieMensual: CostoMensual[];
   porVehiculo: CostoPorVehiculo[];
+  periodo: { desde: Date; hasta: Date };
 }) {
   const max = Math.max(1, ...serieMensual.map((m) => m.monto));
   const analisis = analizar(serieMensual);
@@ -120,7 +126,9 @@ export function ReporteCostosDocument({
 
         {!vehiculoPatente && (
           <View style={styles.section}>
-            <Text style={styles.h2}>Costos por vehículo (histórico completo)</Text>
+            <Text style={styles.h2}>
+              Costos por vehículo ({formatearFecha(periodo.desde)} – {formatearFecha(periodo.hasta)})
+            </Text>
             <View style={styles.table}>
               <View style={styles.trHead}>
                 <Text style={styles.th}>Vehículo</Text>

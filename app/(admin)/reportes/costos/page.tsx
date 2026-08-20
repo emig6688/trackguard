@@ -70,6 +70,8 @@ export default async function CostosPage({
   const queryMensual = new URLSearchParams();
   queryMensual.set("tipo", tipoMensualValido);
   if (vehiculoMensual) queryMensual.set("vehiculo", vehiculoMensual);
+  if (desde) queryMensual.set("desde", desde);
+  if (hasta) queryMensual.set("hasta", hasta);
 
   return (
     <div className="space-y-8">

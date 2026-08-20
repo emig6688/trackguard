@@ -1,5 +1,6 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import type { AreaReparacionOT, TipoIntervaloPlan } from "@/app/generated/prisma/client";
+import { ESTADO_VENCIMIENTO_LABEL, type EstadoVencimiento } from "@/lib/vencimientos";
 
 const AREA_LABEL: Record<AreaReparacionOT, string> = {
   FRENOS: "Frenos",
@@ -39,7 +40,15 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 16, fontWeight: 700 },
   statLabel: { fontSize: 8, color: "#6b7280" },
   footer: { position: "absolute", bottom: 24, left: 36, right: 36, fontSize: 8, color: "#9ca3af" },
+  estadoVencido: { color: "#b91c1c", fontWeight: 700 },
+  estadoProximo: { color: "#b45309", fontWeight: 700 },
 });
+
+function estiloEstado(estado: EstadoVencimiento) {
+  if (estado === "VENCIDO") return styles.estadoVencido;
+  if (estado === "PROXIMO") return styles.estadoProximo;
+  return {};
+}
 
 function formatearFecha(fecha: Date | null | undefined) {
   return fecha ? fecha.toLocaleDateString("es-AR") : "—";
@@ -69,9 +78,15 @@ export type ReporteTrazabilidadData = {
     intervaloHoras: number | null;
     kmUltimoService: number | null;
     fechaUltimoService: Date | null;
+    horasUltimoService: number | null;
   }[];
   checklists: { okCount: number; conFallasCount: number; presalidaCount: number };
-  documentosVigentes: { tipoNombre: string; numeroDocumento: string | null; fechaVencimiento: Date }[];
+  documentosVigentes: {
+    tipoNombre: string;
+    numeroDocumento: string | null;
+    fechaVencimiento: Date;
+    estado: EstadoVencimiento;
+  }[];
   horasEquipoFrioPeriodo: number;
   eventosRutaPeriodo: number;
 };
@@ -163,6 +178,7 @@ export function ReporteTrazabilidadDocument({ data }: { data: ReporteTrazabilida
                 <Text style={styles.th}>Plan</Text>
                 <Text style={styles.th}>Intervalo</Text>
                 <Text style={styles.th}>Último service (km)</Text>
+                <Text style={styles.th}>Último service (horas)</Text>
                 <Text style={styles.th}>Último service (fecha)</Text>
               </View>
               {planesPreventivos.map((p, i) => (
@@ -178,6 +194,7 @@ export function ReporteTrazabilidadDocument({ data }: { data: ReporteTrazabilida
                     {p.intervaloHoras ? ` · ${p.intervaloHoras} hs` : ""}
                   </Text>
                   <Text style={styles.td}>{p.kmUltimoService?.toLocaleString("es-AR") ?? "—"}</Text>
+                  <Text style={styles.td}>{p.horasUltimoService?.toLocaleString("es-AR") ?? "—"}</Text>
                   <Text style={styles.td}>{formatearFecha(p.fechaUltimoService)}</Text>
                 </View>
               ))}
@@ -206,24 +223,28 @@ export function ReporteTrazabilidadDocument({ data }: { data: ReporteTrazabilida
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.h2}>Documentación vigente</Text>
+          <Text style={styles.h2}>Documentación</Text>
           {documentosVigentes.length > 0 ? (
             <View style={styles.table}>
               <View style={styles.trHead}>
                 <Text style={styles.th}>Tipo</Text>
                 <Text style={styles.th}>Número</Text>
                 <Text style={styles.th}>Vencimiento</Text>
+                <Text style={styles.th}>Estado</Text>
               </View>
               {documentosVigentes.map((d, i) => (
                 <View key={i} style={styles.tr}>
                   <Text style={styles.td}>{d.tipoNombre}</Text>
                   <Text style={styles.td}>{d.numeroDocumento ?? "—"}</Text>
                   <Text style={styles.td}>{formatearFecha(d.fechaVencimiento)}</Text>
+                  <Text style={[styles.td, estiloEstado(d.estado)]}>
+                    {ESTADO_VENCIMIENTO_LABEL[d.estado]}
+                  </Text>
                 </View>
               ))}
             </View>
           ) : (
-            <Text style={styles.descripcion}>Sin documentación vigente cargada.</Text>
+            <Text style={styles.descripcion}>Sin documentación cargada.</Text>
           )}
         </View>
 

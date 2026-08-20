@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { requireSession } from "@/lib/permisos";
 import { horasEquipoFrioEnPeriodo } from "@/lib/checklist";
+import { calcularEstadoVencimiento } from "@/lib/vencimientos";
 import { ReporteTrazabilidadDocument } from "@/lib/pdf/reporte-trazabilidad";
 
 // Render de PDF con varias secciones puede acercarse al límite por defecto.
@@ -92,6 +93,7 @@ export async function GET(request: Request) {
           intervaloHoras: p.intervaloHoras,
           kmUltimoService: p.kmUltimoService,
           fechaUltimoService: p.fechaUltimoService,
+          horasUltimoService: p.horasUltimoService,
         })),
         checklists: {
           okCount: checklistsPeriodo.filter((c) => c.resultadoGeneral === "OK").length,
@@ -102,6 +104,7 @@ export async function GET(request: Request) {
           tipoNombre: d.tipoDocumento.nombre,
           numeroDocumento: d.numeroDocumento,
           fechaVencimiento: d.fechaVencimiento,
+          estado: calcularEstadoVencimiento(d.fechaVencimiento, d.tipoDocumento.diasAlertaDefault),
         })),
         horasEquipoFrioPeriodo,
         eventosRutaPeriodo,

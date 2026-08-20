@@ -4,7 +4,8 @@
 
 Copiar `.env.example` como referencia y cargar en Vercel (Project Settings → Environment Variables):
 
-- `DATABASE_URL` — Postgres (Neon, Supabase, RDS, etc.)
+- `DATABASE_URL` — Postgres (Neon, Supabase, RDS, etc.). Si la base está detrás de un connection pooler (Supabase, PgBouncer), esta es la connection string **pooleada** (puerto 6543 en Supabase, con `?pgbouncer=true`) — la usa la app en runtime.
+- `DIRECT_URL` — **obligatoria si `DATABASE_URL` usa un pooler** (ver arriba). Connection string **directa** (puerto 5432), la usa `prisma.config.ts` para que `prisma migrate deploy` funcione — contra un pooler en modo transacción, las migraciones fallan sin esto. Sin pooler (Postgres directo), no hace falta.
 - `AUTH_SECRET` — generar con `npx auth secret`
 - `CRON_SECRET` — cualquier valor random largo. **Obligatorio**: sin esto, los 5 endpoints `/api/cron/*` devuelven 401 siempre (fail-closed a propósito).
 - `BLOB_READ_WRITE_TOKEN` — crear un Blob Store desde el dashboard de Vercel (Storage → Create Database → Blob) y copiar el token que genera. Sin esto, la subida de archivos (fotos de checklist/ticket, documentos, comprobantes) falla.

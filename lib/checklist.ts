@@ -3,9 +3,29 @@ import type { ScopedPrismaClient } from "@/lib/tenant-prisma";
 import { obtenerReglaNotificacion, enviarPorCanalesConfigurados } from "@/lib/notificaciones";
 import { usuariosDeEmpresaPorRol } from "@/lib/permisos";
 
+// Argentina no usa horario de verano desde 2009 — UTC-3 fijo todo el año.
+const HORAS_DESFASE_ARGENTINA = 3;
+
+/**
+ * "Hoy" en huso horario de Argentina, no del servidor. En Vercel las
+ * funciones corren en UTC: sin este ajuste, un chofer que hace el
+ * checklist de pre-salida en la mañana y cierra la ruta entre las 21:00 y
+ * las 23:59 (hora Argentina) cae del lado de "mañana" para el servidor
+ * (ya es el día siguiente en UTC) y el emparejamiento pre-salida/cierre se
+ * pierde en silencio — nunca suma horas y puede bloquear el cierre de ruta
+ * si el checklist obligatorio está activo.
+ */
 export function inicioDeHoy(): Date {
-  const ahora = new Date();
-  return new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  const msArgentina = Date.now() - HORAS_DESFASE_ARGENTINA * 60 * 60 * 1000;
+  const argentina = new Date(msArgentina);
+  const medianocheUTC = Date.UTC(argentina.getUTCFullYear(), argentina.getUTCMonth(), argentina.getUTCDate());
+  return new Date(medianocheUTC + HORAS_DESFASE_ARGENTINA * 60 * 60 * 1000);
+}
+
+/** Clave "YYYY-MM-DD" del día calendario en Argentina para una fecha dada. */
+function diaArgentina(fecha: Date): string {
+  const argentina = new Date(fecha.getTime() - HORAS_DESFASE_ARGENTINA * 60 * 60 * 1000);
+  return argentina.toISOString().slice(0, 10);
 }
 
 export async function choferHizoChecklistHoy(prisma: ScopedPrismaClient, choferId: string): Promise<boolean> {
@@ -95,7 +115,7 @@ export async function horasEquipoFrioEnPeriodo(
 
   const porDiaChofer = new Map<string, { presalida?: Date; cierre?: Date }>();
   for (const c of checklists) {
-    const dia = c.fechaHora.toISOString().slice(0, 10);
+    const dia = diaArgentina(c.fechaHora);
     const clave = `${dia}_${c.choferId}`;
     const entrada = porDiaChofer.get(clave) ?? {};
     if (c.momento === "PRESALIDA" && !entrada.presalida) entrada.presalida = c.fechaHora;
@@ -103,7 +123,7 @@ export async function horasEquipoFrioEnPeriodo(
     porDiaChofer.set(clave, entrada);
   }
   for (const e of eventos) {
-    const dia = e.fechaHora.toISOString().slice(0, 10);
+    const dia = diaArgentina(e.fechaHora);
     const clave = `${dia}_${e.choferId}`;
     const entrada = porDiaChofer.get(clave) ?? {};
     if (!entrada.cierre) entrada.cierre = e.fechaHora;

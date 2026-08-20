@@ -17,9 +17,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: {},
       },
       authorize: async (credentials, request) => {
-        const identificador = (credentials?.usuario as string | undefined)?.trim();
+        const identificadorCrudo = (credentials?.usuario as string | undefined)?.trim();
         const password = credentials?.password as string | undefined;
-        if (!identificador || !password) return null;
+        if (!identificadorCrudo || !password) return null;
+
+        // Clave de rate-limit normalizada igual que la búsqueda de usuario
+        // (DNI sin puntos/espacios/guiones, email en minúsculas) — si se
+        // usara el string crudo, alguien podía probar la misma cuenta
+        // variando el formato del DNI ("20.123.456", "20123456", "20-123-456")
+        // en cada intento y nunca acumular los 6 fallos porque cada variante
+        // contaba como un identificador distinto.
+        const identificador = identificadorCrudo.includes("@")
+          ? identificadorCrudo.toLowerCase()
+          : normalizarDni(identificadorCrudo);
 
         const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "sin-ip";
         const registrarIntentoFallido = () => prisma.intentoLogin.create({ data: { identificador, ip } });
@@ -36,7 +46,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (intentosRecientes >= MAX_INTENTOS) return null;
 
         const usuario = await prisma.usuario.findFirst({
-          where: { OR: [{ email: identificador }, { dni: normalizarDni(identificador) }] },
+          where: { OR: [{ email: identificador }, { dni: identificador }] },
           include: { empresa: true },
         });
         if (!usuario || !usuario.activo) {
