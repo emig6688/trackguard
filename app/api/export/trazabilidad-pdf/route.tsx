@@ -30,20 +30,20 @@ export async function GET(request: Request) {
   const vehiculo = await prisma.vehiculo.findUnique({ where: { id: vehiculoId } });
   if (!vehiculo) return NextResponse.json({ error: "Vehículo no encontrado" }, { status: 404 });
 
-  const [otsCompletadas, planesPreventivos, checklistsPeriodo, documentosVigentes, horasEquipoFrioPeriodo, eventosRutaPeriodo] =
+  const [otsPeriodo, planesPreventivos, checklistsPeriodo, documentosVigentes, horasEquipoFrioPeriodo, eventosRutaPeriodo] =
     await Promise.all([
       prisma.ordenDeTrabajo.findMany({
         where: {
           vehiculoId,
           eliminadoEn: null,
-          estado: "COMPLETADA",
-          fechaFin: { gte: desde, lte: hasta },
+          createdAt: { gte: desde, lte: hasta },
         },
         include: {
           repuestos: { where: { eliminadoEn: null } },
           facturas: { where: { eliminadoEn: null } },
+          itemsPreventivos: { select: { planMantenimiento: { select: { tipoIntervalo: true } } } },
         },
-        orderBy: { fechaFin: "desc" },
+        orderBy: { createdAt: "desc" },
       }),
       prisma.planMantenimiento.findMany({
         where: { vehiculoId, activo: true, eliminadoEn: null },
@@ -73,11 +73,15 @@ export async function GET(request: Request) {
           horasEquipoFrio: vehiculo.horasEquipoFrio,
         },
         periodo: { desde, hasta },
-        mantenimientos: otsCompletadas.map((ot) => ({
+        mantenimientos: otsPeriodo.map((ot) => ({
           numero: ot.numero,
           titulo: ot.titulo,
           areaReparacion: ot.areaReparacion,
+          origen: ot.origen,
+          estado: ot.estado,
+          fechaAlta: ot.createdAt,
           fechaFin: ot.fechaFin,
+          tiposIntervalo: [...new Set(ot.itemsPreventivos.map((i) => i.planMantenimiento.tipoIntervalo))],
           totalRepuestos: ot.repuestos.reduce(
             (acc, r) => acc + (r.costoUnitario ? Number(r.costoUnitario) * r.cantidad : 0),
             0

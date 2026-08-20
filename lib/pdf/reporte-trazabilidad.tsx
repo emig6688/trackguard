@@ -1,5 +1,5 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
-import type { AreaReparacionOT, TipoIntervaloPlan } from "@/app/generated/prisma/client";
+import type { AreaReparacionOT, EstadoOT, OrigenOT, TipoIntervaloPlan } from "@/app/generated/prisma/client";
 import { ESTADO_VENCIMIENTO_LABEL, type EstadoVencimiento } from "@/lib/vencimientos";
 
 const AREA_LABEL: Record<AreaReparacionOT, string> = {
@@ -18,6 +18,22 @@ const INTERVALO_LABEL: Record<TipoIntervaloPlan, string> = {
   TIEMPO: "Tiempo",
   HORAS: "Horas de frío",
   AMBOS: "Km y/o tiempo",
+};
+
+const INTERVALO_CORTO: Record<TipoIntervaloPlan, string> = {
+  KM: "Km",
+  TIEMPO: "Días",
+  HORAS: "Horas",
+  AMBOS: "Km/Días/Horas",
+};
+
+const ESTADO_OT_LABEL: Record<EstadoOT, string> = {
+  PENDIENTE_APROBACION: "Pendiente de aprobación",
+  APROBADA: "Aprobada",
+  EN_PROGRESO: "En progreso",
+  DERIVADA_EXTERNO: "Derivada a externo",
+  COMPLETADA: "Completada",
+  CANCELADA: "Cancelada",
 };
 
 const styles = StyleSheet.create({
@@ -58,6 +74,16 @@ function formatearMonto(monto: number) {
   return `$${Math.round(monto).toLocaleString("es-AR")}`;
 }
 
+// Para preventivas indica qué disparó el mantenimiento (km/días/horas) según
+// los planes que agrupó la OT; para correctivas (checklist, evento de ruta,
+// carga manual) ese dato no aplica, solo la fecha.
+function formatearAlta(fechaAlta: Date, origen: OrigenOT, tiposIntervalo: TipoIntervaloPlan[]) {
+  const fecha = formatearFecha(fechaAlta);
+  if (origen !== "PREVENTIVO" || tiposIntervalo.length === 0) return fecha;
+  const tipos = [...new Set(tiposIntervalo.map((t) => INTERVALO_CORTO[t]))].join(", ");
+  return `${fecha} (${tipos})`;
+}
+
 export type ReporteTrazabilidadData = {
   vehiculo: { patente: string; marca: string; modelo: string; kmActual: number; horasEquipoFrio: number | null };
   periodo: { desde: Date; hasta: Date };
@@ -65,6 +91,10 @@ export type ReporteTrazabilidadData = {
     numero: string;
     titulo: string;
     areaReparacion: AreaReparacionOT | null;
+    origen: OrigenOT;
+    estado: EstadoOT;
+    fechaAlta: Date;
+    tiposIntervalo: TipoIntervaloPlan[];
     fechaFin: Date | null;
     totalRepuestos: number;
     totalFacturas: number;
@@ -135,22 +165,28 @@ export function ReporteTrazabilidadDocument({ data }: { data: ReporteTrazabilida
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.h2}>Mantenimientos completados en el período</Text>
+          <Text style={styles.h2}>Mantenimientos en el período</Text>
           {mantenimientos.length > 0 ? (
             <View style={styles.table}>
               <View style={styles.trHead}>
                 <Text style={styles.th}>OT</Text>
-                <Text style={styles.th}>Título</Text>
+                <Text style={[styles.th, { flex: 1.6 }]}>Título</Text>
                 <Text style={styles.th}>Área</Text>
-                <Text style={styles.th}>Fecha fin</Text>
+                <Text style={[styles.th, { flex: 1.4 }]}>Alta</Text>
+                <Text style={[styles.th, { flex: 1.2 }]}>Estado</Text>
+                <Text style={styles.th}>Finalización</Text>
                 <Text style={styles.th}>Repuestos</Text>
                 <Text style={styles.th}>Facturas</Text>
               </View>
               {mantenimientos.map((m, i) => (
                 <View key={i} style={styles.tr}>
                   <Text style={styles.td}>{m.numero}</Text>
-                  <Text style={styles.td}>{m.titulo}</Text>
+                  <Text style={[styles.td, { flex: 1.6 }]}>{m.titulo}</Text>
                   <Text style={styles.td}>{m.areaReparacion ? AREA_LABEL[m.areaReparacion] : "—"}</Text>
+                  <Text style={[styles.td, { flex: 1.4 }]}>
+                    {formatearAlta(m.fechaAlta, m.origen, m.tiposIntervalo)}
+                  </Text>
+                  <Text style={[styles.td, { flex: 1.2 }]}>{ESTADO_OT_LABEL[m.estado]}</Text>
                   <Text style={styles.td}>{formatearFecha(m.fechaFin)}</Text>
                   <Text style={styles.td}>{formatearMonto(m.totalRepuestos)}</Text>
                   <Text style={styles.td}>{formatearMonto(m.totalFacturas)}</Text>
@@ -158,15 +194,17 @@ export function ReporteTrazabilidadDocument({ data }: { data: ReporteTrazabilida
               ))}
               <View style={styles.tr}>
                 <Text style={[styles.td, { fontWeight: 700 }]}>Total</Text>
+                <Text style={[styles.td, { flex: 1.6 }]} />
                 <Text style={styles.td} />
-                <Text style={styles.td} />
+                <Text style={[styles.td, { flex: 1.4 }]} />
+                <Text style={[styles.td, { flex: 1.2 }]} />
                 <Text style={styles.td} />
                 <Text style={[styles.td, { fontWeight: 700 }]}>{formatearMonto(totalRepuestos)}</Text>
                 <Text style={[styles.td, { fontWeight: 700 }]}>{formatearMonto(totalFacturas)}</Text>
               </View>
             </View>
           ) : (
-            <Text style={styles.descripcion}>Sin órdenes de trabajo completadas en el período.</Text>
+            <Text style={styles.descripcion}>Sin órdenes de trabajo generadas en el período.</Text>
           )}
         </View>
 
