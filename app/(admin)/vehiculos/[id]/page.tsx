@@ -3,20 +3,23 @@ import { requireEmpresa } from "@/lib/permisos";
 import { actualizarVehiculo, darDeBajaVehiculo, reactivarVehiculo } from "@/app/_actions/vehiculos";
 import { DocumentosPanel } from "@/components/documentos/documentos-panel";
 import { PlanesPanel } from "@/components/planes-mantenimiento/planes-panel";
+import { TrazabilidadPanel } from "@/components/vehiculos/trazabilidad-panel";
 import { BajaPanel } from "@/components/baja-panel";
 import { BackButton } from "@/components/back-button";
 import { EliminarButton } from "@/components/eliminar-button";
 import { DisponibilidadToggle } from "@/components/vehiculos/disponibilidad-toggle";
 import { vehiculosEnTallerExterno } from "@/lib/disponibilidad";
-import { buttonVariants } from "@/components/ui/button";
 import { VehiculoForm } from "../nuevo/vehiculo-form";
 
 export default async function VehiculoDetallePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ desde?: string; hasta?: string }>;
 }) {
   const { id } = await params;
+  const { desde, hasta } = await searchParams;
   const { user, prisma } = await requireEmpresa();
   const vehiculo = await prisma.vehiculo.findUnique({ where: { id, eliminadoEn: null } });
   if (!vehiculo) notFound();
@@ -33,12 +36,6 @@ export default async function VehiculoDetallePage({
             {vehiculo.patente} — {vehiculo.marca} {vehiculo.modelo}
           </h1>
           <div className="flex items-center gap-2">
-            <a
-              href={`/api/export/trazabilidad-pdf?vehiculoId=${vehiculo.id}`}
-              className={buttonVariants({ variant: "outline", size: "sm" })}
-            >
-              Reporte de trazabilidad
-            </a>
             <DisponibilidadToggle
               vehiculoId={vehiculo.id}
               disponible={vehiculo.disponible}
@@ -63,6 +60,8 @@ export default async function VehiculoDetallePage({
           submitLabel="Guardar cambios"
         />
       </div>
+
+      <TrazabilidadPanel vehiculoId={vehiculo.id} desde={desde} hasta={hasta} />
 
       <PlanesPanel vehiculoId={vehiculo.id} redirectPath={`/vehiculos/${vehiculo.id}`} />
 

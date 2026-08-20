@@ -3,20 +3,11 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { requireSession } from "@/lib/permisos";
 import { horasEquipoFrioEnPeriodo } from "@/lib/checklist";
 import { calcularEstadoVencimiento } from "@/lib/vencimientos";
+import { rangoExportPorDefecto } from "@/lib/export-rango";
 import { ReporteTrazabilidadDocument } from "@/lib/pdf/reporte-trazabilidad";
 
 // Render de PDF con varias secciones puede acercarse al límite por defecto.
 export const maxDuration = 60;
-
-// Sin rango explícito, se acota al último año — evitar exports sin límite
-// sobre vehículos con años de historial.
-function rangoPorDefecto(searchParams: URLSearchParams) {
-  const desdeRaw = searchParams.get("desde");
-  const hastaRaw = searchParams.get("hasta");
-  const hasta = hastaRaw ? new Date(hastaRaw) : new Date();
-  const desde = desdeRaw ? new Date(desdeRaw) : new Date(hasta.getFullYear() - 1, hasta.getMonth(), hasta.getDate());
-  return { desde, hasta };
-}
 
 export async function GET(request: Request) {
   const { prisma } = await requireSession();
@@ -25,29 +16,19 @@ export async function GET(request: Request) {
   const vehiculoId = searchParams.get("vehiculoId");
   if (!vehiculoId) return NextResponse.json({ error: "Falta el vehiculoId" }, { status: 400 });
 
-  const { desde, hasta } = rangoPorDefecto(searchParams);
+  const { desde, hasta } = rangoExportPorDefecto(searchParams);
 
   const vehiculo = await prisma.vehiculo.findUnique({ where: { id: vehiculoId } });
   if (!vehiculo) return NextResponse.json({ error: "Vehículo no encontrado" }, { status: 404 });
 
-  const [otsPeriodo, planesPreventivos, checklistsPeriodo, documentosVigentes, horasEquipoFrioPeriodo, eventosRutaPeriodo] =
+  const [otsPeriodo, checklistsPeriodo, documentosVigentes, horasEquipoFrioPeriodo, eventosRutaPeriodo] =
     await Promise.all([
       prisma.ordenDeTrabajo.findMany({
-        where: {
-          vehiculoId,
-          eliminadoEn: null,
-          createdAt: { gte: desde, lte: hasta },
-        },
+        where: { vehiculoId, eliminadoEn: null, createdAt: { gte: desde, lte: hasta } },
         include: {
-          repuestos: { where: { eliminadoEn: null } },
-          facturas: { where: { eliminadoEn: null } },
           itemsPreventivos: { select: { planMantenimiento: { select: { tipoIntervalo: true } } } },
         },
         orderBy: { createdAt: "desc" },
-      }),
-      prisma.planMantenimiento.findMany({
-        where: { vehiculoId, activo: true, eliminadoEn: null },
-        orderBy: { nombre: "asc" },
       }),
       prisma.checklistRealizado.findMany({
         where: { vehiculoId, fechaHora: { gte: desde, lte: hasta } },
@@ -62,6 +43,18 @@ export async function GET(request: Request) {
       prisma.eventoRuta.count({ where: { vehiculoId, fechaHora: { gte: desde, lte: hasta } } }),
     ]);
 
+  const mapearOt = (ot: (typeof otsPeriodo)[number]) => ({
+    numero: ot.numero,
+    titulo: ot.titulo,
+    areaReparacion: ot.areaReparacion,
+    estado: ot.estado,
+    fechaAlta: ot.createdAt,
+    fechaFin: ot.fechaFin,
+    tiposIntervalo: [...new Set(ot.itemsPreventivos.map((i) => i.planMantenimiento.tipoIntervalo))],
+  });
+  const mantenimientos = otsPeriodo.filter((ot) => ot.origen !== "PREVENTIVO").map(mapearOt);
+  const preventivos = otsPeriodo.filter((ot) => ot.origen === "PREVENTIVO").map(mapearOt);
+
   const buffer = await renderToBuffer(
     <ReporteTrazabilidadDocument
       data={{
@@ -73,32 +66,8 @@ export async function GET(request: Request) {
           horasEquipoFrio: vehiculo.horasEquipoFrio,
         },
         periodo: { desde, hasta },
-        mantenimientos: otsPeriodo.map((ot) => ({
-          numero: ot.numero,
-          titulo: ot.titulo,
-          areaReparacion: ot.areaReparacion,
-          origen: ot.origen,
-          estado: ot.estado,
-          fechaAlta: ot.createdAt,
-          fechaFin: ot.fechaFin,
-          tiposIntervalo: [...new Set(ot.itemsPreventivos.map((i) => i.planMantenimiento.tipoIntervalo))],
-          totalRepuestos: ot.repuestos.reduce(
-            (acc, r) => acc + (r.costoUnitario ? Number(r.costoUnitario) * r.cantidad : 0),
-            0
-          ),
-          totalFacturas: ot.facturas.reduce((acc, f) => acc + Number(f.monto), 0),
-        })),
-        planesPreventivos: planesPreventivos.map((p) => ({
-          nombre: p.nombre,
-          categoria: p.categoria,
-          tipoIntervalo: p.tipoIntervalo,
-          intervaloKm: p.intervaloKm,
-          intervaloDias: p.intervaloDias,
-          intervaloHoras: p.intervaloHoras,
-          kmUltimoService: p.kmUltimoService,
-          fechaUltimoService: p.fechaUltimoService,
-          horasUltimoService: p.horasUltimoService,
-        })),
+        mantenimientos,
+        preventivos,
         checklists: {
           okCount: checklistsPeriodo.filter((c) => c.resultadoGeneral === "OK").length,
           conFallasCount: checklistsPeriodo.filter((c) => c.resultadoGeneral === "CON_FALLAS").length,

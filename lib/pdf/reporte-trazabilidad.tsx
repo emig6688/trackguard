@@ -1,5 +1,5 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
-import type { AreaReparacionOT, EstadoOT, OrigenOT, TipoIntervaloPlan } from "@/app/generated/prisma/client";
+import type { AreaReparacionOT, EstadoOT, TipoIntervaloPlan } from "@/app/generated/prisma/client";
 import { ESTADO_VENCIMIENTO_LABEL, type EstadoVencimiento } from "@/lib/vencimientos";
 
 const AREA_LABEL: Record<AreaReparacionOT, string> = {
@@ -11,13 +11,6 @@ const AREA_LABEL: Record<AreaReparacionOT, string> = {
   NEUMATICOS: "Neumáticos",
   EQUIPO_FRIO: "Equipo de frío",
   OTRO: "Otro",
-};
-
-const INTERVALO_LABEL: Record<TipoIntervaloPlan, string> = {
-  KM: "Kilómetros",
-  TIEMPO: "Tiempo",
-  HORAS: "Horas de frío",
-  AMBOS: "Km y/o tiempo",
 };
 
 const INTERVALO_CORTO: Record<TipoIntervaloPlan, string> = {
@@ -70,46 +63,29 @@ function formatearFecha(fecha: Date | null | undefined) {
   return fecha ? fecha.toLocaleDateString("es-AR") : "—";
 }
 
-function formatearMonto(monto: number) {
-  return `$${Math.round(monto).toLocaleString("es-AR")}`;
+// Qué disparó el mantenimiento preventivo (km/días/horas), según los planes
+// que agrupó la OT — una OT preventiva puede agrupar varios planes con
+// distinto tipo de intervalo si vencieron el mismo día.
+function motivoTexto(tiposIntervalo: TipoIntervaloPlan[]) {
+  if (tiposIntervalo.length === 0) return "—";
+  return [...new Set(tiposIntervalo.map((t) => INTERVALO_CORTO[t]))].join(", ");
 }
 
-// Para preventivas indica qué disparó el mantenimiento (km/días/horas) según
-// los planes que agrupó la OT; para correctivas (checklist, evento de ruta,
-// carga manual) ese dato no aplica, solo la fecha.
-function formatearAlta(fechaAlta: Date, origen: OrigenOT, tiposIntervalo: TipoIntervaloPlan[]) {
-  const fecha = formatearFecha(fechaAlta);
-  if (origen !== "PREVENTIVO" || tiposIntervalo.length === 0) return fecha;
-  const tipos = [...new Set(tiposIntervalo.map((t) => INTERVALO_CORTO[t]))].join(", ");
-  return `${fecha} (${tipos})`;
-}
+type OtResumen = {
+  numero: string;
+  titulo: string;
+  areaReparacion: AreaReparacionOT | null;
+  estado: EstadoOT;
+  fechaAlta: Date;
+  tiposIntervalo: TipoIntervaloPlan[];
+  fechaFin: Date | null;
+};
 
 export type ReporteTrazabilidadData = {
   vehiculo: { patente: string; marca: string; modelo: string; kmActual: number; horasEquipoFrio: number | null };
   periodo: { desde: Date; hasta: Date };
-  mantenimientos: {
-    numero: string;
-    titulo: string;
-    areaReparacion: AreaReparacionOT | null;
-    origen: OrigenOT;
-    estado: EstadoOT;
-    fechaAlta: Date;
-    tiposIntervalo: TipoIntervaloPlan[];
-    fechaFin: Date | null;
-    totalRepuestos: number;
-    totalFacturas: number;
-  }[];
-  planesPreventivos: {
-    nombre: string;
-    categoria: string | null;
-    tipoIntervalo: TipoIntervaloPlan;
-    intervaloKm: number | null;
-    intervaloDias: number | null;
-    intervaloHoras: number | null;
-    kmUltimoService: number | null;
-    fechaUltimoService: Date | null;
-    horasUltimoService: number | null;
-  }[];
+  mantenimientos: OtResumen[];
+  preventivos: OtResumen[];
   checklists: { okCount: number; conFallasCount: number; presalidaCount: number };
   documentosVigentes: {
     tipoNombre: string;
@@ -127,15 +103,12 @@ export function ReporteTrazabilidadDocument({ data }: { data: ReporteTrazabilida
     vehiculo,
     periodo,
     mantenimientos,
-    planesPreventivos,
+    preventivos,
     checklists,
     documentosVigentes,
     horasEquipoFrioPeriodo,
     eventosRutaPeriodo,
   } = data;
-
-  const totalRepuestos = mantenimientos.reduce((acc, m) => acc + m.totalRepuestos, 0);
-  const totalFacturas = mantenimientos.reduce((acc, m) => acc + m.totalFacturas, 0);
 
   return (
     <Document>
@@ -165,80 +138,58 @@ export function ReporteTrazabilidadDocument({ data }: { data: ReporteTrazabilida
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.h2}>Mantenimientos en el período</Text>
+          <Text style={styles.h2}>Mantenimientos correctivos en el período</Text>
           {mantenimientos.length > 0 ? (
             <View style={styles.table}>
               <View style={styles.trHead}>
-                <Text style={styles.th}>OT</Text>
-                <Text style={[styles.th, { flex: 1.6 }]}>Título</Text>
-                <Text style={styles.th}>Área</Text>
-                <Text style={[styles.th, { flex: 1.4 }]}>Alta</Text>
-                <Text style={[styles.th, { flex: 1.2 }]}>Estado</Text>
-                <Text style={styles.th}>Finalización</Text>
-                <Text style={styles.th}>Repuestos</Text>
-                <Text style={styles.th}>Facturas</Text>
+                <Text style={[styles.th, { flex: 0.9 }]}>OT</Text>
+                <Text style={[styles.th, { flex: 2.2 }]}>Título</Text>
+                <Text style={[styles.th, { flex: 1.2 }]}>Área</Text>
+                <Text style={[styles.th, { flex: 1 }]}>Alta</Text>
+                <Text style={[styles.th, { flex: 1.3 }]}>Estado</Text>
+                <Text style={[styles.th, { flex: 1 }]}>Finalización</Text>
               </View>
               {mantenimientos.map((m, i) => (
                 <View key={i} style={styles.tr}>
-                  <Text style={styles.td}>{m.numero}</Text>
-                  <Text style={[styles.td, { flex: 1.6 }]}>{m.titulo}</Text>
-                  <Text style={styles.td}>{m.areaReparacion ? AREA_LABEL[m.areaReparacion] : "—"}</Text>
-                  <Text style={[styles.td, { flex: 1.4 }]}>
-                    {formatearAlta(m.fechaAlta, m.origen, m.tiposIntervalo)}
+                  <Text style={[styles.td, { flex: 0.9 }]}>{m.numero}</Text>
+                  <Text style={[styles.td, { flex: 2.2 }]}>{m.titulo}</Text>
+                  <Text style={[styles.td, { flex: 1.2 }]}>
+                    {m.areaReparacion ? AREA_LABEL[m.areaReparacion] : "—"}
                   </Text>
-                  <Text style={[styles.td, { flex: 1.2 }]}>{ESTADO_OT_LABEL[m.estado]}</Text>
-                  <Text style={styles.td}>{formatearFecha(m.fechaFin)}</Text>
-                  <Text style={styles.td}>{formatearMonto(m.totalRepuestos)}</Text>
-                  <Text style={styles.td}>{formatearMonto(m.totalFacturas)}</Text>
+                  <Text style={[styles.td, { flex: 1 }]}>{formatearFecha(m.fechaAlta)}</Text>
+                  <Text style={[styles.td, { flex: 1.3 }]}>{ESTADO_OT_LABEL[m.estado]}</Text>
+                  <Text style={[styles.td, { flex: 1 }]}>{formatearFecha(m.fechaFin)}</Text>
                 </View>
               ))}
-              <View style={styles.tr}>
-                <Text style={[styles.td, { fontWeight: 700 }]}>Total</Text>
-                <Text style={[styles.td, { flex: 1.6 }]} />
-                <Text style={styles.td} />
-                <Text style={[styles.td, { flex: 1.4 }]} />
-                <Text style={[styles.td, { flex: 1.2 }]} />
-                <Text style={styles.td} />
-                <Text style={[styles.td, { fontWeight: 700 }]}>{formatearMonto(totalRepuestos)}</Text>
-                <Text style={[styles.td, { fontWeight: 700 }]}>{formatearMonto(totalFacturas)}</Text>
-              </View>
             </View>
           ) : (
-            <Text style={styles.descripcion}>Sin órdenes de trabajo generadas en el período.</Text>
+            <Text style={styles.descripcion}>Sin mantenimientos correctivos en el período.</Text>
           )}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.h2}>Mantenimiento preventivo</Text>
-          {planesPreventivos.length > 0 ? (
+          <Text style={styles.h2}>Mantenimiento preventivo en el período</Text>
+          {preventivos.length > 0 ? (
             <View style={styles.table}>
               <View style={styles.trHead}>
-                <Text style={styles.th}>Plan</Text>
-                <Text style={styles.th}>Intervalo</Text>
-                <Text style={styles.th}>Último service (km)</Text>
-                <Text style={styles.th}>Último service (horas)</Text>
-                <Text style={styles.th}>Último service (fecha)</Text>
+                <Text style={[styles.th, { flex: 1 }]}>OT</Text>
+                <Text style={[styles.th, { flex: 1.1 }]}>Alta</Text>
+                <Text style={[styles.th, { flex: 1.4 }]}>Motivo</Text>
+                <Text style={[styles.th, { flex: 1.4 }]}>Estado</Text>
+                <Text style={[styles.th, { flex: 1.1 }]}>Finalización</Text>
               </View>
-              {planesPreventivos.map((p, i) => (
+              {preventivos.map((p, i) => (
                 <View key={i} style={styles.tr}>
-                  <Text style={styles.td}>
-                    {p.nombre}
-                    {p.categoria ? ` (${p.categoria})` : ""}
-                  </Text>
-                  <Text style={styles.td}>
-                    {INTERVALO_LABEL[p.tipoIntervalo]}
-                    {p.intervaloKm ? ` · ${p.intervaloKm.toLocaleString("es-AR")} km` : ""}
-                    {p.intervaloDias ? ` · ${p.intervaloDias} días` : ""}
-                    {p.intervaloHoras ? ` · ${p.intervaloHoras} hs` : ""}
-                  </Text>
-                  <Text style={styles.td}>{p.kmUltimoService?.toLocaleString("es-AR") ?? "—"}</Text>
-                  <Text style={styles.td}>{p.horasUltimoService?.toLocaleString("es-AR") ?? "—"}</Text>
-                  <Text style={styles.td}>{formatearFecha(p.fechaUltimoService)}</Text>
+                  <Text style={[styles.td, { flex: 1 }]}>{p.numero}</Text>
+                  <Text style={[styles.td, { flex: 1.1 }]}>{formatearFecha(p.fechaAlta)}</Text>
+                  <Text style={[styles.td, { flex: 1.4 }]}>{motivoTexto(p.tiposIntervalo)}</Text>
+                  <Text style={[styles.td, { flex: 1.4 }]}>{ESTADO_OT_LABEL[p.estado]}</Text>
+                  <Text style={[styles.td, { flex: 1.1 }]}>{formatearFecha(p.fechaFin)}</Text>
                 </View>
               ))}
             </View>
           ) : (
-            <Text style={styles.descripcion}>Sin planes de mantenimiento preventivo activos.</Text>
+            <Text style={styles.descripcion}>Sin mantenimiento preventivo disparado en el período.</Text>
           )}
         </View>
 
@@ -265,17 +216,17 @@ export function ReporteTrazabilidadDocument({ data }: { data: ReporteTrazabilida
           {documentosVigentes.length > 0 ? (
             <View style={styles.table}>
               <View style={styles.trHead}>
-                <Text style={styles.th}>Tipo</Text>
-                <Text style={styles.th}>Número</Text>
-                <Text style={styles.th}>Vencimiento</Text>
-                <Text style={styles.th}>Estado</Text>
+                <Text style={[styles.th, { flex: 1.6 }]}>Tipo</Text>
+                <Text style={[styles.th, { flex: 1.2 }]}>Número</Text>
+                <Text style={[styles.th, { flex: 1 }]}>Vencimiento</Text>
+                <Text style={[styles.th, { flex: 1 }]}>Estado</Text>
               </View>
               {documentosVigentes.map((d, i) => (
                 <View key={i} style={styles.tr}>
-                  <Text style={styles.td}>{d.tipoNombre}</Text>
-                  <Text style={styles.td}>{d.numeroDocumento ?? "—"}</Text>
-                  <Text style={styles.td}>{formatearFecha(d.fechaVencimiento)}</Text>
-                  <Text style={[styles.td, estiloEstado(d.estado)]}>
+                  <Text style={[styles.td, { flex: 1.6 }]}>{d.tipoNombre}</Text>
+                  <Text style={[styles.td, { flex: 1.2 }]}>{d.numeroDocumento ?? "—"}</Text>
+                  <Text style={[styles.td, { flex: 1 }]}>{formatearFecha(d.fechaVencimiento)}</Text>
+                  <Text style={[styles.td, { flex: 1 }, estiloEstado(d.estado)]}>
                     {ESTADO_VENCIMIENTO_LABEL[d.estado]}
                   </Text>
                 </View>
