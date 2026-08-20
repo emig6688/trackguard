@@ -17,7 +17,10 @@ export async function aplicarPlanEstandarAVehiculo(
     prisma.planMantenimientoEstandarItem.findMany({
       where: { empresaId, activo: true, eliminadoEn: null },
     }),
-    prisma.planMantenimiento.findMany({ where: { vehiculoId }, select: { nombre: true } }),
+    prisma.planMantenimiento.findMany({
+      where: { vehiculoId, eliminadoEn: null },
+      select: { nombre: true },
+    }),
   ]);
   const nombresExistentes = new Set(existentes.map((p) => p.nombre));
   const nuevos = catalogo.filter((item) => !nombresExistentes.has(item.nombre));
