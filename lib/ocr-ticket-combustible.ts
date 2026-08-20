@@ -12,9 +12,8 @@ export type LecturaTicketResultado =
 
 const PROMPT = `Sos un asistente que lee tickets o facturas de carga de combustible en estaciones de servicio. Suelen tener una tabla con columnas como "PRODUCTO / CANTIDAD / PRECIO / IMPORTE" (los nombres exactos varían). A partir de la imagen, extraé:
 - monto: el importe TOTAL pagado — el número final de la fila (a veces rotulado "IMPORTE" o "TOTAL"), no el precio unitario. Como número, sin el símbolo $, usando punto como separador decimal. null si no se distingue.
-- litros: la CANTIDAD de litros cargados. Ojo: en la misma fila hay dos números fáciles de confundir — la cantidad de litros (columna "CANTIDAD", junto a la unidad "Litr"/"Lts"/"L") y el precio por litro (columna "PRECIO"). Son números distintos: no tomes el precio por litro como si fueran los litros cargados. Como número. null si no se distingue.
+- litros: la CANTIDAD de litros cargados. Ojo: en la misma fila hay dos números fáciles de confundir — la cantidad de litros (columna "CANTIDAD", junto a la unidad "Litr"/"Lts"/"L") y el precio por litro (columna "PRECIO"). PISTA CLAVE para no confundirlos: los surtidores miden el volumen con TRES decimales (ej: 39.526), mientras que los montos en dinero — precio por litro e importe — casi siempre se escriben con DOS decimales (ej: 12.65, 500.00). Si de los dos números uno tiene tres decimales y el otro dos, el de tres decimales son los litros, no el de dos. Como número. null si no se distingue.
 - proveedor: el nombre de la estación de servicio o razón social que emitió el ticket. null si no se distingue.
-Antes de responder, verificá tu propia lectura: litros × precio_por_litro tiene que dar aproximadamente el monto total. Si no da, revisá cuál de los dos números leíste al revés.
 Respondé ÚNICAMENTE con un JSON: {"monto": number|null, "litros": number|null, "proveedor": string|null}`;
 
 /**
