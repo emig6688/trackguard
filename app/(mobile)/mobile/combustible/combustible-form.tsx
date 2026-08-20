@@ -1,13 +1,36 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { registrarCargaCombustible } from "@/app/_actions/combustible";
+import { leerTicketCombustibleAction } from "@/app/_actions/ocrTicketCombustible";
 
 export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patente: string }[] }) {
   const [state, formAction, pending] = useActionState(registrarCargaCombustible, undefined);
+  const [litros, setLitros] = useState("");
+  const [monto, setMonto] = useState("");
+  const [estacionServicio, setEstacionServicio] = useState("");
+  const [leyendoTicket, setLeyendoTicket] = useState(false);
+
+  async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLeyendoTicket(true);
+    try {
+      const datosArchivo = new FormData();
+      datosArchivo.set("archivoTicket", file);
+      const resultado = await leerTicketCombustibleAction(datosArchivo);
+      if (resultado.leido) {
+        if (resultado.datos.litros != null) setLitros(String(resultado.datos.litros));
+        if (resultado.datos.monto != null) setMonto(String(resultado.datos.monto));
+        if (resultado.datos.proveedor) setEstacionServicio(resultado.datos.proveedor);
+      }
+    } finally {
+      setLeyendoTicket(false);
+    }
+  }
 
   if (state?.success) {
     return (
@@ -55,7 +78,18 @@ export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patent
 
       <div className="space-y-2">
         <Label htmlFor="archivoTicket">Foto del ticket</Label>
-        <Input id="archivoTicket" name="archivoTicket" type="file" accept="image/*" capture="environment" required />
+        <Input
+          id="archivoTicket"
+          name="archivoTicket"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          required
+          onChange={onFileChange}
+        />
+        {leyendoTicket && (
+          <p className="text-xs text-muted-foreground">Leyendo el ticket con IA...</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -66,17 +100,40 @@ export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patent
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="litrosCargados">Litros</Label>
-          <Input id="litrosCargados" name="litrosCargados" type="number" step="0.01" inputMode="decimal" required />
+          <Input
+            id="litrosCargados"
+            name="litrosCargados"
+            type="number"
+            step="0.01"
+            inputMode="decimal"
+            required
+            value={litros}
+            onChange={(e) => setLitros(e.target.value)}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="montoTotal">Monto total</Label>
-          <Input id="montoTotal" name="montoTotal" type="number" step="0.01" inputMode="decimal" required />
+          <Input
+            id="montoTotal"
+            name="montoTotal"
+            type="number"
+            step="0.01"
+            inputMode="decimal"
+            required
+            value={monto}
+            onChange={(e) => setMonto(e.target.value)}
+          />
         </div>
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="estacionServicio">Estación de servicio (opcional)</Label>
-        <Input id="estacionServicio" name="estacionServicio" />
+        <Input
+          id="estacionServicio"
+          name="estacionServicio"
+          value={estacionServicio}
+          onChange={(e) => setEstacionServicio(e.target.value)}
+        />
       </div>
 
       {state?.error && <p className="text-sm text-destructive">{state.error}</p>}

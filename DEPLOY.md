@@ -11,6 +11,7 @@ Copiar `.env.example` como referencia y cargar en Vercel (Project Settings → E
 - `BLOB_READ_WRITE_TOKEN` — crear un Blob Store desde el dashboard de Vercel (Storage → Create Database → Blob) y copiar el token que genera. Sin esto, la subida de archivos (fotos de checklist/ticket, documentos, comprobantes) falla.
 - `RESEND_API_KEY` / `RESEND_FROM_EMAIL` — opcionales, pero sin ellos el canal de email de las notificaciones solo deja constancia en el log (no manda nada real). `RESEND_FROM_EMAIL` tiene que ser un remitente de un dominio **verificado en el dashboard de Resend** (SPF/DKIM) — no puede ser una casilla de Office 365 ajena a Resend. Sin dominio verificado, Resend entrega solo a la cuenta dueña de la API key.
 - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` — para las notificaciones push reales (llegan al celular con la app cerrada). Generar el par una sola vez con `node -e "console.log(require('web-push').generateVAPIDKeys())"` y `VAPID_SUBJECT` es un `mailto:` de contacto. Sin estas 3, el botón "Activar notificaciones push" no hace nada (`lib/push.ts` queda en no-op).
+- `OPENAI_API_KEY` — opcional. Sin esto, la carga de combustible no lee el ticket con IA (monto/litros/proveedor) — el chofer los completa a mano, como siempre (`lib/ocr-ticket-combustible.ts`).
 
 ## 2. Base de datos
 
