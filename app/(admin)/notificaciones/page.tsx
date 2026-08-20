@@ -102,7 +102,7 @@ export default async function NotificacionesPage() {
                   rolesIniciales={regla?.roles ?? []}
                   canalesIniciales={regla?.canales ?? ["EMAIL", "EN_APP"]}
                   diasAvisoIniciales={regla?.diasAviso ?? [15, 7]}
-                  activoInicial={regla?.activo ?? true}
+                  activoInicial={regla?.activo ?? false}
                   usaDiasAviso={info.usaDiasAviso}
                   usaHoraEnvio={info.usaHoraEnvio}
                   horaEnvioInicial={regla?.horaEnvio ?? null}
