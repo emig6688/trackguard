@@ -15,6 +15,12 @@ import { agregarRepuesto, type AgregarRepuestoState } from "@/app/_actions/orden
 
 type ArticuloOpcion = { id: string; nombre: string; stockActual: number; unidadMedida: string | null };
 
+// Base UI no admite un SelectItem con value="" — sin un ítem real que
+// represente "ninguno", el trigger mostraba el id crudo del artículo elegido
+// en vez de su nombre (SelectValue necesita resolver el value actual contra
+// algún ítem de la lista).
+const SIN_ARTICULO = "__sin_articulo__";
+
 export function RepuestoForm({
   otId,
   articulos,
@@ -40,6 +46,10 @@ export function RepuestoForm({
   const [descripcion, setDescripcion] = useState(defaultDescripcion);
 
   const onSeleccionarArticulo = (id: string | null) => {
+    if (id === SIN_ARTICULO) {
+      setArticuloId("");
+      return;
+    }
     setArticuloId(id ?? "");
     const articulo = articulos.find((a) => a.id === id);
     if (articulo) setDescripcion(articulo.nombre);
@@ -53,11 +63,18 @@ export function RepuestoForm({
           <div className="space-y-2">
             <Label htmlFor="articuloPanolSelect">Del pañol (opcional)</Label>
             <input type="hidden" name="articuloPanolId" value={articuloId} />
-            <Select value={articuloId} onValueChange={onSeleccionarArticulo}>
+            <Select value={articuloId || SIN_ARTICULO} onValueChange={onSeleccionarArticulo}>
               <SelectTrigger id="articuloPanolSelect" className="w-52">
-                <SelectValue placeholder="Repuesto en stock..." />
+                <SelectValue placeholder="Repuesto en stock...">
+                  {(value: string) => {
+                    if (value === SIN_ARTICULO) return "Repuesto en stock...";
+                    const a = articulos.find((a) => a.id === value);
+                    return a ? `${a.nombre} (${a.stockActual} ${a.unidadMedida ?? "u."})` : "Repuesto en stock...";
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={SIN_ARTICULO}>Repuesto en stock...</SelectItem>
                 {articulos.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
                     {a.nombre} ({a.stockActual} {a.unidadMedida ?? "u."})

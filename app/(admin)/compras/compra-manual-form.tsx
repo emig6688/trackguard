@@ -20,6 +20,13 @@ import {
 
 type Fila = { id: string; articuloId: string; descripcion: string; cantidad: string; archivoUrl: string | null };
 
+// Sentinels para las opciones "sin elegir" de cada Select: Base UI no admite
+// un SelectItem con value="" (colisiona con el estado "sin selección" del
+// propio primitivo), y sin un ítem real en la lista tampoco había forma de
+// volver atrás una vez elegida una OT o un artículo del pañol por error.
+const SIN_OT = "__sin_ot__";
+const SIN_ARTICULO = "__sin_articulo__";
+
 export function CompraManualForm({
   articulos,
   ordenes,
@@ -74,6 +81,10 @@ export function CompraManualForm({
   }
 
   function onSeleccionarArticulo(id: string, articuloId: string | null) {
+    if (articuloId === SIN_ARTICULO) {
+      actualizarFila(id, { articuloId: "", descripcion: "" });
+      return;
+    }
     const articulo = articulos.find((a) => a.id === articuloId);
     actualizarFila(id, { articuloId: articuloId ?? "", descripcion: articulo ? articulo.nombre : "" });
   }
@@ -86,16 +97,21 @@ export function CompraManualForm({
         <div className="space-y-2">
           <Label htmlFor={domId("ordenDeTrabajoSelect")}>Orden de trabajo (opcional)</Label>
           <input type="hidden" name="ordenDeTrabajoId" value={ordenDeTrabajoId} />
-          <Select value={ordenDeTrabajoId} onValueChange={(v) => setOrdenDeTrabajoId(v ?? "")}>
+          <Select
+            value={ordenDeTrabajoId || SIN_OT}
+            onValueChange={(v) => setOrdenDeTrabajoId(v === SIN_OT ? "" : (v ?? ""))}
+          >
             <SelectTrigger id={domId("ordenDeTrabajoSelect")} className="w-full">
               <SelectValue placeholder="No corresponde a ninguna OT">
                 {(value: string) => {
+                  if (value === SIN_OT) return "No corresponde a ninguna OT";
                   const ot = ordenes.find((o) => o.id === value);
                   return ot ? `${ot.numero} — ${ot.titulo}` : "OT ya cerrada";
                 }}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value={SIN_OT}>No corresponde a ninguna OT</SelectItem>
               {ordenes.map((o) => (
                 <SelectItem key={o.id} value={o.id}>
                   {o.numero} — {o.titulo}
@@ -128,13 +144,19 @@ export function CompraManualForm({
                 <Label htmlFor={domId(`articuloPanolSelect_${fila.id}`)}>Artículo del pañol (opcional)</Label>
                 <input type="hidden" name={`item_articuloPanolId_${fila.id}`} value={fila.articuloId} />
                 <Select
-                  value={fila.articuloId}
-                  onValueChange={(v) => onSeleccionarArticulo(fila.id, v)}
+                  value={fila.articuloId || SIN_ARTICULO}
+                  onValueChange={(v) => onSeleccionarArticulo(fila.id, v === SIN_ARTICULO ? null : v)}
                 >
                   <SelectTrigger id={domId(`articuloPanolSelect_${fila.id}`)} className="w-full">
-                    <SelectValue placeholder="No corresponde a un artículo del pañol" />
+                    <SelectValue placeholder="No corresponde a un artículo del pañol">
+                      {(value: string) => {
+                        if (value === SIN_ARTICULO) return "No corresponde a un artículo del pañol";
+                        return articulos.find((a) => a.id === value)?.nombre ?? "No corresponde a un artículo del pañol";
+                      }}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value={SIN_ARTICULO}>No corresponde a un artículo del pañol</SelectItem>
                     {articulos.map((a) => (
                       <SelectItem key={a.id} value={a.id}>
                         {a.nombre}
