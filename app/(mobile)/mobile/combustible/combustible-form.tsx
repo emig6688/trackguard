@@ -9,6 +9,7 @@ import { leerTicketCombustibleAction } from "@/app/_actions/ocrTicketCombustible
 
 export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patente: string }[] }) {
   const [state, formAction, pending] = useActionState(registrarCargaCombustible, undefined);
+  const [kmOdometro, setKmOdometro] = useState("");
   const [litros, setLitros] = useState("");
   const [monto, setMonto] = useState("");
   const [estacionServicio, setEstacionServicio] = useState("");
@@ -26,6 +27,7 @@ export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patent
         if (resultado.datos.litros != null) setLitros(String(resultado.datos.litros));
         if (resultado.datos.monto != null) setMonto(String(resultado.datos.monto));
         if (resultado.datos.proveedor) setEstacionServicio(resultado.datos.proveedor);
+        if (resultado.datos.kmOdometro != null) setKmOdometro(String(resultado.datos.kmOdometro));
       }
     } finally {
       setLeyendoTicket(false);
@@ -93,7 +95,15 @@ export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patent
 
       <div className="space-y-2">
         <Label htmlFor="kmOdometro">Km actual del odómetro</Label>
-        <Input id="kmOdometro" name="kmOdometro" type="number" inputMode="numeric" required />
+        <Input
+          id="kmOdometro"
+          name="kmOdometro"
+          type="number"
+          inputMode="numeric"
+          required
+          value={kmOdometro}
+          onChange={(e) => setKmOdometro(e.target.value)}
+        />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

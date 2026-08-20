@@ -4,6 +4,7 @@ export type TicketCombustibleDetectado = {
   monto: number | null;
   litros: number | null;
   proveedor: string | null;
+  kmOdometro: number | null;
 };
 
 export type LecturaTicketResultado =
@@ -14,7 +15,8 @@ const PROMPT = `Sos un asistente que lee tickets o facturas de carga de combusti
 - monto: el importe TOTAL pagado — el número final de la fila (a veces rotulado "IMPORTE" o "TOTAL"), no el precio unitario. Como número, sin el símbolo $, usando punto como separador decimal. null si no se distingue.
 - litros: la CANTIDAD de litros cargados. Ojo: en la misma fila hay dos números fáciles de confundir — la cantidad de litros (columna "CANTIDAD", junto a la unidad "Litr"/"Lts"/"L") y el precio por litro (columna "PRECIO"). PISTA CLAVE para no confundirlos: los surtidores miden el volumen con TRES decimales (ej: 39.526), mientras que los montos en dinero — precio por litro e importe — casi siempre se escriben con DOS decimales (ej: 12.65, 500.00). Si de los dos números uno tiene tres decimales y el otro dos, el de tres decimales son los litros, no el de dos. Como número. null si no se distingue.
 - proveedor: el nombre de la estación de servicio o razón social que emitió el ticket. null si no se distingue.
-Respondé ÚNICAMENTE con un JSON: {"monto": number|null, "litros": number|null, "proveedor": string|null}`;
+- kmOdometro: el kilometraje del odómetro del vehículo, SOLO si el ticket lo tiene escrito (impreso o a mano) — muchas estaciones lo anotan como "KM", "ODOMETRO" o "KILOMETRAJE". Es un número entero de varios dígitos (miles a cientos de miles), muy distinto en magnitud a los litros o al monto — no lo confundas con esos. Si el ticket no muestra ningún dato de kilometraje, respondé null: no lo inventes ni lo adivines a partir de otro número de la imagen.
+Respondé ÚNICAMENTE con un JSON: {"monto": number|null, "litros": number|null, "proveedor": string|null, "kmOdometro": number|null}`;
 
 /**
  * Mismo criterio que lib/email.ts: sin OPENAI_API_KEY configurada, no hace
@@ -80,6 +82,7 @@ export async function leerTicketCombustible(file: File): Promise<LecturaTicketRe
         monto: typeof datos.monto === "number" ? datos.monto : null,
         litros: typeof datos.litros === "number" ? datos.litros : null,
         proveedor: typeof datos.proveedor === "string" ? datos.proveedor : null,
+        kmOdometro: typeof datos.kmOdometro === "number" ? datos.kmOdometro : null,
       },
     };
   } catch (err) {
