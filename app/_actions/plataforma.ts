@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireSuperadmin } from "@/lib/permisos";
+import { ITEMS_CHECKLIST_ESTANDAR } from "@/lib/checklist";
 
 const crearEmpresaSchema = z.object({
   nombreEmpresa: z.string().trim().min(1, "Nombre de la empresa requerido"),
@@ -40,7 +41,7 @@ export async function crearEmpresa(
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 10);
 
-  await prisma.empresa.create({
+  const nuevaEmpresa = await prisma.empresa.create({
     data: {
       nombre: parsed.data.nombreEmpresa,
       usuarios: {
@@ -51,6 +52,16 @@ export async function crearEmpresa(
           rol: "ADMIN",
         },
       },
+    },
+  });
+
+  await prisma.checklistTemplate.create({
+    data: {
+      empresaId: nuevaEmpresa.id,
+      nombre: "Checklist pre-salida",
+      activo: true,
+      version: 1,
+      items: { create: ITEMS_CHECKLIST_ESTANDAR.map((texto, i) => ({ orden: i + 1, texto })) },
     },
   });
 

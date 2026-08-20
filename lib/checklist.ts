@@ -3,6 +3,24 @@ import type { ScopedPrismaClient } from "@/lib/tenant-prisma";
 import { obtenerReglaNotificacion, enviarPorCanalesConfigurados } from "@/lib/notificaciones";
 import { usuariosDeEmpresaPorRol } from "@/lib/permisos";
 
+/**
+ * Ítems con los que arranca el checklist pre-salida de toda empresa nueva
+ * (se puede editar después desde /notificaciones → "Checklist pre-salida").
+ * Sin esto, una empresa recién dada de alta no tiene ningún checklist
+ * cargado y sus choferes quedan bloqueados el primer día.
+ */
+export const ITEMS_CHECKLIST_ESTANDAR = [
+  "Luces delanteras",
+  "Luces traseras y de freno",
+  "Frenos",
+  "Freno de mano",
+  "Estado de neumáticos",
+  "Presión de neumáticos",
+  "Nivel de aceite",
+  "Nivel de agua/refrigerante",
+  "Documentación a bordo",
+];
+
 // Argentina no usa horario de verano desde 2009 — UTC-3 fijo todo el año.
 const HORAS_DESFASE_ARGENTINA = 3;
 
