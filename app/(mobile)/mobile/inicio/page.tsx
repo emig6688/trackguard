@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { ClipboardCheck, Fuel, TriangleAlert, Receipt, Wrench, CircleCheck } from "lucide-react";
+import { ClipboardCheck, Fuel, TriangleAlert, Receipt, Wrench } from "lucide-react";
 import { requireEmpresa } from "@/lib/permisos";
-import { Button } from "@/components/ui/button";
-import { cerrarRutaSinNovedades } from "@/app/_actions/eventosRuta";
+import { SinNovedadesForm } from "./sin-novedades-form";
 
 const ACCESOS = [
   {
@@ -68,41 +67,7 @@ export default async function MobileInicioPage() {
     <div className="space-y-4">
       <h1 className="text-lg font-semibold">Hola, {session.nombre}</h1>
 
-      <form
-        action={cerrarRutaSinNovedades}
-        className="space-y-3 rounded-lg border border-success/40 bg-success/5 p-4"
-      >
-        <div className="flex items-center gap-2">
-          <CircleCheck className="size-5 shrink-0 text-success" strokeWidth={2} />
-          <p className="font-medium">Cerrar ruta sin novedades</p>
-        </div>
-        <select
-          name="vehiculoId"
-          required
-          className="w-full rounded-md border border-input bg-transparent p-2 text-sm"
-        >
-          <option value="">Elegí un vehículo</option>
-          {vehiculos.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.patente}
-            </option>
-          ))}
-        </select>
-        <input
-          name="kmAlMomento"
-          type="number"
-          inputMode="numeric"
-          placeholder="Km actual (opcional)"
-          className="w-full rounded-md border border-input bg-transparent p-2 text-sm"
-        />
-        <label className="flex items-center gap-2 text-sm">
-          <input name="tanqueLleno" type="checkbox" className="size-4" />
-          Tanque lleno
-        </label>
-        <Button type="submit" variant="secondary" className="w-full">
-          Confirmar sin novedades
-        </Button>
-      </form>
+      <SinNovedadesForm vehiculos={vehiculos} />
 
       <div className="grid gap-3">
         {accesos.map((a) => (

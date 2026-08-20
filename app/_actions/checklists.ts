@@ -16,22 +16,27 @@ const respuestaSchema = z.object({
   observacion: z.string().trim().optional(),
 });
 
-export async function registrarChecklist(formData: FormData) {
+export type ChecklistState = { error?: string } | undefined;
+
+export async function registrarChecklist(
+  _prevState: ChecklistState,
+  formData: FormData
+): Promise<ChecklistState> {
   const { user: chofer, prisma } = await requireRole(ROLES_MOBILE_CHOFER);
   const empresaId = chofer.empresaId!;
 
   const vehiculoId = formData.get("vehiculoId");
   const templateId = formData.get("templateId");
   const momento = formData.get("momento") === "CIERRE" ? "CIERRE" : "PRESALIDA";
-  if (typeof vehiculoId !== "string" || !vehiculoId) throw new Error("Elegí un vehículo.");
-  if (typeof templateId !== "string" || !templateId) throw new Error("Falta el template de checklist.");
+  if (typeof vehiculoId !== "string" || !vehiculoId) return { error: "Elegí un vehículo." };
+  if (typeof templateId !== "string" || !templateId) return { error: "Falta el template de checklist." };
 
   const [vehiculoValido, templateValido] = await Promise.all([
     prisma.vehiculo.findUnique({ where: { id: vehiculoId }, select: { id: true } }),
     prisma.checklistTemplate.findUnique({ where: { id: templateId }, select: { id: true } }),
   ]);
-  if (!vehiculoValido) throw new Error("Vehículo inválido.");
-  if (!templateValido) throw new Error("Template de checklist inválido.");
+  if (!vehiculoValido) return { error: "Vehículo inválido." };
+  if (!templateValido) return { error: "Template de checklist inválido." };
 
   const kmAlMomento = optionalInt().parse(formData.get("kmAlMomento"));
 

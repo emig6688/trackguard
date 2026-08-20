@@ -15,22 +15,27 @@ const PRIORIDAD_POR_TIPO = {
   OBSERVACION: "MEDIA",
 } as const;
 
-export async function registrarEventoRuta(formData: FormData) {
+export type EventoRutaState = { error?: string } | undefined;
+
+export async function registrarEventoRuta(
+  _prevState: EventoRutaState,
+  formData: FormData
+): Promise<EventoRutaState> {
   const { user: chofer, prisma } = await requireRole(ROLES_MOBILE_CHOFER);
   const empresaId = chofer.empresaId!;
 
   const chequeo = await verificarChecklistDelDia(prisma, empresaId, chofer);
-  if (chequeo.bloqueado) throw new Error(chequeo.motivo);
+  if (chequeo.bloqueado) return { error: chequeo.motivo };
 
   const vehiculoId = formData.get("vehiculoId");
   const tipo = formData.get("tipo");
   const descripcion = formData.get("descripcion");
-  if (typeof vehiculoId !== "string" || !vehiculoId) throw new Error("Elegí un vehículo.");
-  if (typeof tipo !== "string" || !(tipo in PRIORIDAD_POR_TIPO)) throw new Error("Elegí un tipo de evento.");
-  if (typeof descripcion !== "string" || !descripcion.trim()) throw new Error("Describí el evento.");
+  if (typeof vehiculoId !== "string" || !vehiculoId) return { error: "Elegí un vehículo." };
+  if (typeof tipo !== "string" || !(tipo in PRIORIDAD_POR_TIPO)) return { error: "Elegí un tipo de evento." };
+  if (typeof descripcion !== "string" || !descripcion.trim()) return { error: "Describí el evento." };
 
   const vehiculo = await prisma.vehiculo.findUnique({ where: { id: vehiculoId }, select: { patente: true } });
-  if (!vehiculo) throw new Error("Vehículo inválido.");
+  if (!vehiculo) return { error: "Vehículo inválido." };
 
   const kmRaw = formData.get("kmAlMomento");
   const kmAlMomento = typeof kmRaw === "string" && kmRaw !== "" ? Number(kmRaw) : undefined;
@@ -115,17 +120,20 @@ export async function registrarEventoRuta(formData: FormData) {
  * el silencio). El vehículo sigue siendo obligatorio: chofer y patente
  * siempre van juntos en todo lo que carga el chofer.
  */
-export async function cerrarRutaSinNovedades(formData: FormData) {
+export async function cerrarRutaSinNovedades(
+  _prevState: EventoRutaState,
+  formData: FormData
+): Promise<EventoRutaState> {
   const { user: chofer, prisma } = await requireRole(ROLES_MOBILE_CHOFER);
   const empresaId = chofer.empresaId!;
 
   const chequeo = await verificarChecklistDelDia(prisma, empresaId, chofer);
-  if (chequeo.bloqueado) throw new Error(chequeo.motivo);
+  if (chequeo.bloqueado) return { error: chequeo.motivo };
 
   const vehiculoId = formData.get("vehiculoId");
-  if (typeof vehiculoId !== "string" || !vehiculoId) throw new Error("Elegí un vehículo.");
+  if (typeof vehiculoId !== "string" || !vehiculoId) return { error: "Elegí un vehículo." };
   const vehiculo = await prisma.vehiculo.findUnique({ where: { id: vehiculoId } });
-  if (!vehiculo) throw new Error("Vehículo inválido.");
+  if (!vehiculo) return { error: "Vehículo inválido." };
 
   const kmRaw = formData.get("kmAlMomento");
   const kmAlMomento = typeof kmRaw === "string" && kmRaw !== "" ? Number(kmRaw) : undefined;
