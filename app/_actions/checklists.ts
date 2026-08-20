@@ -9,7 +9,6 @@ import { optionalInt } from "@/lib/zod-helpers";
 import { notificarOTGeneradaChofer } from "@/lib/notificaciones";
 import { buscarOTAbiertaMismoProblema } from "@/lib/ot";
 import { clasificarAreaReparacion } from "@/lib/clasificador-averias";
-import { registrarHorasEquipoFrioSiCorresponde } from "@/lib/checklist";
 
 const respuestaSchema = z.object({
   checklistItemId: z.string(),
@@ -64,15 +63,6 @@ export async function registrarChecklist(formData: FormData) {
     await prisma.vehiculo.updateMany({
       where: { id: vehiculoId, kmActual: { lt: kmAlMomento } },
       data: { kmActual: kmAlMomento },
-    });
-  }
-
-  if (momento === "CIERRE") {
-    await registrarHorasEquipoFrioSiCorresponde(prisma, {
-      vehiculoId,
-      choferId: chofer.id,
-      cierreId: checklist.id,
-      cierreFechaHora: checklist.fechaHora,
     });
   }
 

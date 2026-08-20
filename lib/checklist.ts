@@ -17,16 +17,17 @@ export async function choferHizoChecklistHoy(prisma: ScopedPrismaClient, choferI
 
 /**
  * Suma a Vehiculo.horasEquipoFrio la duración entre el checklist pre-salida
- * de hoy y el checklist de cierre que se acaba de completar, para el mismo
- * chofer+vehículo. Si falta el pre-salida de hoy, o si ya se sumó un cierre
- * hoy (evita doble conteo si el chofer completa el cierre dos veces), la
- * medición se descarta sin sumar nada — nunca se adivina un valor.
+ * de hoy y el cierre de ruta (con o sin novedades) que se acaba de
+ * completar, para el mismo chofer+vehículo. Si falta el pre-salida de hoy,
+ * o si ya se sumó un cierre hoy (evita doble conteo si el chofer cierra la
+ * ruta más de una vez), la medición se descarta sin sumar nada — nunca se
+ * adivina un valor.
  */
 export async function registrarHorasEquipoFrioSiCorresponde(
   prisma: ScopedPrismaClient,
-  params: { vehiculoId: string; choferId: string; cierreId: string; cierreFechaHora: Date }
+  params: { vehiculoId: string; choferId: string; eventoRutaId: string; cierreFechaHora: Date }
 ) {
-  const { vehiculoId, choferId, cierreId, cierreFechaHora } = params;
+  const { vehiculoId, choferId, eventoRutaId, cierreFechaHora } = params;
 
   const presalida = await prisma.checklistRealizado.findFirst({
     where: { choferId, vehiculoId, momento: "PRESALIDA", fechaHora: { gte: inicioDeHoy() } },
@@ -37,11 +38,11 @@ export async function registrarHorasEquipoFrioSiCorresponde(
     return;
   }
 
-  const otroCierreHoy = await prisma.checklistRealizado.findFirst({
-    where: { choferId, vehiculoId, momento: "CIERRE", fechaHora: { gte: inicioDeHoy() }, id: { not: cierreId } },
+  const otroCierreHoy = await prisma.eventoRuta.findFirst({
+    where: { choferId, vehiculoId, fechaHora: { gte: inicioDeHoy() }, id: { not: eventoRutaId } },
   });
   if (otroCierreHoy) {
-    console.log(`[horasEquipoFrio] descartada: ya se registró un cierre hoy (chofer=${choferId}, vehiculo=${vehiculoId})`);
+    console.log(`[horasEquipoFrio] descartada: ya se registró un cierre de ruta hoy (chofer=${choferId}, vehiculo=${vehiculoId})`);
     return;
   }
 
@@ -66,9 +67,12 @@ export async function registrarHorasEquipoFrioSiCorresponde(
  * acumuladas en un período — Vehiculo.horasEquipoFrio es un total corrido
  * sin desglose por fecha, así que para un período arbitrario hay que
  * volver a armar los pares pre-salida/cierre (por día+chofer) a partir de
- * los checklists de esa ventana. Mismo criterio de descarte que
- * registrarHorasEquipoFrioSiCorresponde: sin ambos checklists del día, esa
- * jornada no suma.
+ * los checklists y los cierres de ruta de esa ventana. El cierre de cada
+ * jornada puede venir de un checklist de cierre (períodos viejos, antes de
+ * que se sacara esa pantalla) o de un EventoRuta (períodos nuevos) — se usa
+ * lo que exista. Mismo criterio de descarte que
+ * registrarHorasEquipoFrioSiCorresponde: sin pre-salida y cierre del día,
+ * esa jornada no suma.
  */
 export async function horasEquipoFrioEnPeriodo(
   prisma: ScopedPrismaClient,
@@ -76,11 +80,18 @@ export async function horasEquipoFrioEnPeriodo(
   desde: Date,
   hasta: Date
 ): Promise<number> {
-  const checklists = await prisma.checklistRealizado.findMany({
-    where: { vehiculoId, fechaHora: { gte: desde, lte: hasta } },
-    orderBy: { fechaHora: "asc" },
-    select: { momento: true, fechaHora: true, choferId: true },
-  });
+  const [checklists, eventos] = await Promise.all([
+    prisma.checklistRealizado.findMany({
+      where: { vehiculoId, fechaHora: { gte: desde, lte: hasta } },
+      orderBy: { fechaHora: "asc" },
+      select: { momento: true, fechaHora: true, choferId: true },
+    }),
+    prisma.eventoRuta.findMany({
+      where: { vehiculoId, fechaHora: { gte: desde, lte: hasta } },
+      orderBy: { fechaHora: "asc" },
+      select: { fechaHora: true, choferId: true },
+    }),
+  ]);
 
   const porDiaChofer = new Map<string, { presalida?: Date; cierre?: Date }>();
   for (const c of checklists) {
@@ -89,6 +100,13 @@ export async function horasEquipoFrioEnPeriodo(
     const entrada = porDiaChofer.get(clave) ?? {};
     if (c.momento === "PRESALIDA" && !entrada.presalida) entrada.presalida = c.fechaHora;
     if (c.momento === "CIERRE" && !entrada.cierre) entrada.cierre = c.fechaHora;
+    porDiaChofer.set(clave, entrada);
+  }
+  for (const e of eventos) {
+    const dia = e.fechaHora.toISOString().slice(0, 10);
+    const clave = `${dia}_${e.choferId}`;
+    const entrada = porDiaChofer.get(clave) ?? {};
+    if (!entrada.cierre) entrada.cierre = e.fechaHora;
     porDiaChofer.set(clave, entrada);
   }
 

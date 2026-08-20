@@ -70,15 +70,24 @@ export type ReporteTrazabilidadData = {
     kmUltimoService: number | null;
     fechaUltimoService: Date | null;
   }[];
-  checklists: { total: number; okCount: number; conFallasCount: number; presalidaCount: number; cierreCount: number };
+  checklists: { okCount: number; conFallasCount: number; presalidaCount: number };
   documentosVigentes: { tipoNombre: string; numeroDocumento: string | null; fechaVencimiento: Date }[];
   horasEquipoFrioPeriodo: number;
+  eventosRutaPeriodo: number;
 };
 
 export function ReporteTrazabilidadDocument({ data }: { data: ReporteTrazabilidadData }) {
   const hoy = new Date().toLocaleDateString("es-AR");
-  const { vehiculo, periodo, mantenimientos, planesPreventivos, checklists, documentosVigentes, horasEquipoFrioPeriodo } =
-    data;
+  const {
+    vehiculo,
+    periodo,
+    mantenimientos,
+    planesPreventivos,
+    checklists,
+    documentosVigentes,
+    horasEquipoFrioPeriodo,
+    eventosRutaPeriodo,
+  } = data;
 
   const totalRepuestos = mantenimientos.reduce((acc, m) => acc + m.totalRepuestos, 0);
   const totalFacturas = mantenimientos.reduce((acc, m) => acc + m.totalFacturas, 0);
@@ -181,16 +190,18 @@ export function ReporteTrazabilidadDocument({ data }: { data: ReporteTrazabilida
         <View style={styles.section}>
           <Text style={styles.h2}>Checklists en el período</Text>
           <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Total realizados</Text>
-            <Text style={styles.metaValue}>
-              {checklists.total} ({checklists.presalidaCount} pre-salida, {checklists.cierreCount} cierre)
-            </Text>
+            <Text style={styles.metaLabel}>Pre-salida realizados</Text>
+            <Text style={styles.metaValue}>{checklists.presalidaCount}</Text>
           </View>
           <View style={styles.metaRow}>
             <Text style={styles.metaLabel}>Sin fallas / con fallas</Text>
             <Text style={styles.metaValue}>
               {checklists.okCount} OK · {checklists.conFallasCount} con fallas
             </Text>
+          </View>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaLabel}>Cierres de ruta registrados</Text>
+            <Text style={styles.metaValue}>{eventosRutaPeriodo}</Text>
           </View>
         </View>
 

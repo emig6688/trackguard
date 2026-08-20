@@ -7,7 +7,7 @@ import { generarNumeroOT } from "@/app/_actions/ordenesTrabajo";
 import { clasificarAreaReparacion, AREA_REPARACION_LABEL } from "@/lib/clasificador-averias";
 import { notificarOTGeneradaChofer } from "@/lib/notificaciones";
 import { buscarOTAbiertaMismoProblema } from "@/lib/ot";
-import { verificarChecklistDelDia } from "@/lib/checklist";
+import { verificarChecklistDelDia, registrarHorasEquipoFrioSiCorresponde } from "@/lib/checklist";
 
 const PRIORIDAD_POR_TIPO = {
   DESPERFECTO: "ALTA",
@@ -50,6 +50,13 @@ export async function registrarEventoRuta(formData: FormData) {
       archivoId: archivo?.id,
       tanqueLleno: formData.get("tanqueLleno") === "on",
     },
+  });
+
+  await registrarHorasEquipoFrioSiCorresponde(prisma, {
+    vehiculoId,
+    choferId: chofer.id,
+    eventoRutaId: evento.id,
+    cierreFechaHora: evento.fechaHora,
   });
 
   const areaReparacion = clasificarAreaReparacion(descripcion);
@@ -120,15 +127,33 @@ export async function cerrarRutaSinNovedades(formData: FormData) {
   const vehiculo = await prisma.vehiculo.findUnique({ where: { id: vehiculoId } });
   if (!vehiculo) throw new Error("Vehículo inválido.");
 
-  await prisma.eventoRuta.create({
+  const kmRaw = formData.get("kmAlMomento");
+  const kmAlMomento = typeof kmRaw === "string" && kmRaw !== "" ? Number(kmRaw) : undefined;
+
+  const evento = await prisma.eventoRuta.create({
     data: {
       empresaId,
       vehiculoId,
       choferId: chofer.id,
       tipo: "OBSERVACION",
       descripcion: "Cierre de ruta sin novedades.",
+      kmAlMomento,
       tanqueLleno: formData.get("tanqueLleno") === "on",
     },
+  });
+
+  if (kmAlMomento != null) {
+    await prisma.vehiculo.updateMany({
+      where: { id: vehiculoId, kmActual: { lt: kmAlMomento } },
+      data: { kmActual: kmAlMomento },
+    });
+  }
+
+  await registrarHorasEquipoFrioSiCorresponde(prisma, {
+    vehiculoId,
+    choferId: chofer.id,
+    eventoRutaId: evento.id,
+    cierreFechaHora: evento.fechaHora,
   });
 
   redirect("/mobile/evento/listo?sinNovedades=1");

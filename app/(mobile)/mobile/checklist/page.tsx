@@ -5,14 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { registrarChecklist } from "@/app/_actions/checklists";
 
-export default async function ChecklistPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ momento?: string }>;
-}) {
-  const { momento: momentoParam } = await searchParams;
-  const momento = momentoParam === "CIERRE" ? "CIERRE" : "PRESALIDA";
-
+export default async function ChecklistPage() {
   const { prisma } = await requireEmpresa();
   const [vehiculos, template] = await Promise.all([
     prisma.vehiculo.findMany({ where: { activo: true, eliminadoEn: null }, orderBy: { patente: "asc" } }),
@@ -28,12 +21,10 @@ export default async function ChecklistPage({
 
   return (
     <form action={registrarChecklist} className="space-y-6">
-      <h1 className="text-lg font-semibold">
-        {momento === "CIERRE" ? "Checklist de cierre" : "Checklist pre-salida"}
-      </h1>
+      <h1 className="text-lg font-semibold">Checklist pre-salida</h1>
 
       <input type="hidden" name="templateId" value={template.id} />
-      <input type="hidden" name="momento" value={momento} />
+      <input type="hidden" name="momento" value="PRESALIDA" />
 
       <div className="space-y-2">
         <Label htmlFor="vehiculoId">Vehículo</Label>

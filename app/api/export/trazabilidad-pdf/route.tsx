@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   const vehiculo = await prisma.vehiculo.findUnique({ where: { id: vehiculoId } });
   if (!vehiculo) return NextResponse.json({ error: "Vehículo no encontrado" }, { status: 404 });
 
-  const [otsCompletadas, planesPreventivos, checklistsPeriodo, documentosVigentes, horasEquipoFrioPeriodo] =
+  const [otsCompletadas, planesPreventivos, checklistsPeriodo, documentosVigentes, horasEquipoFrioPeriodo, eventosRutaPeriodo] =
     await Promise.all([
       prisma.ordenDeTrabajo.findMany({
         where: {
@@ -58,6 +58,7 @@ export async function GET(request: Request) {
         orderBy: { fechaVencimiento: "asc" },
       }),
       horasEquipoFrioEnPeriodo(prisma, vehiculoId, desde, hasta),
+      prisma.eventoRuta.count({ where: { vehiculoId, fechaHora: { gte: desde, lte: hasta } } }),
     ]);
 
   const buffer = await renderToBuffer(
@@ -93,11 +94,9 @@ export async function GET(request: Request) {
           fechaUltimoService: p.fechaUltimoService,
         })),
         checklists: {
-          total: checklistsPeriodo.length,
           okCount: checklistsPeriodo.filter((c) => c.resultadoGeneral === "OK").length,
           conFallasCount: checklistsPeriodo.filter((c) => c.resultadoGeneral === "CON_FALLAS").length,
           presalidaCount: checklistsPeriodo.filter((c) => c.momento === "PRESALIDA").length,
-          cierreCount: checklistsPeriodo.filter((c) => c.momento === "CIERRE").length,
         },
         documentosVigentes: documentosVigentes.map((d) => ({
           tipoNombre: d.tipoDocumento.nombre,
@@ -105,6 +104,7 @@ export async function GET(request: Request) {
           fechaVencimiento: d.fechaVencimiento,
         })),
         horasEquipoFrioPeriodo,
+        eventosRutaPeriodo,
       }}
     />
   );

@@ -12,12 +12,6 @@ const ACCESOS = [
     icon: ClipboardCheck,
   },
   {
-    href: "/mobile/checklist?momento=CIERRE",
-    label: "Checklist de cierre",
-    desc: "Al terminar el reparto — suma horas del equipo de frío",
-    icon: ClipboardCheck,
-  },
-  {
     href: "/mobile/combustible",
     label: "Cargar combustible",
     desc: "Foto del ticket + km actual",
@@ -26,7 +20,7 @@ const ACCESOS = [
   {
     href: "/mobile/evento",
     label: "Cierre ruta",
-    desc: "Reportar un desperfecto u observación del viaje",
+    desc: "Reportar un desperfecto — al terminar el reparto, suma horas del equipo de frío",
     icon: TriangleAlert,
   },
   {
@@ -94,6 +88,13 @@ export default async function MobileInicioPage() {
             </option>
           ))}
         </select>
+        <input
+          name="kmAlMomento"
+          type="number"
+          inputMode="numeric"
+          placeholder="Km actual (opcional)"
+          className="w-full rounded-md border border-input bg-transparent p-2 text-sm"
+        />
         <label className="flex items-center gap-2 text-sm">
           <input name="tanqueLleno" type="checkbox" className="size-4" />
           Tanque lleno
