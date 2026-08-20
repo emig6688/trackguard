@@ -123,7 +123,7 @@ export function CompraManualForm({
                 Quitar
               </Button>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor={domId(`articuloPanolSelect_${fila.id}`)}>Artículo del pañol (opcional)</Label>
                 <input type="hidden" name={`item_articuloPanolId_${fila.id}`} value={fila.articuloId} />

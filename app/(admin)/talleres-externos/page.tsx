@@ -31,8 +31,8 @@ export default async function TalleresExternosPage() {
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
-            <TableHead>Contacto</TableHead>
-            <TableHead>Teléfono</TableHead>
+            <TableHead className="hidden md:table-cell">Contacto</TableHead>
+            <TableHead className="hidden md:table-cell">Teléfono</TableHead>
             <TableHead>Especialidad</TableHead>
             <TableHead>Estado</TableHead>
           </TableRow>
@@ -45,8 +45,8 @@ export default async function TalleresExternosPage() {
                   {t.nombre}
                 </Link>
               </TableCell>
-              <TableCell>{t.contactoNombre ?? "—"}</TableCell>
-              <TableCell>{t.telefono ?? "—"}</TableCell>
+              <TableCell className="hidden md:table-cell">{t.contactoNombre ?? "—"}</TableCell>
+              <TableCell className="hidden md:table-cell">{t.telefono ?? "—"}</TableCell>
               <TableCell>{t.especialidad ?? "—"}</TableCell>
               <TableCell>
                 <Badge variant={t.activo ? "success" : "secondary"}>

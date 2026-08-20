@@ -88,7 +88,7 @@ export default async function GastosPage({
             list="choferes-con-gasto"
             defaultValue={chofer}
             placeholder="Buscar chofer..."
-            className="w-56"
+            className="w-full sm:w-56"
           />
           <datalist id="choferes-con-gasto">
             {choferesConGasto.map((g) => (
@@ -104,7 +104,7 @@ export default async function GastosPage({
             list="vehiculos-con-gasto"
             defaultValue={vehiculo}
             placeholder="Buscar patente..."
-            className="w-56"
+            className="w-full sm:w-56"
           />
           <datalist id="vehiculos-con-gasto">
             {vehiculosConGasto.map((g) => (
@@ -114,11 +114,11 @@ export default async function GastosPage({
         </div>
         <div className="space-y-1">
           <Label htmlFor="desde">Desde</Label>
-          <Input id="desde" name="desde" type="date" defaultValue={desde} className="w-40" />
+          <Input id="desde" name="desde" type="date" defaultValue={desde} className="w-full sm:w-40" />
         </div>
         <div className="space-y-1">
           <Label htmlFor="hasta">Hasta</Label>
-          <Input id="hasta" name="hasta" type="date" defaultValue={hasta} className="w-40" />
+          <Input id="hasta" name="hasta" type="date" defaultValue={hasta} className="w-full sm:w-40" />
         </div>
         <Button type="submit" variant="outline">
           Filtrar
@@ -133,11 +133,11 @@ export default async function GastosPage({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Chofer</TableHead>
+            <TableHead className="hidden md:table-cell">Chofer</TableHead>
             <TableHead>Vehículo</TableHead>
             <TableHead>Tipo</TableHead>
             <TableHead>Monto</TableHead>
-            <TableHead>Fecha</TableHead>
+            <TableHead className="hidden md:table-cell">Fecha</TableHead>
             <TableHead>Estado</TableHead>
             {session.rol === "ADMIN" && <TableHead>Acciones</TableHead>}
           </TableRow>
@@ -145,11 +145,11 @@ export default async function GastosPage({
         <TableBody>
           {gastos.map((g) => (
             <TableRow key={g.id}>
-              <TableCell>{g.chofer.nombre}</TableCell>
+              <TableCell className="hidden md:table-cell">{g.chofer.nombre}</TableCell>
               <TableCell>{g.vehiculo?.patente ?? "—"}</TableCell>
               <TableCell>{TIPO_LABEL[g.tipo]}</TableCell>
               <TableCell>${g.monto.toString()}</TableCell>
-              <TableCell>{g.fecha.toLocaleDateString("es-AR")}</TableCell>
+              <TableCell className="hidden md:table-cell">{g.fecha.toLocaleDateString("es-AR")}</TableCell>
               <TableCell>
                 <Badge variant="secondary">{g.estado}</Badge>
               </TableCell>

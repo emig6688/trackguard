@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { type NavEntry, type NavLink } from "@/components/admin-nav";
-import { AdminSidebar } from "@/components/admin-sidebar";
+import { AdminSidebar, SidebarMobileToggle } from "@/components/admin-sidebar";
 import { NotificationBell } from "@/components/notificaciones/notification-bell";
 import { PushToggle } from "@/components/notificaciones/push-toggle";
 import { Badge } from "@/components/ui/badge";
@@ -110,8 +110,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="flex min-h-screen">
       <AdminSidebar items={NAV_ITEMS} />
       <div className="flex flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b bg-background/95 px-6 py-3.5 backdrop-blur-sm">
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b bg-background/95 px-4 py-3.5 backdrop-blur-sm sm:px-6">
           <div className="flex items-center gap-3">
+            <SidebarMobileToggle />
             <div className="flex size-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
               {iniciales(session.user.nombre)}
             </div>

@@ -174,10 +174,10 @@ export default async function CostosPage({
           <TableHeader>
             <TableRow>
               <TableHead>Vehículo</TableHead>
-              <TableHead>Combustible</TableHead>
-              <TableHead>Gastos</TableHead>
-              <TableHead>Repuestos</TableHead>
-              <TableHead>Facturas</TableHead>
+              <TableHead className="hidden md:table-cell">Combustible</TableHead>
+              <TableHead className="hidden md:table-cell">Gastos</TableHead>
+              <TableHead className="hidden md:table-cell">Repuestos</TableHead>
+              <TableHead className="hidden md:table-cell">Facturas</TableHead>
               <TableHead>Total</TableHead>
             </TableRow>
           </TableHeader>
@@ -185,10 +185,10 @@ export default async function CostosPage({
             {porVehiculo.map((c) => (
               <TableRow key={c.vehiculoId}>
                 <TableCell className="font-medium">{c.patente}</TableCell>
-                <TableCell>{formatearMoneda(c.combustible)}</TableCell>
-                <TableCell>{formatearMoneda(c.gastos)}</TableCell>
-                <TableCell>{formatearMoneda(c.repuestos)}</TableCell>
-                <TableCell>{formatearMoneda(c.facturas)}</TableCell>
+                <TableCell className="hidden md:table-cell">{formatearMoneda(c.combustible)}</TableCell>
+                <TableCell className="hidden md:table-cell">{formatearMoneda(c.gastos)}</TableCell>
+                <TableCell className="hidden md:table-cell">{formatearMoneda(c.repuestos)}</TableCell>
+                <TableCell className="hidden md:table-cell">{formatearMoneda(c.facturas)}</TableCell>
                 <TableCell className="font-semibold">{formatearMoneda(c.total)}</TableCell>
               </TableRow>
             ))}
@@ -221,8 +221,8 @@ export default async function CostosPage({
           <TableHeader>
             <TableRow>
               <TableHead>Chofer</TableHead>
-              <TableHead>Combustible</TableHead>
-              <TableHead>Gastos</TableHead>
+              <TableHead className="hidden md:table-cell">Combustible</TableHead>
+              <TableHead className="hidden md:table-cell">Gastos</TableHead>
               <TableHead>Total</TableHead>
             </TableRow>
           </TableHeader>
@@ -230,8 +230,8 @@ export default async function CostosPage({
             {porChofer.map((c) => (
               <TableRow key={c.choferId}>
                 <TableCell className="font-medium">{c.nombre}</TableCell>
-                <TableCell>{formatearMoneda(c.combustible)}</TableCell>
-                <TableCell>{formatearMoneda(c.gastos)}</TableCell>
+                <TableCell className="hidden md:table-cell">{formatearMoneda(c.combustible)}</TableCell>
+                <TableCell className="hidden md:table-cell">{formatearMoneda(c.gastos)}</TableCell>
                 <TableCell className="font-semibold">{formatearMoneda(c.total)}</TableCell>
               </TableRow>
             ))}

@@ -39,10 +39,10 @@ export default async function VehiculosPage() {
         <TableHeader>
           <TableRow>
             <TableHead>Patente</TableHead>
-            <TableHead>Marca / Modelo</TableHead>
-            <TableHead>Tipo</TableHead>
+            <TableHead className="hidden md:table-cell">Marca / Modelo</TableHead>
+            <TableHead className="hidden md:table-cell">Tipo</TableHead>
             <TableHead>Km actual</TableHead>
-            <TableHead>Equipo de frío</TableHead>
+            <TableHead className="hidden md:table-cell">Equipo de frío</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead>Operativo</TableHead>
           </TableRow>
@@ -55,12 +55,12 @@ export default async function VehiculosPage() {
                   {v.patente}
                 </Link>
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden md:table-cell">
                 {v.marca} {v.modelo}
               </TableCell>
-              <TableCell>{v.tipoCarroceria ?? v.tipo}</TableCell>
+              <TableCell className="hidden md:table-cell">{v.tipoCarroceria ?? v.tipo}</TableCell>
               <TableCell>{v.kmActual.toLocaleString("es-AR")} km</TableCell>
-              <TableCell>{v.equipoFrioTipo ?? "—"}</TableCell>
+              <TableCell className="hidden md:table-cell">{v.equipoFrioTipo ?? "—"}</TableCell>
               <TableCell>
                 <Badge variant={v.activo ? "success" : "secondary"}>
                   {v.activo ? "Activo" : "Inactivo"}

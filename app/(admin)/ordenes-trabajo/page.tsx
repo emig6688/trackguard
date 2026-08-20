@@ -244,10 +244,10 @@ export default async function OrdenesTrabajoPage({
             <TableHead>Número</TableHead>
             <TableHead>Vehículo</TableHead>
             <TableHead>Título</TableHead>
-            <TableHead>Área</TableHead>
+            <TableHead className="hidden md:table-cell">Área</TableHead>
             <TableHead>Prioridad</TableHead>
-            <TableHead>Asignado a</TableHead>
-            <TableHead>Fecha estimada</TableHead>
+            <TableHead className="hidden md:table-cell">Asignado a</TableHead>
+            <TableHead className="hidden md:table-cell">Fecha estimada</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead>Acciones</TableHead>
           </TableRow>
@@ -282,12 +282,14 @@ export default async function OrdenesTrabajoPage({
                     )}
                   </div>
                 </TableCell>
-                <TableCell>{ot.areaReparacion ? AREA_REPARACION_LABEL[ot.areaReparacion] : "—"}</TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {ot.areaReparacion ? AREA_REPARACION_LABEL[ot.areaReparacion] : "—"}
+                </TableCell>
                 <TableCell>
                   <Badge variant={PRIORIDAD_VARIANT[ot.prioridad]}>{PRIORIDAD_LABEL[ot.prioridad]}</Badge>
                 </TableCell>
-                <TableCell>{ot.asignadoA?.nombre ?? "—"}</TableCell>
-                <TableCell>
+                <TableCell className="hidden md:table-cell">{ot.asignadoA?.nombre ?? "—"}</TableCell>
+                <TableCell className="hidden md:table-cell">
                   {fechaMostrada ? (
                     <span className={atrasada ? "font-medium text-destructive" : ""}>
                       {fechaMostrada.toLocaleDateString("es-AR")}

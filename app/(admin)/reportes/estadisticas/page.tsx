@@ -80,10 +80,10 @@ export default async function EstadisticasPage() {
                     <TableHead>Vehículo</TableHead>
                     <TableHead>Score</TableHead>
                     <TableHead>Costo/km (12m)</TableHead>
-                    <TableHead>Costo total (12m)</TableHead>
+                    <TableHead className="hidden md:table-cell">Costo total (12m)</TableHead>
                     <TableHead>Correctivas (12m)</TableHead>
-                    <TableHead>Antigüedad</TableHead>
-                    <TableHead>Áreas repetidas</TableHead>
+                    <TableHead className="hidden md:table-cell">Antigüedad</TableHead>
+                    <TableHead className="hidden md:table-cell">Áreas repetidas</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -94,10 +94,14 @@ export default async function EstadisticasPage() {
                       <TableCell className="tabular-nums">
                         {c.kmActual > 0 ? formatearMoneda(c.costoPorKm) : "—"}
                       </TableCell>
-                      <TableCell className="tabular-nums">{formatearMoneda(c.costoTotal12m)}</TableCell>
+                      <TableCell className="hidden tabular-nums md:table-cell">
+                        {formatearMoneda(c.costoTotal12m)}
+                      </TableCell>
                       <TableCell className="tabular-nums">{c.correctivas12m}</TableCell>
-                      <TableCell>{c.antiguedadAnios != null ? `${c.antiguedadAnios} años` : "—"}</TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {c.antiguedadAnios != null ? `${c.antiguedadAnios} años` : "—"}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
                         {c.areasRepetidas.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {c.areasRepetidas.map((a) => (

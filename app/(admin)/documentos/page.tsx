@@ -106,7 +106,7 @@ export default async function DocumentosPage({
             list="tipos-documento"
             defaultValue={filtroTipo}
             placeholder="Ej: ITV, SENASA, Licencia..."
-            className="w-64"
+            className="w-full sm:w-64"
           />
           <datalist id="tipos-documento">
             {tiposDocumento.map((t) => (
@@ -144,7 +144,7 @@ export default async function DocumentosPage({
         <TableHeader>
           <TableRow>
             <TableHead>Entidad</TableHead>
-            <TableHead>Tipo</TableHead>
+            <TableHead className="hidden md:table-cell">Tipo</TableHead>
             <TableHead>Vencimiento</TableHead>
             <TableHead>Estado</TableHead>
             {user.rol === "ADMIN" && <TableHead>Acciones</TableHead>}
@@ -158,7 +158,7 @@ export default async function DocumentosPage({
                   {entidadLabel}
                 </Link>
               </TableCell>
-              <TableCell>{doc.tipoDocumento.nombre}</TableCell>
+              <TableCell className="hidden md:table-cell">{doc.tipoDocumento.nombre}</TableCell>
               <TableCell>{doc.fechaVencimiento.toLocaleDateString("es-AR")}</TableCell>
               <TableCell>
                 <Badge variant={ESTADO_VENCIMIENTO_VARIANT[estado]}>

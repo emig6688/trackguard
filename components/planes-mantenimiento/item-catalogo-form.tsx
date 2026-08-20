@@ -32,7 +32,7 @@ export function ItemCatalogoForm() {
     <form ref={formRef} action={formAction} className="space-y-4 rounded-lg border p-4">
       <h2 className="text-sm font-semibold">Agregar tarea al catálogo estándar</h2>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="categoria">Categoría</Label>
           <Input id="categoria" name="categoria" placeholder="Ej: Sistema de motor" required />
@@ -60,7 +60,7 @@ export function ItemCatalogoForm() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="intervaloKm">Cada cuántos km</Label>
           <Input id="intervaloKm" name="intervaloKm" type="number" placeholder="Ej: 10000" />

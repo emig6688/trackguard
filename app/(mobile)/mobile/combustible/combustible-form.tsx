@@ -63,7 +63,7 @@ export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patent
         <Input id="kmOdometro" name="kmOdometro" type="number" inputMode="numeric" required />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="litrosCargados">Litros</Label>
           <Input id="litrosCargados" name="litrosCargados" type="number" step="0.01" inputMode="decimal" required />

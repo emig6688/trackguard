@@ -46,7 +46,7 @@ export function VehiculoForm({
         {errors.patente && <p className="text-sm text-destructive">{errors.patente[0]}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="marca">Marca</Label>
           <Input id="marca" name="marca" defaultValue={defaultValues?.marca} required />
@@ -59,7 +59,7 @@ export function VehiculoForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="anio">Año</Label>
           <Input id="anio" name="anio" type="number" defaultValue={defaultValues?.anio ?? ""} />
@@ -81,7 +81,7 @@ export function VehiculoForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="numeroInterno">Número interno</Label>
           <Input
@@ -101,7 +101,7 @@ export function VehiculoForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="horasEquipoFrio">Horas del equipo de frío</Label>
           <Input

@@ -38,7 +38,7 @@ export default async function UsuariosPage() {
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
-            <TableHead>Email</TableHead>
+            <TableHead className="hidden md:table-cell">Email</TableHead>
             <TableHead>Rol</TableHead>
             <TableHead>Estado</TableHead>
           </TableRow>
@@ -51,7 +51,7 @@ export default async function UsuariosPage() {
                   {u.nombre}
                 </Link>
               </TableCell>
-              <TableCell>{u.email}</TableCell>
+              <TableCell className="hidden md:table-cell">{u.email}</TableCell>
               <TableCell>{u.rol}</TableCell>
               <TableCell>
                 <Badge variant={u.activo ? "success" : "secondary"}>

@@ -53,7 +53,7 @@ export function PlanForm({ vehiculoId, redirectPath }: { vehiculoId: string; red
         </Select>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="intervaloKm">Cada cuántos km</Label>
           <Input id="intervaloKm" name="intervaloKm" type="number" placeholder="Ej: 10000" />

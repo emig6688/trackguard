@@ -33,7 +33,7 @@ export default async function PanolPage() {
             <TableHead>Artículo</TableHead>
             <TableHead>Unidad</TableHead>
             <TableHead>Stock actual</TableHead>
-            <TableHead>Stock mínimo</TableHead>
+            <TableHead className="hidden md:table-cell">Stock mínimo</TableHead>
             <TableHead>Estado</TableHead>
           </TableRow>
         </TableHeader>
@@ -49,7 +49,7 @@ export default async function PanolPage() {
                 </TableCell>
                 <TableCell>{a.unidadMedida ?? "—"}</TableCell>
                 <TableCell>{a.stockActual}</TableCell>
-                <TableCell>{a.stockMinimo}</TableCell>
+                <TableCell className="hidden md:table-cell">{a.stockMinimo}</TableCell>
                 <TableCell className="flex gap-2">
                   {bajoMinimo && <Badge variant="warning">Al mínimo</Badge>}
                   <Badge variant={a.activo ? "success" : "secondary"}>

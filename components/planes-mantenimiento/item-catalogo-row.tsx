@@ -56,7 +56,7 @@ export function ItemCatalogoRow({ item }: { item: ItemCatalogo }) {
     const errors = state?.fieldErrors ?? {};
     return (
       <form action={formAction} className="space-y-3 rounded-lg border bg-muted/30 p-3 text-sm">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label htmlFor={`categoria-${item.id}`}>Categoría</Label>
             <Input id={`categoria-${item.id}`} name="categoria" defaultValue={item.categoria} required />
@@ -82,7 +82,7 @@ export function ItemCatalogoRow({ item }: { item: ItemCatalogo }) {
             </SelectContent>
           </Select>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="space-y-1">
             <Label htmlFor={`intervaloKm-${item.id}`}>Cada cuántos km</Label>
             <Input

@@ -74,11 +74,11 @@ export default async function CombustiblePage({
       <form className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
           <Label htmlFor="desde">Desde</Label>
-          <Input id="desde" name="desde" type="date" defaultValue={desde} className="w-40" />
+          <Input id="desde" name="desde" type="date" defaultValue={desde} className="w-full sm:w-40" />
         </div>
         <div className="space-y-1">
           <Label htmlFor="hasta">Hasta</Label>
-          <Input id="hasta" name="hasta" type="date" defaultValue={hasta} className="w-40" />
+          <Input id="hasta" name="hasta" type="date" defaultValue={hasta} className="w-full sm:w-40" />
         </div>
         <Button type="submit" variant="outline">
           Filtrar
@@ -103,9 +103,9 @@ export default async function CombustiblePage({
         <TableHeader>
           <TableRow>
             <TableHead>Vehículo</TableHead>
-            <TableHead>Chofer</TableHead>
+            <TableHead className="hidden md:table-cell">Chofer</TableHead>
             <TableHead>Fecha</TableHead>
-            <TableHead>Km odómetro</TableHead>
+            <TableHead className="hidden md:table-cell">Km odómetro</TableHead>
             <TableHead>Litros</TableHead>
             <TableHead>Consumo</TableHead>
             {session.rol === "ADMIN" && <TableHead>Acciones</TableHead>}
@@ -121,9 +121,9 @@ export default async function CombustiblePage({
             return (
               <TableRow key={c.id}>
                 <TableCell>{c.vehiculo.patente}</TableCell>
-                <TableCell>{c.chofer.nombre}</TableCell>
+                <TableCell className="hidden md:table-cell">{c.chofer.nombre}</TableCell>
                 <TableCell>{c.fechaHora.toLocaleDateString("es-AR")}</TableCell>
-                <TableCell>{c.kmOdometro.toLocaleString("es-AR")}</TableCell>
+                <TableCell className="hidden md:table-cell">{c.kmOdometro.toLocaleString("es-AR")}</TableCell>
                 <TableCell>{c.litrosCargados.toString()}</TableCell>
                 <TableCell>
                   {consumo != null ? (

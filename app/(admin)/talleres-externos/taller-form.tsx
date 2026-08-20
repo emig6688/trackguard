@@ -33,7 +33,7 @@ export function TallerForm({
         {errors.nombre && <p className="text-sm text-destructive">{errors.nombre[0]}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="contactoNombre">Contacto</Label>
           <Input

@@ -69,7 +69,7 @@ export function OCForm({
               placeholder="Qué hay que comprar"
               required
             />
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div className="space-y-1">
                 <Label htmlFor={domId(`item_cantidad_${fila.id}`)}>Cantidad</Label>
                 <Input id={domId(`item_cantidad_${fila.id}`)} name={`item_cantidad_${fila.id}`} type="number" />

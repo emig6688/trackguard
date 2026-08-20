@@ -39,7 +39,7 @@ export function PresupuestoForm({ compraId }: { compraId: string }) {
         <Label htmlFor={`archivo-${compraId}`}>Foto o archivo del presupuesto</Label>
         <Input id={`archivo-${compraId}`} name="archivo" type="file" accept="image/*,.pdf" capture="environment" required />
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div className="space-y-1">
           <Label htmlFor={`monto-${compraId}`}>Monto (opcional)</Label>
           <Input id={`monto-${compraId}`} name="monto" type="number" step="0.01" />

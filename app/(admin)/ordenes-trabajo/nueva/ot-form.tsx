@@ -57,7 +57,7 @@ export function OTForm({
         <Textarea id="descripcion" name="descripcion" />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="prioridad">Prioridad</Label>
           <Select name="prioridad" defaultValue="MEDIA">

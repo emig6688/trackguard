@@ -62,7 +62,7 @@ export function ChoferForm({
         {errors.password && <p className="text-sm text-destructive">{errors.password[0]}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="dni">DNI</Label>
           <Input id="dni" name="dni" defaultValue={defaultValues?.dni ?? ""} />
@@ -77,7 +77,7 @@ export function ChoferForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="numeroLicencia">N° de licencia</Label>
           <Input
@@ -96,7 +96,7 @@ export function ChoferForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="legajo">Legajo</Label>
           <Input id="legajo" name="legajo" defaultValue={defaultValues?.legajo ?? ""} />

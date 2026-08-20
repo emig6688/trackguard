@@ -63,7 +63,7 @@ export function OTAcciones({
       {ot.estado === "PENDIENTE_APROBACION" && puedeGestionar && (
         <form action={aprobarAction} className="space-y-4 rounded-lg border p-4">
           <h3 className="font-medium">Aprobar orden de trabajo</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="prioridad">Prioridad</Label>
               <Select name="prioridad" defaultValue={ot.prioridad}>
@@ -86,7 +86,7 @@ export function OTAcciones({
               )}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="areaReparacion">
                 Área de reparación

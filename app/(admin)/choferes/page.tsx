@@ -34,10 +34,10 @@ export default async function ChoferesPage() {
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
-            <TableHead>Email</TableHead>
+            <TableHead className="hidden md:table-cell">Email</TableHead>
             <TableHead>DNI</TableHead>
-            <TableHead>Legajo</TableHead>
-            <TableHead>Licencia</TableHead>
+            <TableHead className="hidden md:table-cell">Legajo</TableHead>
+            <TableHead className="hidden md:table-cell">Licencia</TableHead>
             <TableHead>Estado</TableHead>
           </TableRow>
         </TableHeader>
@@ -49,10 +49,10 @@ export default async function ChoferesPage() {
                   {c.nombre}
                 </Link>
               </TableCell>
-              <TableCell>{c.email}</TableCell>
+              <TableCell className="hidden md:table-cell">{c.email}</TableCell>
               <TableCell>{c.dni ?? "—"}</TableCell>
-              <TableCell>{c.perfilChofer?.legajo ?? "—"}</TableCell>
-              <TableCell>{c.perfilChofer?.numeroLicencia ?? "—"}</TableCell>
+              <TableCell className="hidden md:table-cell">{c.perfilChofer?.legajo ?? "—"}</TableCell>
+              <TableCell className="hidden md:table-cell">{c.perfilChofer?.numeroLicencia ?? "—"}</TableCell>
               <TableCell>
                 <Badge variant={c.activo ? "success" : "secondary"}>
                   {c.activo ? "Activo" : "Inactivo"}

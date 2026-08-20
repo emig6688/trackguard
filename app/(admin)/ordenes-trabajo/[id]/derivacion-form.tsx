@@ -35,7 +35,7 @@ export function DerivacionForm({
       className="space-y-4 rounded-lg border p-4"
     >
       <h3 className="font-medium">Seguimiento de la derivación</h3>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="estadoExterno">Estado</Label>
           <Select name="estadoExterno" defaultValue={defaultEstado}>
