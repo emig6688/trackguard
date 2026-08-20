@@ -83,7 +83,6 @@ export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patent
           name="archivoTicket"
           type="file"
           accept="image/*"
-          capture="environment"
           required
           onChange={onFileChange}
         />

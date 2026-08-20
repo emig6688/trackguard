@@ -49,7 +49,7 @@ export function EventoForm({ vehiculos }: { vehiculos: { id: string; patente: st
 
       <div className="space-y-2">
         <Label htmlFor="archivo">Foto (opcional)</Label>
-        <Input id="archivo" name="archivo" type="file" accept="image/*" capture="environment" />
+        <Input id="archivo" name="archivo" type="file" accept="image/*" />
       </div>
 
       <div className="flex items-center gap-2 rounded-md border p-3">

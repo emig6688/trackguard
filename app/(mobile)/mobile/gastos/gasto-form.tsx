@@ -77,7 +77,6 @@ export function GastoForm({ vehiculos }: { vehiculos: { id: string; patente: str
           name="archivoComprobante"
           type="file"
           accept="image/*"
-          capture="environment"
         />
       </div>
 
