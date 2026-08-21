@@ -20,13 +20,13 @@ export async function registrarCargaCombustible(
   const { user: chofer, prisma } = await requireRole(ROLES_MOBILE_CHOFER);
   const empresaId = chofer.empresaId!;
 
-  const chequeo = await verificarChecklistDelDia(prisma, empresaId, chofer);
-  if (chequeo.bloqueado) return { error: chequeo.motivo };
-
   const vehiculoId = formData.get("vehiculoId");
   if (typeof vehiculoId !== "string" || !vehiculoId) return { error: "Elegí un vehículo." };
   const vehiculo = await prisma.vehiculo.findUnique({ where: { id: vehiculoId } });
   if (!vehiculo) return { error: "Vehículo inválido." };
+
+  const chequeo = await verificarChecklistDelDia(prisma, empresaId, chofer, vehiculoId);
+  if (chequeo.bloqueado) return { error: chequeo.motivo };
 
   const kmOdometro = Number(formData.get("kmOdometro"));
   const litrosCargados = Number(formData.get("litrosCargados"));

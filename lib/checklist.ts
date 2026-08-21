@@ -46,9 +46,27 @@ function diaArgentina(fecha: Date): string {
   return argentina.toISOString().slice(0, 10);
 }
 
-export async function choferHizoChecklistHoy(prisma: ScopedPrismaClient, choferId: string): Promise<boolean> {
+/**
+ * vehiculoId es opcional a propósito: sin él, chequea "hizo algún checklist
+ * hoy con cualquier vehículo" (usado como pista general en pantallas que
+ * todavía no saben con qué camión va a trabajar el chofer). Pasándolo,
+ * chequea el checklist de ESE vehículo puntual — es el chequeo que hay que
+ * usar antes de dejar cargar combustible/cerrar ruta/cargar gasto de un
+ * vehículo específico, para no dar por hecho que el checklist de otro
+ * camión (hecho más temprano el mismo día) también cubre a este.
+ */
+export async function choferHizoChecklistHoy(
+  prisma: ScopedPrismaClient,
+  choferId: string,
+  vehiculoId?: string
+): Promise<boolean> {
   const checklist = await prisma.checklistRealizado.findFirst({
-    where: { choferId, momento: "PRESALIDA", fechaHora: { gte: inicioDeHoy() } },
+    where: {
+      choferId,
+      momento: "PRESALIDA",
+      fechaHora: { gte: inicioDeHoy() },
+      ...(vehiculoId ? { vehiculoId } : {}),
+    },
   });
   return checklist != null;
 }
@@ -172,11 +190,12 @@ export const MOTIVO_CHECKLIST_PENDIENTE =
 export async function checklistObligatorioPendiente(
   prisma: ScopedPrismaClient,
   empresaId: string,
-  choferId: string
+  choferId: string,
+  vehiculoId?: string
 ): Promise<boolean> {
   const regla = await obtenerReglaNotificacion(prisma, empresaId, "CHECKLIST_NO_REALIZADO");
   if (!regla.activo) return false;
-  return !(await choferHizoChecklistHoy(prisma, choferId));
+  return !(await choferHizoChecklistHoy(prisma, choferId, vehiculoId));
 }
 
 /**
@@ -189,12 +208,13 @@ export async function checklistObligatorioPendiente(
 export async function verificarChecklistDelDia(
   prisma: ScopedPrismaClient,
   empresaId: string,
-  chofer: { id: string; nombre: string }
+  chofer: { id: string; nombre: string },
+  vehiculoId?: string
 ): Promise<ResultadoChecklistObligatorio> {
   const regla = await obtenerReglaNotificacion(prisma, empresaId, "CHECKLIST_NO_REALIZADO");
   if (!regla.activo) return { bloqueado: false };
 
-  const yaHizo = await choferHizoChecklistHoy(prisma, chofer.id);
+  const yaHizo = await choferHizoChecklistHoy(prisma, chofer.id, vehiculoId);
   if (yaHizo) return { bloqueado: false };
 
   if (regla.roles.length > 0 && regla.canales.length > 0) {

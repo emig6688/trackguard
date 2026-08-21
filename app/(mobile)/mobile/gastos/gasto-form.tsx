@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { registrarGasto } from "@/app/_actions/gastos";
 
 export function GastoForm({ vehiculos }: { vehiculos: { id: string; patente: string }[] }) {
+  const [state, formAction, pending] = useActionState(registrarGasto, undefined);
   const [tipo, setTipo] = useState("PEAJE");
   const esOtro = tipo === "OTRO";
 
   return (
-    <form action={registrarGasto} className="space-y-4">
+    <form action={formAction} className="space-y-4">
       <h1 className="text-lg font-semibold">Cargar gasto</h1>
 
       <div className="space-y-2">
@@ -80,8 +81,10 @@ export function GastoForm({ vehiculos }: { vehiculos: { id: string; patente: str
         />
       </div>
 
-      <Button type="submit" className="w-full">
-        Guardar gasto
+      {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
+
+      <Button type="submit" className="w-full" disabled={pending}>
+        {pending ? "Guardando..." : "Guardar gasto"}
       </Button>
     </form>
   );

@@ -24,9 +24,6 @@ export async function registrarEventoRuta(
   const { user: chofer, prisma } = await requireRole(ROLES_MOBILE_CHOFER);
   const empresaId = chofer.empresaId!;
 
-  const chequeo = await verificarChecklistDelDia(prisma, empresaId, chofer);
-  if (chequeo.bloqueado) return { error: chequeo.motivo };
-
   const vehiculoId = formData.get("vehiculoId");
   const tipo = formData.get("tipo");
   const descripcion = formData.get("descripcion");
@@ -36,6 +33,9 @@ export async function registrarEventoRuta(
 
   const vehiculo = await prisma.vehiculo.findUnique({ where: { id: vehiculoId }, select: { patente: true } });
   if (!vehiculo) return { error: "Vehículo inválido." };
+
+  const chequeo = await verificarChecklistDelDia(prisma, empresaId, chofer, vehiculoId);
+  if (chequeo.bloqueado) return { error: chequeo.motivo };
 
   const kmRaw = formData.get("kmAlMomento");
   const kmAlMomento = typeof kmRaw === "string" && kmRaw !== "" ? Number(kmRaw) : undefined;
@@ -127,13 +127,13 @@ export async function cerrarRutaSinNovedades(
   const { user: chofer, prisma } = await requireRole(ROLES_MOBILE_CHOFER);
   const empresaId = chofer.empresaId!;
 
-  const chequeo = await verificarChecklistDelDia(prisma, empresaId, chofer);
-  if (chequeo.bloqueado) return { error: chequeo.motivo };
-
   const vehiculoId = formData.get("vehiculoId");
   if (typeof vehiculoId !== "string" || !vehiculoId) return { error: "Elegí un vehículo." };
   const vehiculo = await prisma.vehiculo.findUnique({ where: { id: vehiculoId } });
   if (!vehiculo) return { error: "Vehículo inválido." };
+
+  const chequeo = await verificarChecklistDelDia(prisma, empresaId, chofer, vehiculoId);
+  if (chequeo.bloqueado) return { error: chequeo.motivo };
 
   const kmRaw = formData.get("kmAlMomento");
   const kmAlMomento = typeof kmRaw === "string" && kmRaw !== "" ? Number(kmRaw) : undefined;

@@ -7,12 +7,11 @@ import { verificarChecklistDelDia } from "@/lib/checklist";
 
 const TIPOS_GASTO = ["PEAJE", "VIATICO", "REPARACION_MENOR", "OTRO"] as const;
 
-export async function registrarGasto(formData: FormData) {
+export type GastoState = { error?: string } | undefined;
+
+export async function registrarGasto(_prevState: GastoState, formData: FormData): Promise<GastoState> {
   const { user: chofer, prisma } = await requireRole(ROLES_MOBILE_CHOFER);
   const empresaId = chofer.empresaId!;
-
-  const chequeo = await verificarChecklistDelDia(prisma, empresaId, chofer);
-  if (chequeo.bloqueado) throw new Error(chequeo.motivo);
 
   const tipo = formData.get("tipo");
   const montoRaw = formData.get("monto");
@@ -20,20 +19,23 @@ export async function registrarGasto(formData: FormData) {
   const descripcion = formData.get("descripcion");
 
   if (typeof tipo !== "string" || !TIPOS_GASTO.includes(tipo as (typeof TIPOS_GASTO)[number])) {
-    throw new Error("Elegí un tipo de gasto.");
+    return { error: "Elegí un tipo de gasto." };
   }
   const monto = Number(montoRaw);
-  if (!Number.isFinite(monto) || monto <= 0) throw new Error("Ingresá un monto válido.");
+  if (!Number.isFinite(monto) || monto <= 0) return { error: "Ingresá un monto válido." };
 
   // El vehículo nunca es opcional: todo lo que carga el chofer queda
   // identificado con chofer + patente juntos.
-  if (typeof vehiculoId !== "string" || !vehiculoId) throw new Error("Elegí un vehículo.");
+  if (typeof vehiculoId !== "string" || !vehiculoId) return { error: "Elegí un vehículo." };
   const vehiculo = await prisma.vehiculo.findUnique({ where: { id: vehiculoId } });
-  if (!vehiculo) throw new Error("Vehículo inválido.");
+  if (!vehiculo) return { error: "Vehículo inválido." };
+
+  const chequeo = await verificarChecklistDelDia(prisma, empresaId, chofer, vehiculoId);
+  if (chequeo.bloqueado) return { error: chequeo.motivo };
 
   const descripcionTrim = typeof descripcion === "string" ? descripcion.trim() : "";
   if (tipo === "OTRO" && !descripcionTrim) {
-    throw new Error("Para \"Otro\" tenés que aclarar el gasto en observación.");
+    return { error: 'Para "Otro" tenés que aclarar el gasto en observación.' };
   }
 
   const file = formData.get("archivoComprobante");
