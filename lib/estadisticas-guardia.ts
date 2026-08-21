@@ -143,6 +143,88 @@ export async function calcularCumplimientoPorMes(
   return acumulado;
 }
 
+export type ReporteChofer = {
+  choferNombre: string;
+  diasOperados: number;
+  checklistPresalidaCumplidos: number;
+  cierresRutaCumplidos: number;
+  tanqueNoLlenoCount: number;
+  roturasReportadas: number;
+  observacionesGuardia: number;
+};
+
+/**
+ * Resumen de un chofer en un período, para el reporte de Estadísticas →
+ * Reportes: cuántos días operó, cuántos checklists pre-salida y cierres de
+ * ruta cumplió sobre esos días, cuántas veces volvió con el tanque sin
+ * llenar, cuántas roturas (OT correctivas de origen checklist o evento de
+ * ruta) generó, y cuántas veces el guardia dejó una observación en un
+ * día/vehículo que este chofer efectivamente usó (no todas las
+ * observaciones de la empresa, solo las que le corresponden a él).
+ */
+export async function calcularReportePorChofer(
+  prisma: ScopedPrismaClient,
+  choferId: string,
+  desde: Date,
+  hasta: Date
+): Promise<ReporteChofer> {
+  const [chofer, checklists, eventos, diasNoOperados, roturas, observacionesEmpresa] = await Promise.all([
+    prisma.usuario.findUniqueOrThrow({ where: { id: choferId }, select: { nombre: true } }),
+    prisma.checklistRealizado.findMany({
+      where: { choferId, momento: "PRESALIDA", fechaHora: { gte: desde, lte: hasta } },
+      select: { vehiculoId: true, fechaHora: true },
+    }),
+    prisma.eventoRuta.findMany({
+      where: { choferId, fechaHora: { gte: desde, lte: hasta } },
+      select: { vehiculoId: true, fechaHora: true, tanqueLleno: true },
+    }),
+    prisma.diaNoOperado.findMany({
+      where: { choferId, fecha: { gte: desde, lte: hasta } },
+      select: { fecha: true },
+    }),
+    prisma.ordenDeTrabajo.count({
+      where: {
+        eliminadoEn: null,
+        createdAt: { gte: desde, lte: hasta },
+        origen: { in: ["CHECKLIST", "EVENTO_RUTA"] },
+        OR: [{ checklistRealizado: { choferId } }, { eventoRuta: { choferId } }],
+      },
+    }),
+    prisma.observacionGuardia.findMany({
+      where: { fecha: { gte: desde, lte: hasta } },
+      select: { vehiculoId: true, fecha: true, etapa: true },
+    }),
+  ]);
+
+  const diasNoOperadosSet = new Set(diasNoOperados.map((d) => claveDiaUTC(d.fecha)));
+
+  const clavesConChecklist = new Set(checklists.map((c) => `${c.vehiculoId}_${claveDia(c.fechaHora)}`));
+  const clavesConCierre = new Set(eventos.map((e) => `${e.vehiculoId}_${claveDia(e.fechaHora)}`));
+
+  const diasChecklist = new Set(
+    checklists.map((c) => claveDia(c.fechaHora)).filter((d) => !diasNoOperadosSet.has(d))
+  );
+  const diasCierre = new Set(eventos.map((e) => claveDia(e.fechaHora)).filter((d) => !diasNoOperadosSet.has(d)));
+  const diasOperados = new Set([...diasChecklist, ...diasCierre]).size;
+
+  const tanqueNoLlenoCount = eventos.filter((e) => e.tanqueLleno === false).length;
+
+  const observacionesGuardia = observacionesEmpresa.filter((o) => {
+    const clave = `${o.vehiculoId}_${claveDiaUTC(o.fecha)}`;
+    return o.etapa === "SALIDA" ? clavesConChecklist.has(clave) : clavesConCierre.has(clave);
+  }).length;
+
+  return {
+    choferNombre: chofer.nombre,
+    diasOperados,
+    checklistPresalidaCumplidos: diasChecklist.size,
+    cierresRutaCumplidos: diasCierre.size,
+    tanqueNoLlenoCount,
+    roturasReportadas: roturas,
+    observacionesGuardia,
+  };
+}
+
 /** Rango de años (inclusive) con al menos un registro del chofer, para saber qué años graficar. */
 async function rangoAniosConDatos(prisma: ScopedPrismaClient, choferId: string): Promise<[number, number] | null> {
   const [checklistMin, checklistMax, eventoMin, eventoMax] = await Promise.all([

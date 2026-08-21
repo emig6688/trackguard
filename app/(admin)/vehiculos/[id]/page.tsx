@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { requireEmpresa } from "@/lib/permisos";
 import { actualizarVehiculo, darDeBajaVehiculo, reactivarVehiculo } from "@/app/_actions/vehiculos";
 import { DocumentosPanel } from "@/components/documentos/documentos-panel";
 import { PlanesPanel } from "@/components/planes-mantenimiento/planes-panel";
-import { TrazabilidadPanel } from "@/components/vehiculos/trazabilidad-panel";
 import { BajaPanel } from "@/components/baja-panel";
 import { BackButton } from "@/components/back-button";
 import { EliminarButton } from "@/components/eliminar-button";
@@ -11,15 +11,8 @@ import { DisponibilidadToggle } from "@/components/vehiculos/disponibilidad-togg
 import { vehiculosEnTallerExterno } from "@/lib/disponibilidad";
 import { VehiculoForm } from "../nuevo/vehiculo-form";
 
-export default async function VehiculoDetallePage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ desde?: string; hasta?: string }>;
-}) {
+export default async function VehiculoDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { desde, hasta } = await searchParams;
   const { user, prisma } = await requireEmpresa();
   const vehiculo = await prisma.vehiculo.findUnique({ where: { id, eliminadoEn: null } });
   if (!vehiculo) notFound();
@@ -61,7 +54,13 @@ export default async function VehiculoDetallePage({
         />
       </div>
 
-      <TrazabilidadPanel vehiculoId={vehiculo.id} desde={desde} hasta={hasta} />
+      <p className="text-sm text-muted-foreground">
+        El reporte de trazabilidad de este vehículo se armó en{" "}
+        <Link href={`/reportes/estadisticas?tab=reportes&vehiculoId=${vehiculo.id}`} className="underline">
+          Estadísticas → Reportes
+        </Link>
+        .
+      </p>
 
       <PlanesPanel vehiculoId={vehiculo.id} redirectPath={`/vehiculos/${vehiculo.id}`} />
 

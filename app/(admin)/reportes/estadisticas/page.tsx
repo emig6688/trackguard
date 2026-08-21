@@ -1,6 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -15,10 +18,12 @@ import {
   calcularDisponibilidadHistorica,
   calcularTendenciaPreventivoCorrectivo,
 } from "@/lib/estadisticas";
+import { calcularReportePorChofer } from "@/lib/estadisticas-guardia";
 import { AREA_REPARACION_LABEL } from "@/lib/clasificador-averias";
 import { requireEmpresa } from "@/lib/permisos";
 import { TendenciaMantenimientoChart } from "@/components/estadisticas/tendencia-mantenimiento-chart";
 import { DisponibilidadHistoricaChart } from "@/components/estadisticas/disponibilidad-historica-chart";
+import { TrazabilidadPanel } from "@/components/vehiculos/trazabilidad-panel";
 
 function formatearMoneda(n: number) {
   return n.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
@@ -30,22 +35,56 @@ function badgeScore(score: number) {
   return <Badge variant="secondary">{score}</Badge>;
 }
 
-export default async function EstadisticasPage() {
-  const { prisma } = await requireEmpresa([
+function rangoPorDefecto(desdeStr?: string, hastaStr?: string) {
+  const hasta = hastaStr ? new Date(hastaStr) : new Date();
+  const desde = desdeStr ? new Date(desdeStr) : new Date(hasta.getFullYear() - 1, hasta.getMonth(), hasta.getDate());
+  return { desde, hasta };
+}
+
+export default async function EstadisticasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    tab?: string;
+    vehiculoId?: string;
+    choferId?: string;
+    desde?: string;
+    hasta?: string;
+  }>;
+}) {
+  const { user, prisma } = await requireEmpresa([
     "ADMIN",
     "ENCARGADO_MANTENIMIENTO",
     "ENCARGADO_COMPRAS",
     "GERENTE",
     "CONTADOR",
   ]);
+  const { tab, vehiculoId, choferId, desde, hasta } = await searchParams;
 
-  const [candidatos, tendencia, disponibilidad, correctivasChofer] = await Promise.all([
+  const [candidatos, tendencia, disponibilidad, correctivasChofer, vehiculos, choferesActivos] = await Promise.all([
     calcularCandidatosReemplazo(prisma),
     calcularTendenciaPreventivoCorrectivo(prisma),
     calcularDisponibilidadHistorica(prisma),
     calcularCorrectivasPorChofer(prisma),
+    prisma.vehiculo.findMany({
+      where: { activo: true, eliminadoEn: null },
+      select: { id: true, patente: true },
+      orderBy: { patente: "asc" },
+    }),
+    prisma.usuario.findMany({
+      where: { empresaId: user.empresaId!, rol: "CHOFER", activo: true, eliminadoEn: null },
+      select: { id: true, nombre: true },
+      orderBy: { nombre: "asc" },
+    }),
   ]);
   const { ranking: choferes, correlaciones } = correctivasChofer;
+
+  const choferSeleccionado =
+    choferId && choferesActivos.some((c) => c.id === choferId) ? choferId : choferesActivos[0]?.id;
+  const { desde: desdeReporte, hasta: hastaReporte } = rangoPorDefecto(desde, hasta);
+  const reporteChofer = choferSeleccionado
+    ? await calcularReportePorChofer(prisma, choferSeleccionado, desdeReporte, hastaReporte)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -57,10 +96,11 @@ export default async function EstadisticasPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="vehiculos">
+      <Tabs defaultValue={tab === "reportes" || tab === "choferes" ? tab : "vehiculos"}>
         <TabsList>
           <TabsTrigger value="vehiculos">Vehículos</TabsTrigger>
           <TabsTrigger value="choferes">Choferes</TabsTrigger>
+          <TabsTrigger value="reportes">Reportes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="vehiculos" className="space-y-6 pt-4">
@@ -234,6 +274,96 @@ export default async function EstadisticasPage() {
                 <p className="text-sm text-muted-foreground">
                   No hay correlaciones que superen el umbral con los datos actuales.
                 </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reportes" className="space-y-6 pt-4">
+          <TrazabilidadPanel vehiculos={vehiculos} vehiculoId={vehiculoId} desde={desde} hasta={hasta} />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Reporte por chofer</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Roturas reportadas, cumplimiento de checklist pre-salida y cierre de ruta, veces que
+                volvió con el tanque sin llenar, y observaciones del guardia por incumplimiento de
+                checklist — para un chofer en un período.
+              </p>
+              {choferesActivos.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hay choferes activos.</p>
+              ) : (
+                <>
+                  <form className="flex flex-wrap items-end gap-3">
+                    <input type="hidden" name="tab" value="reportes" />
+                    <div className="space-y-1">
+                      <Label htmlFor="rep-choferId">Chofer</Label>
+                      <select
+                        id="rep-choferId"
+                        name="choferId"
+                        defaultValue={choferSeleccionado}
+                        className="block rounded-md border border-input bg-transparent p-2 text-sm"
+                      >
+                        {choferesActivos.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="rep-desde">Desde</Label>
+                      <Input id="rep-desde" name="desde" type="date" defaultValue={desde} className="w-full sm:w-40" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="rep-hasta">Hasta</Label>
+                      <Input id="rep-hasta" name="hasta" type="date" defaultValue={hasta} className="w-full sm:w-40" />
+                    </div>
+                    <Button type="submit" variant="outline">
+                      Aplicar
+                    </Button>
+                  </form>
+                  <p className="text-xs text-muted-foreground">Sin período elegido, se toma el último año.</p>
+
+                  {reporteChofer && (
+                    <Table>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell className="font-medium">Días operados</TableCell>
+                          <TableCell className="tabular-nums">{reporteChofer.diasOperados}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="font-medium">Checklist pre-salida cumplidos</TableCell>
+                          <TableCell className="tabular-nums">
+                            {reporteChofer.checklistPresalidaCumplidos} / {reporteChofer.diasOperados}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="font-medium">Cierres de ruta cumplidos</TableCell>
+                          <TableCell className="tabular-nums">
+                            {reporteChofer.cierresRutaCumplidos} / {reporteChofer.diasOperados}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="font-medium">Veces con el tanque sin llenar</TableCell>
+                          <TableCell className="tabular-nums">{reporteChofer.tanqueNoLlenoCount}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="font-medium">Roturas reportadas (OT correctivas)</TableCell>
+                          <TableCell className="tabular-nums">{reporteChofer.roturasReportadas}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="font-medium">
+                            Observaciones del guardia por incumplimiento
+                          </TableCell>
+                          <TableCell className="tabular-nums">{reporteChofer.observacionesGuardia}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
