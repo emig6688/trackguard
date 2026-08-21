@@ -19,6 +19,7 @@ enum Rol {
   ADMIN
   ENCARGADO_MANTENIMIENTO
   ENCARGADO_COMPRAS
+  ENCARGADO_LOGISTICA
   MECANICO_INTERNO
   CHOFER
   GERENTE
@@ -169,6 +170,7 @@ enum TipoNotificacion {
   COMPRA_PENDIENTE_AUTORIZACION
   PRESUPUESTO_SUBIDO
   COMPRA_AUTORIZADA
+  COMPRA_MECANICO_PENDIENTE_AUTORIZACION
 }
 
 enum CanalNotificacion {
@@ -184,19 +186,23 @@ enum CanalNotificacion {
 // ---------------------------------------------------------------------------
 
 model Empresa {
-  id                      String   @id @default(cuid())
-  nombre                  String
-  activo                  Boolean  @default(true)
-  emailContacto           String?
-  telefono                String?
-  direccion               String?
-  contactoNombre          String?
+  id                              String   @id @default(cuid())
+  nombre                          String
+  activo                          Boolean  @default(true)
+  emailContacto                   String?
+  telefono                        String?
+  direccion                       String?
+  contactoNombre                  String?
   // Monto máximo (ARS) por debajo del cual una orden de compra no requiere
   // autorización de gerencia. null = función desactivada, ninguna OC requiere
   // autorización sin importar el monto.
-  montoAutorizacionCompra Decimal? @db.Decimal(12, 2)
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  montoAutorizacionCompra         Decimal? @db.Decimal(12, 2)
+  // Igual que montoAutorizacionCompra, pero solo aplica a compras generadas
+  // por un mecánico interno, y la autoriza encargado de mantenimiento (no
+  // gerencia) — es una compuerta aparte, independiente de la de arriba.
+  montoAutorizacionCompraMecanico Decimal? @db.Decimal(12, 2)
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
 
   usuarios                    Usuario[]
   vehiculos                   Vehiculo[]
@@ -233,27 +239,27 @@ model Empresa {
 // destinatario directamente afectado — eso no es configurable acá, roles son
 // destinatarios *adicionales*.
 model ReglaNotificacion {
-  id        String              @id @default(cuid())
-  empresaId String
-  empresa   Empresa             @relation(fields: [empresaId], references: [id])
-  tipo      TipoNotificacion
-  roles     Rol[]
-  canales   CanalNotificacion[] @default([EMAIL, EN_APP])
+  id            String              @id @default(cuid())
+  empresaId     String
+  empresa       Empresa             @relation(fields: [empresaId], references: [id])
+  tipo          TipoNotificacion
+  roles         Rol[]
+  canales       CanalNotificacion[] @default([EMAIL, EN_APP])
   // Solo aplica a VENCIMIENTO_DOCUMENTO_CHOFER/VEHICULO: a cuántos días antes
   // del vencimiento se avisa. Sin uso en los demás tipos (disparados por un
   // evento, no por una fecha límite).
-  diasAviso Int[]               @default([15, 7])
+  diasAviso     Int[]               @default([15, 7])
   // Solo aplica a RESUMEN_VEHICULOS_OPERATIVOS: hora del día (0-23, huso
   // horario Argentina) en la que se manda el resumen diario. El cron corre
   // cada hora y compara contra esto (ver app/api/cron/resumen-operativos).
-  horaEnvio Int?
-  activo    Boolean             @default(true)
+  horaEnvio     Int?
+  activo        Boolean             @default(true)
   // Solo aplica a los avisos horarios recurrentes (RESUMEN_VEHICULOS_OPERATIVOS,
   // DEVOLUCION_SIN_ENVIAR): última vez que efectivamente se mandó, para que un
   // reintento de Vercel dentro de la misma franja horaria no duplique el aviso.
   ultimoEnvioEn DateTime?
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 
   @@unique([empresaId, tipo])
 }
@@ -361,8 +367,9 @@ model Usuario {
   devolucionesRegistradas Devolucion[]         @relation("DevolucionRegistradoPor")
   devolucionesEnviadas    Devolucion[]         @relation("DevolucionEnviadoPor")
 
-  comprasAutorizadas  OrdenCompra[]       @relation("CompraAutorizadaPor")
-  presupuestosSubidos PresupuestoCompra[]
+  comprasAutorizadas              OrdenCompra[]       @relation("CompraAutorizadaPor")
+  comprasAutorizadasMantenimiento OrdenCompra[]       @relation("CompraAutorizadaMantenimientoPor")
+  presupuestosSubidos             PresupuestoCompra[]
 
   diasNoOperadosComoChofer DiaNoOperado[] @relation("DiaNoOperadoChofer")
   diasNoOperadosMarcados   DiaNoOperado[] @relation("DiaNoOperadoMarcadoPor")
@@ -811,6 +818,15 @@ model OrdenCompra {
   autorizadoEn          DateTime?
   presupuestoAprobadoId String?                  @unique
   presupuestoAprobado   PresupuestoCompra?       @relation("PresupuestoAprobado", fields: [presupuestoAprobadoId], references: [id])
+
+  // Autorización de encargado de mantenimiento cuando la compra la generó un
+  // mecánico interno y montoEstimado supera
+  // Empresa.montoAutorizacionCompraMecanico — compuerta aparte de la de
+  // gerencia de arriba, no la reemplaza.
+  estadoAutorizacionMantenimiento EstadoAutorizacionCompra @default(NO_REQUERIDA)
+  autorizadoMantenimientoPorId    String?
+  autorizadoMantenimientoPor      Usuario?                 @relation("CompraAutorizadaMantenimientoPor", fields: [autorizadoMantenimientoPorId], references: [id])
+  autorizadoMantenimientoEn       DateTime?
 
   eliminadoEn    DateTime?
   eliminadoPorId String?

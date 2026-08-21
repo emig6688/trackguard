@@ -3,6 +3,7 @@ import { BackToDashboard } from "@/components/back-to-dashboard";
 import { CATALOGO_NOTIFICACIONES } from "@/lib/notificaciones";
 import { ReglaNotificacionForm } from "@/components/notificaciones/regla-notificacion-form";
 import { MontoAutorizacionForm } from "@/components/notificaciones/monto-autorizacion-form";
+import { actualizarMontoAutorizacionCompraMecanico } from "@/app/_actions/reglasNotificacion";
 import { ChecklistTemplateForm } from "@/components/notificaciones/checklist-template-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +50,26 @@ export default async function NotificacionesPage() {
             la gerencia antes de poder comprarse.
           </p>
           <MontoAutorizacionForm montoInicial={empresa.montoAutorizacionCompra?.toString() ?? null} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Autorización de compras de mecánicos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Si una orden de compra generada por un mecánico interno estima superar este monto,
+            queda pendiente de autorización del encargado de mantenimiento antes de poder
+            comprarse — compuerta aparte de la autorización de gerencia de arriba, que sigue
+            funcionando igual.
+          </p>
+          <MontoAutorizacionForm
+            montoInicial={empresa.montoAutorizacionCompraMecanico?.toString() ?? null}
+            idPrefix="montoAutorizacionCompraMecanico"
+            action={actualizarMontoAutorizacionCompraMecanico}
+            descripcion="Si está desactivado, las compras de mecánicos no requieren autorización de mantenimiento sin importar el monto (siguen requiriendo la de gerencia de arriba, si aplica)."
+          />
         </CardContent>
       </Card>
 

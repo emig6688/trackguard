@@ -61,7 +61,7 @@ function navItemsPorRol(rol: Rol): NavEntry[] {
       { href: "/documentos", label: "Documentación", icon: "documentos" },
       { href: "/ordenes-trabajo", label: "Órdenes de trabajo", icon: "ordenesTrabajo" },
       { href: "/compras", label: "Compras", icon: "compras" },
-      ...(rol === "ADMIN"
+      ...(rol === "ADMIN" || rol === "ENCARGADO_MANTENIMIENTO"
         ? [{ href: "/autorizaciones", label: "Autorizaciones", icon: "autorizaciones" as const }]
         : []),
       grupoCostos,

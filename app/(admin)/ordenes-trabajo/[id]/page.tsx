@@ -150,9 +150,11 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
   ]);
 
   const soloLectura = session.rol === "GERENTE" || session.rol === "CONTADOR";
-  const puedeGenerarOC = session.rol === "ADMIN" || session.rol === "ENCARGADO_MANTENIMIENTO";
-  const puedeCerrarOT =
-    ot.estado === "EN_PROGRESO" && (puedeGenerarOC || puedeMecanicoAccionar(ot, session.id));
+  const esGestor = session.rol === "ADMIN" || session.rol === "ENCARGADO_MANTENIMIENTO";
+  // El mecánico también puede generar una OC, pero solo de la OT que tiene
+  // asignada — no de cualquiera (esGestor no tiene esa restricción).
+  const puedeGenerarOC = esGestor || (session.rol === "MECANICO_INTERNO" && puedeMecanicoAccionar(ot, session.id));
+  const puedeCerrarOT = ot.estado === "EN_PROGRESO" && (esGestor || puedeMecanicoAccionar(ot, session.id));
 
   const atrasada = otEstaAtrasada(ot);
 
@@ -476,6 +478,11 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
                   {c.estadoAutorizacion !== "NO_REQUERIDA" && (
                     <Badge variant={ESTADO_AUTORIZACION_VARIANT[c.estadoAutorizacion]}>
                       {ESTADO_AUTORIZACION_LABEL[c.estadoAutorizacion]}
+                    </Badge>
+                  )}
+                  {c.estadoAutorizacionMantenimiento !== "NO_REQUERIDA" && (
+                    <Badge variant={ESTADO_AUTORIZACION_VARIANT[c.estadoAutorizacionMantenimiento]}>
+                      Mantenimiento: {ESTADO_AUTORIZACION_LABEL[c.estadoAutorizacionMantenimiento]}
                     </Badge>
                   )}
                   <Badge variant={ESTADO_COMPRA_VARIANT[c.estado]}>{ESTADO_COMPRA_LABEL[c.estado]}</Badge>

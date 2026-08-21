@@ -15,10 +15,21 @@ export const ROLES_MOBILE_CHOFER: Rol[] = ["CHOFER"];
 export const ROLES_GUARDIA: Rol[] = ["GUARDIA", "ADMIN", "GERENTE"];
 // Quien ejecuta/aprueba la compra (marca realizada, carga factura, cancela, asigna a una OT).
 export const ROLES_COMPRAS: Rol[] = ["ADMIN", "ENCARGADO_COMPRAS"];
-// Quien puede pedir una compra manual: además de compras, mantenimiento sabe qué repuesto necesita.
-export const ROLES_CREAR_COMPRA: Rol[] = ["ADMIN", "ENCARGADO_MANTENIMIENTO", "ENCARGADO_COMPRAS"];
-// Quien aprueba/rechaza una compra sujeta a autorización y ve /autorizaciones.
+// Quien puede pedir una compra manual: además de compras, mantenimiento sabe
+// qué repuesto necesita, y el mecánico interno la pide desde la OT que tiene
+// asignada (queda sujeta a la autorización de encargado de mantenimiento —
+// ver ROLES_AUTORIZAR_COMPRA_MECANICO).
+export const ROLES_CREAR_COMPRA: Rol[] = [
+  "ADMIN",
+  "ENCARGADO_MANTENIMIENTO",
+  "ENCARGADO_COMPRAS",
+  "MECANICO_INTERNO",
+];
+// Quien aprueba/rechaza una compra sujeta a autorización de gerencia y ve /autorizaciones.
 export const ROLES_AUTORIZAR_COMPRA: Rol[] = ["GERENTE", "ADMIN"];
+// Quien aprueba/rechaza una compra de un mecánico sujeta a autorización de
+// mantenimiento (compuerta aparte de la de gerencia de arriba).
+export const ROLES_AUTORIZAR_COMPRA_MECANICO: Rol[] = ["ENCARGADO_MANTENIMIENTO", "ADMIN"];
 
 export class AutorizacionError extends Error {
   constructor(message = "No tenés permisos para realizar esta acción.") {

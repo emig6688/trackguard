@@ -7,7 +7,17 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { actualizarMontoAutorizacionCompra } from "@/app/_actions/reglasNotificacion";
 
-export function MontoAutorizacionForm({ montoInicial }: { montoInicial: string | null }) {
+export function MontoAutorizacionForm({
+  montoInicial,
+  idPrefix = "montoAutorizacionCompra",
+  action = actualizarMontoAutorizacionCompra,
+  descripcion = "Si está desactivado, ninguna orden de compra requiere autorización de gerencia sin importar el monto.",
+}: {
+  montoInicial: string | null;
+  idPrefix?: string;
+  action?: (monto: number | null) => Promise<void>;
+  descripcion?: string;
+}) {
   const [desactivado, setDesactivado] = useState(montoInicial == null);
   const [monto, setMonto] = useState(montoInicial ?? "");
   const [pending, startTransition] = useTransition();
@@ -15,7 +25,7 @@ export function MontoAutorizacionForm({ montoInicial }: { montoInicial: string |
 
   function guardar() {
     startTransition(async () => {
-      await actualizarMontoAutorizacionCompra(desactivado ? null : Number(monto));
+      await action(desactivado ? null : Number(monto));
       setGuardado(true);
     });
   }
@@ -23,9 +33,9 @@ export function MontoAutorizacionForm({ montoInicial }: { montoInicial: string |
   return (
     <div className="space-y-3">
       <div className="max-w-xs space-y-1.5">
-        <Label htmlFor="montoAutorizacionCompra">Monto máximo sin autorización</Label>
+        <Label htmlFor={idPrefix}>Monto máximo sin autorización</Label>
         <Input
-          id="montoAutorizacionCompra"
+          id={idPrefix}
           type="number"
           min={0}
           step="0.01"
@@ -59,10 +69,7 @@ export function MontoAutorizacionForm({ montoInicial }: { montoInicial: string |
         </Button>
         {guardado && <span className="text-xs text-success">Guardado.</span>}
       </div>
-      <p className="text-xs text-muted-foreground">
-        Si está desactivado, ninguna orden de compra requiere autorización de gerencia sin
-        importar el monto.
-      </p>
+      <p className="text-xs text-muted-foreground">{descripcion}</p>
     </div>
   );
 }

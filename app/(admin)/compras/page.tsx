@@ -186,6 +186,11 @@ export default async function ComprasPage({
                     {ESTADO_AUTORIZACION_LABEL[c.estadoAutorizacion]}
                   </Badge>
                 )}
+                {c.estadoAutorizacionMantenimiento !== "NO_REQUERIDA" && (
+                  <Badge variant={ESTADO_AUTORIZACION_VARIANT[c.estadoAutorizacionMantenimiento]}>
+                    Mantenimiento: {ESTADO_AUTORIZACION_LABEL[c.estadoAutorizacionMantenimiento]}
+                  </Badge>
+                )}
               </div>
               <div className="space-y-1">
                 {c.items.map((item) => (
@@ -310,11 +315,19 @@ export default async function ComprasPage({
                 <RealizarCompraForm
                   compraId={c.id}
                   items={c.items}
-                  puedeRealizar={c.estadoAutorizacion !== "PENDIENTE" && c.estadoAutorizacion !== "RECHAZADA"}
+                  puedeRealizar={
+                    c.estadoAutorizacion !== "PENDIENTE" &&
+                    c.estadoAutorizacion !== "RECHAZADA" &&
+                    c.estadoAutorizacionMantenimiento !== "PENDIENTE" &&
+                    c.estadoAutorizacionMantenimiento !== "RECHAZADA"
+                  }
                 />
               )}
               {puedeGestionarCompras && c.estado === "PENDIENTE" && c.estadoAutorizacion === "PENDIENTE" && (
                 <p className="text-xs text-muted-foreground">Esperando autorización de gerencia.</p>
+              )}
+              {puedeGestionarCompras && c.estado === "PENDIENTE" && c.estadoAutorizacionMantenimiento === "PENDIENTE" && (
+                <p className="text-xs text-muted-foreground">Esperando autorización de mantenimiento.</p>
               )}
               {puedeGestionarCompras && c.estado === "REALIZADA" && (
                 <CargarFacturaCompraForm compraId={c.id} />

@@ -54,3 +54,19 @@ export async function actualizarMontoAutorizacionCompra(monto: number | null) {
 
   revalidatePath(RUTA);
 }
+
+/**
+ * Igual que actualizarMontoAutorizacionCompra, pero para la compuerta aparte
+ * que solo aplica a compras generadas por un mecánico interno (la autoriza
+ * encargado de mantenimiento, no gerencia).
+ */
+export async function actualizarMontoAutorizacionCompraMecanico(monto: number | null) {
+  const { user, prisma } = await requireRole(ROLES_ADMIN_MANTENIMIENTO);
+
+  await prisma.empresa.update({
+    where: { id: user.empresaId! },
+    data: { montoAutorizacionCompraMecanico: monto != null && monto > 0 ? monto : null },
+  });
+
+  revalidatePath(RUTA);
+}

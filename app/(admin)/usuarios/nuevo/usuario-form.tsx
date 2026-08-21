@@ -17,6 +17,7 @@ const ROLES = [
   { value: "ADMIN", label: "Admin" },
   { value: "ENCARGADO_MANTENIMIENTO", label: "Encargado de mantenimiento" },
   { value: "ENCARGADO_COMPRAS", label: "Encargado de compras" },
+  { value: "ENCARGADO_LOGISTICA", label: "Encargado de logística" },
   { value: "MECANICO_INTERNO", label: "Mecánico interno" },
   { value: "GERENTE", label: "Gerente" },
   { value: "CONTADOR", label: "Contador" },

@@ -94,6 +94,13 @@ export const CATALOGO_NOTIFICACIONES: Partial<Record<TipoNotificacion, InfoTipoN
     destinatarioFijo: "El gerente",
     usaDiasAviso: false,
   },
+  COMPRA_MECANICO_PENDIENTE_AUTORIZACION: {
+    label: "Compra de mecánico pendiente de autorización",
+    disparador:
+      "Cuando un mecánico interno genera una orden de compra que supera el monto configurado en la tarjeta de autorización de compras de mecánicos — compuerta aparte de la autorización de gerencia.",
+    destinatarioFijo: "El encargado de mantenimiento",
+    usaDiasAviso: false,
+  },
   PRESUPUESTO_SUBIDO: {
     label: "Presupuesto subido a una compra",
     disparador: "Cuando el encargado de compras sube un presupuesto a una orden pendiente de autorización.",
@@ -297,6 +304,52 @@ export async function notificarCompraPendienteAutorizacion(
       destinatariosExtra,
       regla.canales,
       "COMPRA_PENDIENTE_AUTORIZACION",
+      asunto,
+      mensaje,
+      href
+    );
+  }
+}
+
+/**
+ * Avisa siempre (email + en la app) a ENCARGADO_MANTENIMIENTO cuando una
+ * compra generada por un mecánico interno queda pendiente de su
+ * autorización — compuerta aparte de la de gerencia de arriba (ver
+ * Empresa.montoAutorizacionCompraMecanico).
+ */
+export async function notificarCompraMecanicoPendienteAutorizacion(
+  prisma: ScopedPrismaClient,
+  empresaId: string,
+  compra: { id: string; numero: string; montoEstimado: string | null }
+) {
+  const mensaje = `La orden de compra ${compra.numero}${
+    compra.montoEstimado ? ` (estimada en $${compra.montoEstimado})` : ""
+  }, generada por un mecánico, quedó pendiente de tu autorización.`;
+  const asunto = `Compra de mecánico pendiente de autorización: ${compra.numero}`;
+  const href = "/autorizaciones";
+
+  const encargados = await usuariosDeEmpresaPorRol(prisma, empresaId, ["ENCARGADO_MANTENIMIENTO"]);
+  await enviarPorCanalesConfigurados(
+    prisma,
+    empresaId,
+    encargados,
+    ["EMAIL", "EN_APP"],
+    "COMPRA_MECANICO_PENDIENTE_AUTORIZACION",
+    asunto,
+    mensaje,
+    href
+  );
+
+  const regla = await obtenerReglaNotificacion(prisma, empresaId, "COMPRA_MECANICO_PENDIENTE_AUTORIZACION");
+  const rolesExtra = regla.roles.filter((r) => r !== "ENCARGADO_MANTENIMIENTO");
+  if (rolesExtra.length > 0 && regla.canales.length > 0) {
+    const destinatariosExtra = await usuariosDeEmpresaPorRol(prisma, empresaId, rolesExtra);
+    await enviarPorCanalesConfigurados(
+      prisma,
+      empresaId,
+      destinatariosExtra,
+      regla.canales,
+      "COMPRA_MECANICO_PENDIENTE_AUTORIZACION",
       asunto,
       mensaje,
       href

@@ -9,6 +9,7 @@ export const ROL_LABEL: Record<Rol, string> = {
   ADMIN: "Administrador",
   ENCARGADO_MANTENIMIENTO: "Encargado de mantenimiento",
   ENCARGADO_COMPRAS: "Encargado de compras",
+  ENCARGADO_LOGISTICA: "Encargado de logística",
   MECANICO_INTERNO: "Mecánico interno",
   CHOFER: "Chofer",
   GERENTE: "Gerente",

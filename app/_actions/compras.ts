@@ -8,6 +8,7 @@ import {
   ROLES_COMPRAS,
   ROLES_CREAR_COMPRA,
   ROLES_AUTORIZAR_COMPRA,
+  ROLES_AUTORIZAR_COMPRA_MECANICO,
   AutorizacionError,
   usuariosDeEmpresaPorRol,
 } from "@/lib/permisos";
@@ -18,6 +19,7 @@ import {
   obtenerReglaNotificacion,
   enviarPorCanalesConfigurados,
   notificarCompraPendienteAutorizacion,
+  notificarCompraMecanicoPendienteAutorizacion,
   notificarPresupuestoSubido,
   notificarCompraAutorizada,
 } from "@/lib/notificaciones";
@@ -107,12 +109,14 @@ export async function crearOrdenCompraManual(
 
   const empresa = await prisma.empresa.findUniqueOrThrow({ where: { id: user.empresaId! } });
   const umbral = empresa.montoAutorizacionCompra;
-  if (umbral != null && parsed.data.montoEstimado == null) {
+  const umbralMecanico = user.rol === "MECANICO_INTERNO" ? empresa.montoAutorizacionCompraMecanico : null;
+  if ((umbral != null || umbralMecanico != null) && parsed.data.montoEstimado == null) {
     return {
-      error: `Ingresá el monto estimado de la compra: hay un tope de autorización configurado ($${umbral}).`,
+      error: `Ingresá el monto estimado de la compra: hay un tope de autorización configurado ($${umbral ?? umbralMecanico}).`,
     };
   }
   const requiereAutorizacion = calcularRequiereAutorizacion(parsed.data.montoEstimado, umbral);
+  const requiereAutorizacionMantenimiento = calcularRequiereAutorizacion(parsed.data.montoEstimado, umbralMecanico);
 
   const itemsData: Prisma.OrdenCompraItemUncheckedCreateWithoutOrdenCompraInput[] = [];
   for (const fila of itemsFilas) {
@@ -138,6 +142,7 @@ export async function crearOrdenCompraManual(
       montoEstimado: parsed.data.montoEstimado,
       observaciones: parsed.data.observaciones || undefined,
       estadoAutorizacion: requiereAutorizacion ? "PENDIENTE" : "NO_REQUERIDA",
+      estadoAutorizacionMantenimiento: requiereAutorizacionMantenimiento ? "PENDIENTE" : "NO_REQUERIDA",
       ordenDeTrabajoId: parsed.data.ordenDeTrabajoId || undefined,
       otItemPreventivoId: parsed.data.otItemPreventivoId || undefined,
       creadoPorId: user.id,
@@ -152,7 +157,15 @@ export async function crearOrdenCompraManual(
       numero,
       montoEstimado: compra.montoEstimado?.toString() ?? null,
     });
-  } else {
+  }
+  if (requiereAutorizacionMantenimiento) {
+    await notificarCompraMecanicoPendienteAutorizacion(prisma, user.empresaId!, {
+      id: compra.id,
+      numero,
+      montoEstimado: compra.montoEstimado?.toString() ?? null,
+    });
+  }
+  if (!requiereAutorizacion && !requiereAutorizacionMantenimiento) {
     await notificarNuevaOrdenCompra(prisma, user.empresaId!, {
       numero,
       descripcion: compra.items.map((i) => i.descripcion).join(", "),
@@ -187,7 +200,7 @@ export async function actualizarOrdenCompra(
 
   const compraActual = await prisma.ordenCompra.findUniqueOrThrow({
     where: { id: compraId },
-    include: { items: { orderBy: { id: "asc" } } },
+    include: { items: { orderBy: { id: "asc" } }, creadoPor: { select: { rol: true } } },
   });
   if (compraActual.estado !== "PENDIENTE") {
     return { error: "Esta compra ya no se puede editar." };
@@ -208,12 +221,15 @@ export async function actualizarOrdenCompra(
 
   const empresa = await prisma.empresa.findUniqueOrThrow({ where: { id: user.empresaId! } });
   const umbral = empresa.montoAutorizacionCompra;
-  if (umbral != null && parsed.data.montoEstimado == null) {
+  const umbralMecanico =
+    compraActual.creadoPor?.rol === "MECANICO_INTERNO" ? empresa.montoAutorizacionCompraMecanico : null;
+  if ((umbral != null || umbralMecanico != null) && parsed.data.montoEstimado == null) {
     return {
-      error: `Ingresá el monto estimado de la compra: hay un tope de autorización configurado ($${umbral}).`,
+      error: `Ingresá el monto estimado de la compra: hay un tope de autorización configurado ($${umbral ?? umbralMecanico}).`,
     };
   }
   const requiereAutorizacion = calcularRequiereAutorizacion(parsed.data.montoEstimado, umbral);
+  const requiereAutorizacionMantenimiento = calcularRequiereAutorizacion(parsed.data.montoEstimado, umbralMecanico);
 
   const itemsExistentes = new Map(compraActual.items.map((i) => [i.id, i]));
   const idsEnviados = new Set(itemsFilas.map((f) => f.id));
@@ -245,9 +261,15 @@ export async function actualizarOrdenCompra(
   }
 
   const nuevoEstadoAutorizacion = requiereAutorizacion ? "PENDIENTE" : "NO_REQUERIDA";
+  const nuevoEstadoAutorizacionMantenimiento = requiereAutorizacionMantenimiento ? "PENDIENTE" : "NO_REQUERIDA";
   const notificar = requiereAutorizacion && compraActual.estadoAutorizacion !== "PENDIENTE";
+  const notificarMantenimiento =
+    requiereAutorizacionMantenimiento && compraActual.estadoAutorizacionMantenimiento !== "PENDIENTE";
   const limpiarAutorizacionPrevia =
     nuevoEstadoAutorizacion === "PENDIENTE" && compraActual.estadoAutorizacion !== "PENDIENTE";
+  const limpiarAutorizacionMantenimientoPrevia =
+    nuevoEstadoAutorizacionMantenimiento === "PENDIENTE" &&
+    compraActual.estadoAutorizacionMantenimiento !== "PENDIENTE";
 
   const compra = await prisma.ordenCompra.update({
     where: { id: compraId },
@@ -259,12 +281,23 @@ export async function actualizarOrdenCompra(
       ...(limpiarAutorizacionPrevia
         ? { autorizadoPorId: null, autorizadoEn: null, presupuestoAprobadoId: null }
         : {}),
+      estadoAutorizacionMantenimiento: nuevoEstadoAutorizacionMantenimiento,
+      ...(limpiarAutorizacionMantenimientoPrevia
+        ? { autorizadoMantenimientoPorId: null, autorizadoMantenimientoEn: null }
+        : {}),
     },
     include: { items: { orderBy: { id: "asc" } } },
   });
 
   if (notificar) {
     await notificarCompraPendienteAutorizacion(prisma, user.empresaId!, {
+      id: compra.id,
+      numero: compra.numero,
+      montoEstimado: compra.montoEstimado?.toString() ?? null,
+    });
+  }
+  if (notificarMantenimiento) {
+    await notificarCompraMecanicoPendienteAutorizacion(prisma, user.empresaId!, {
       id: compra.id,
       numero: compra.numero,
       montoEstimado: compra.montoEstimado?.toString() ?? null,
@@ -305,6 +338,14 @@ export async function marcarCompraRealizada(
   });
   if (compraActual.estadoAutorizacion === "PENDIENTE" || compraActual.estadoAutorizacion === "RECHAZADA") {
     throw new AutorizacionError("Esta compra está sujeta a autorización de gerencia y todavía no fue aprobada.");
+  }
+  if (
+    compraActual.estadoAutorizacionMantenimiento === "PENDIENTE" ||
+    compraActual.estadoAutorizacionMantenimiento === "RECHAZADA"
+  ) {
+    throw new AutorizacionError(
+      "Esta compra está sujeta a autorización de encargado de mantenimiento y todavía no fue aprobada."
+    );
   }
 
   // El monto estimado al crear la OC puede haber quedado por debajo del
@@ -563,6 +604,43 @@ export async function rechazarCompra(compraId: string) {
       estadoAutorizacion: "RECHAZADA",
       autorizadoPorId: user.id,
       autorizadoEn: new Date(),
+    },
+  });
+
+  revalidatePath("/autorizaciones");
+  revalidatePath("/compras");
+}
+
+/**
+ * Aprobación de encargado de mantenimiento para una compra de mecánico —
+ * compuerta aparte de aprobarCompra/rechazarCompra (gerencia), sin
+ * presupuestos asociados: es un sí/no más simple.
+ */
+export async function aprobarCompraMantenimiento(compraId: string) {
+  const { user, prisma } = await requireRole(ROLES_AUTORIZAR_COMPRA_MECANICO);
+
+  await prisma.ordenCompra.update({
+    where: { id: compraId },
+    data: {
+      estadoAutorizacionMantenimiento: "APROBADA",
+      autorizadoMantenimientoPorId: user.id,
+      autorizadoMantenimientoEn: new Date(),
+    },
+  });
+
+  revalidatePath("/autorizaciones");
+  revalidatePath("/compras");
+}
+
+export async function rechazarCompraMantenimiento(compraId: string) {
+  const { user, prisma } = await requireRole(ROLES_AUTORIZAR_COMPRA_MECANICO);
+
+  await prisma.ordenCompra.update({
+    where: { id: compraId },
+    data: {
+      estadoAutorizacionMantenimiento: "RECHAZADA",
+      autorizadoMantenimientoPorId: user.id,
+      autorizadoMantenimientoEn: new Date(),
     },
   });
 
