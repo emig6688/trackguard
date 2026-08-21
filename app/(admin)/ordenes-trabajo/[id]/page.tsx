@@ -116,7 +116,7 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
       checklistRealizado: { include: { chofer: true } },
       comprasAsignadas: {
         where: { eliminadoEn: null },
-        include: { facturaArchivo: true, items: { include: { archivo: true } } },
+        include: { facturaArchivo: true, items: { include: { archivo: true }, orderBy: { id: "asc" } } },
         orderBy: { fechaSolicitud: "desc" },
       },
       itemsPreventivos: {
@@ -124,7 +124,7 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
           archivo: true,
           ordenesCompra: {
             where: { eliminadoEn: null },
-            include: { items: true },
+            include: { items: { orderBy: { id: "asc" } } },
             orderBy: { createdAt: "asc" },
           },
           repuestos: { where: { eliminadoEn: null }, orderBy: { createdAt: "asc" } },

@@ -143,7 +143,7 @@ export async function crearOrdenCompraManual(
       creadoPorId: user.id,
       items: { create: itemsData },
     },
-    include: { items: true },
+    include: { items: { orderBy: { id: "asc" } } },
   });
 
   if (requiereAutorizacion) {
@@ -187,7 +187,7 @@ export async function actualizarOrdenCompra(
 
   const compraActual = await prisma.ordenCompra.findUniqueOrThrow({
     where: { id: compraId },
-    include: { items: true },
+    include: { items: { orderBy: { id: "asc" } } },
   });
   if (compraActual.estado !== "PENDIENTE") {
     return { error: "Esta compra ya no se puede editar." };
@@ -260,7 +260,7 @@ export async function actualizarOrdenCompra(
         ? { autorizadoPorId: null, autorizadoEn: null, presupuestoAprobadoId: null }
         : {}),
     },
-    include: { items: true },
+    include: { items: { orderBy: { id: "asc" } } },
   });
 
   if (notificar) {
@@ -301,7 +301,7 @@ export async function marcarCompraRealizada(
 
   const compraActual = await prisma.ordenCompra.findUniqueOrThrow({
     where: { id: compraId },
-    include: { items: true },
+    include: { items: { orderBy: { id: "asc" } } },
   });
   if (compraActual.estadoAutorizacion === "PENDIENTE" || compraActual.estadoAutorizacion === "RECHAZADA") {
     throw new AutorizacionError("Esta compra está sujeta a autorización de gerencia y todavía no fue aprobada.");
@@ -366,7 +366,7 @@ export async function marcarCompraRealizada(
       observaciones: parsed.observaciones,
       facturaArchivoId,
     },
-    include: { creadoPor: true, items: true },
+    include: { creadoPor: true, items: { orderBy: { id: "asc" } } },
   });
 
   await notificarCompraRealizada(prisma, user.empresaId!, compra);

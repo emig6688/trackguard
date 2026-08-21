@@ -81,7 +81,7 @@ export default async function ComprasPage({
           : {}),
       },
       include: {
-        items: { include: { articuloPanol: true, archivo: true } },
+        items: { include: { articuloPanol: true, archivo: true }, orderBy: { id: "asc" } },
         creadoPor: true,
         facturaArchivo: true,
         ordenDeTrabajo: true,
