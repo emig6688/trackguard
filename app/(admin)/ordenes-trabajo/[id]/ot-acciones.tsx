@@ -19,7 +19,6 @@ import {
   derivarAExterno,
   volverAInternoDesdeExterno,
 } from "@/app/_actions/ordenesTrabajo";
-import { CompletarOTForm } from "@/components/ordenes-trabajo/completar-ot-form";
 import { IniciarOTForm } from "@/components/ordenes-trabajo/iniciar-ot-form";
 import { AREA_REPARACION_LABEL } from "@/lib/clasificador-averias";
 import { puedeMecanicoAccionar } from "@/lib/ot";
@@ -184,7 +183,6 @@ export function OTAcciones({
               </Button>
             </form>
           )}
-          {(puedeGestionar || esMecanicoAsignado) && <CompletarOTForm otId={ot.id} />}
           {puedeGestionar && (
             <div className="flex flex-wrap gap-2">
               <DerivarForm otId={ot.id} talleres={talleres} />

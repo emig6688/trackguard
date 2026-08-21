@@ -13,7 +13,7 @@ export function CompletarOTForm({ otId }: { otId: string }) {
 
   return (
     <form action={formAction} className="space-y-4 rounded-lg border p-4">
-      <h3 className="font-medium">Completar orden de trabajo</h3>
+      <h3 className="font-medium">Cerrar orden de trabajo</h3>
       <div className="space-y-2">
         <Label htmlFor="observacionesMecanico">Observaciones</Label>
         <Textarea id="observacionesMecanico" name="observacionesMecanico" />

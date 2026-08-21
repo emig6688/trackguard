@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/back-button";
 import { EliminarButton } from "@/components/eliminar-button";
 import { AREA_REPARACION_LABEL } from "@/lib/clasificador-averias";
-import { otEstaAtrasada } from "@/lib/ot";
+import { otEstaAtrasada, puedeMecanicoAccionar } from "@/lib/ot";
 import { vehiculosEnTallerExterno } from "@/lib/disponibilidad";
 import { DisponibilidadToggle } from "@/components/vehiculos/disponibilidad-toggle";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { DerivacionForm } from "./derivacion-form";
 import { ItemsPreventivosForm } from "./items-preventivos-form";
 import { OCForm } from "./oc-form";
 import { EliminarRepuestoButton } from "./eliminar-repuesto-button";
+import { CompletarOTForm } from "@/components/ordenes-trabajo/completar-ot-form";
 
 const ESTADO_LABEL: Record<string, string> = {
   PENDIENTE_APROBACION: "Pendiente de aprobación",
@@ -150,6 +151,8 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
 
   const soloLectura = session.rol === "GERENTE" || session.rol === "CONTADOR";
   const puedeGenerarOC = session.rol === "ADMIN" || session.rol === "ENCARGADO_MANTENIMIENTO";
+  const puedeCerrarOT =
+    ot.estado === "EN_PROGRESO" && (puedeGenerarOC || puedeMecanicoAccionar(ot, session.id));
 
   const atrasada = otEstaAtrasada(ot);
 
@@ -348,26 +351,33 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
           )}
         </div>
         {!soloLectura && (
-          <div className="flex flex-wrap items-start gap-3">
+          <div className="flex flex-wrap items-start gap-4">
             <div className="min-w-64 flex-1">
               <RepuestoForm otId={ot.id} articulos={articulosPanol} />
             </div>
             {puedeGenerarOC && (
-              <Dialog>
-                <DialogTrigger render={<Button type="button" variant="outline" size="sm" />}>
-                  Generar orden de compra
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Generar orden de compra</DialogTitle>
-                  </DialogHeader>
-                  <OCForm otId={ot.id} montoAutorizacionCompra={empresa.montoAutorizacionCompra?.toString() ?? null} />
-                </DialogContent>
-              </Dialog>
+              <div className="space-y-1.5">
+                <p className="max-w-56 text-xs text-muted-foreground">
+                  ¿El repuesto no está en el pañol? Generá una orden de compra nueva.
+                </p>
+                <Dialog>
+                  <DialogTrigger render={<Button type="button" size="sm" />}>
+                    Generar orden de compra
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Generar orden de compra</DialogTitle>
+                    </DialogHeader>
+                    <OCForm otId={ot.id} montoAutorizacionCompra={empresa.montoAutorizacionCompra?.toString() ?? null} />
+                  </DialogContent>
+                </Dialog>
+              </div>
             )}
           </div>
         )}
       </div>
+
+      {puedeCerrarOT && <CompletarOTForm otId={ot.id} />}
 
       {(ot.observacionesMecanico || ot.fotoReparacion) && (
         <div className="space-y-4">
