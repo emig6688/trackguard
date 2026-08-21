@@ -81,9 +81,9 @@ export const CATALOGO_NOTIFICACIONES: Partial<Record<TipoNotificacion, InfoTipoN
     usaHoraEnvio: true,
   },
   DEVOLUCION_SIN_ENVIAR: {
-    label: "Devoluciones sin enviar",
+    label: "Resumen diario de guardia",
     disparador:
-      "Una vez al día, si todavía hay devoluciones cargadas por el guardia sin enviar. Elegir una hora abajo activa este aviso — con el plan actual de Vercel (crons diarios, no horarios) se manda una vez al día a una hora fija del sistema, no necesariamente la que elijas.",
+      "Una vez al día, un PDF con vehículos sin checklist pre-salida, sin cierre de ruta, con el tanque sin llenar, y las devoluciones registradas. Elegir una hora abajo activa este aviso — con el plan actual de Vercel (crons diarios, no horarios) se manda una vez al día a una hora fija del sistema, no necesariamente la que elijas. El PDF solo va por email; WhatsApp y la app reciben un resumen en texto.",
     destinatarioFijo: null,
     usaDiasAviso: false,
     usaHoraEnvio: true,

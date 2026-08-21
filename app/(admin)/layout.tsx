@@ -26,6 +26,18 @@ function navItemsPorRol(rol: Rol): NavEntry[] {
     ],
   };
 
+  // Mismas pantallas que ve el usuario GUARDIA (/guardia/*, con el rol
+  // ampliado en app/(guardia)/layout.tsx) — para que admin y gerencia no
+  // necesiten loguearse con ese usuario para ver lo mismo.
+  const grupoGuardia: NavEntry = {
+    label: "Guardia",
+    icon: "guardia",
+    items: [
+      { href: "/guardia", label: "Vehículos", icon: "vehiculos" },
+      { href: "/guardia/devoluciones", label: "Devoluciones", icon: "documentos" },
+    ],
+  };
+
   if (rol === "ADMIN" || rol === "ENCARGADO_MANTENIMIENTO") {
     const mantenimientoItems: NavLink[] = [
       { href: "/vehiculos", label: "Vehículos", icon: "vehiculos" },
@@ -53,7 +65,8 @@ function navItemsPorRol(rol: Rol): NavEntry[] {
         ? [{ href: "/autorizaciones", label: "Autorizaciones", icon: "autorizaciones" as const }]
         : []),
       grupoCostos,
-      { href: "/reportes/estadisticas", label: "Estadísticas", icon: "estadisticas" }
+      { href: "/reportes/estadisticas", label: "Estadísticas", icon: "estadisticas" },
+      ...(rol === "ADMIN" ? [grupoGuardia] : [])
     );
   } else if (rol === "MECANICO_INTERNO") {
     items.push(
@@ -77,7 +90,8 @@ function navItemsPorRol(rol: Rol): NavEntry[] {
       { href: "/compras", label: "Compras", icon: "compras" },
       { href: "/autorizaciones", label: "Autorizaciones", icon: "autorizaciones" },
       grupoCostos,
-      { href: "/reportes/estadisticas", label: "Estadísticas", icon: "estadisticas" }
+      { href: "/reportes/estadisticas", label: "Estadísticas", icon: "estadisticas" },
+      grupoGuardia
     );
   } else {
     // CONTADOR: mismo criterio de solo lectura que el resto de la app — ve

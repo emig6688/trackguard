@@ -2,7 +2,6 @@
 
 import { z } from "zod";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import { requireRole, ROLES_GUARDIA } from "@/lib/permisos";
 
 const devolucionSchema = z.object({
@@ -106,19 +105,4 @@ export async function crearDevolucion(
   });
 
   redirect(`/guardia/devoluciones/${devolucion.id}`);
-}
-
-export async function enviarDevolucion(devolucionId: string) {
-  const { user, prisma } = await requireRole(ROLES_GUARDIA);
-
-  const devolucion = await prisma.devolucion.findUniqueOrThrow({ where: { id: devolucionId } });
-  if (devolucion.enviadoEn) return; // ya se envió, no hace nada en un doble click
-
-  await prisma.devolucion.update({
-    where: { id: devolucionId },
-    data: { enviadoEn: new Date(), enviadoPorId: user.id },
-  });
-
-  revalidatePath(`/guardia/devoluciones/${devolucionId}`);
-  revalidatePath("/guardia/devoluciones");
 }

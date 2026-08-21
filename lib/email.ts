@@ -24,7 +24,8 @@ export type EnvioEmailResultado =
 export async function enviarEmail(
   destinatarioEmail: string | null | undefined,
   asunto: string,
-  mensaje: string
+  mensaje: string,
+  adjunto?: { nombreArchivo: string; contenido: Buffer }
 ): Promise<EnvioEmailResultado> {
   if (!destinatarioEmail || !destinatarioEmail.trim()) {
     console.warn("[Email] No se pudo notificar: falta el email del destinatario.");
@@ -51,6 +52,13 @@ export async function enviarEmail(
         to: [destinatarioEmail],
         subject: asunto,
         text: mensaje,
+        ...(adjunto
+          ? {
+              attachments: [
+                { filename: adjunto.nombreArchivo, content: adjunto.contenido.toString("base64") },
+              ],
+            }
+          : {}),
       }),
     });
 

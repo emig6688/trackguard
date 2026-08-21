@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { requireEmpresa, ROLES_GUARDIA } from "@/lib/permisos";
 import { buttonVariants } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 export default async function DevolucionesPage() {
   const { prisma } = await requireEmpresa(ROLES_GUARDIA);
@@ -37,7 +36,6 @@ export default async function DevolucionesPage() {
               <th className="p-3 font-medium">Remito</th>
               <th className="p-3 font-medium">Productos</th>
               <th className="p-3 font-medium">Cambios</th>
-              <th className="p-3 font-medium">Estado</th>
             </tr>
           </thead>
           <tbody>
@@ -53,18 +51,11 @@ export default async function DevolucionesPage() {
                 <td className="p-3">{d.remito}</td>
                 <td className="p-3">{d._count.productos}</td>
                 <td className="p-3">{d._count.cambios}</td>
-                <td className="p-3">
-                  {d.enviadoEn ? (
-                    <Badge variant="success">Enviado</Badge>
-                  ) : (
-                    <Badge variant="warning">Pendiente</Badge>
-                  )}
-                </td>
               </tr>
             ))}
             {devoluciones.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                <td colSpan={6} className="p-6 text-center text-muted-foreground">
                   Todavía no hay devoluciones cargadas.
                 </td>
               </tr>

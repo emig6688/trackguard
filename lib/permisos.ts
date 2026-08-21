@@ -10,7 +10,9 @@ import type { Rol } from "@/app/generated/prisma/client";
 export const ROLES_ADMIN_MANTENIMIENTO: Rol[] = ["ADMIN", "ENCARGADO_MANTENIMIENTO"];
 export const ROLES_SOLO_LECTURA: Rol[] = ["GERENTE", "CONTADOR"];
 export const ROLES_MOBILE_CHOFER: Rol[] = ["CHOFER"];
-export const ROLES_GUARDIA: Rol[] = ["GUARDIA"];
+// ADMIN y GERENTE entran también a las pantallas de guardia (ver y actuar
+// igual que el guardia, sin necesitar loguearse con ese usuario).
+export const ROLES_GUARDIA: Rol[] = ["GUARDIA", "ADMIN", "GERENTE"];
 // Quien ejecuta/aprueba la compra (marca realizada, carga factura, cancela, asigna a una OT).
 export const ROLES_COMPRAS: Rol[] = ["ADMIN", "ENCARGADO_COMPRAS"];
 // Quien puede pedir una compra manual: además de compras, mantenimiento sabe qué repuesto necesita.

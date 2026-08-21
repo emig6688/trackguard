@@ -25,6 +25,7 @@ import {
   Bell,
   LineChart,
   ShieldCheck,
+  Shield,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,7 @@ export const ICONOS = {
   notificaciones: Bell,
   estadisticas: LineChart,
   autorizaciones: ShieldCheck,
+  guardia: Shield,
 } satisfies Record<string, LucideIcon>;
 
 export type IconKey = keyof typeof ICONOS;

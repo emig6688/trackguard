@@ -255,16 +255,6 @@ export default async function DashboardPage() {
     prisma.ordenCompra.count({ where: { estado: "REALIZADA", eliminadoEn: null } }),
   ]);
 
-  const [devolucionesSinEnviar, totalDevolucionesSinEnviar] = await Promise.all([
-    prisma.devolucion.findMany({
-      where: { enviadoEn: null },
-      orderBy: { createdAt: "asc" },
-      take: 8,
-      select: { id: true, fecha: true, cliente: true, remito: true },
-    }),
-    prisma.devolucion.count({ where: { enviadoEn: null } }),
-  ]);
-
   const comprasPendientesAutorizacion = await prisma.ordenCompra.findMany({
     where: { estadoAutorizacion: "PENDIENTE", eliminadoEn: null },
     include: { items: true, presupuestos: true },
@@ -563,30 +553,6 @@ export default async function DashboardPage() {
           <Link href="/compras?estado=REALIZADA" className="block pt-2 text-sm underline">
             Ver compras sin documentar
           </Link>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Devoluciones sin enviar</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {devolucionesSinEnviar.map((d) => (
-            <div key={d.id} className="flex items-center justify-between text-sm">
-              <span>
-                {d.cliente} · {d.remito}
-              </span>
-              <Badge variant="warning">{d.fecha.toLocaleDateString("es-AR", { timeZone: "UTC" })}</Badge>
-            </div>
-          ))}
-          {devolucionesSinEnviar.length === 0 && (
-            <p className="text-sm text-muted-foreground">No hay devoluciones pendientes de envío.</p>
-          )}
-          {totalDevolucionesSinEnviar > devolucionesSinEnviar.length && (
-            <p className="text-sm text-muted-foreground">
-              y {totalDevolucionesSinEnviar - devolucionesSinEnviar.length} más...
-            </p>
-          )}
         </CardContent>
       </Card>
 

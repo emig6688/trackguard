@@ -1,9 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireEmpresa, ROLES_GUARDIA } from "@/lib/permisos";
 import { BackButton } from "@/components/back-button";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { enviarDevolucion } from "@/app/_actions/devoluciones";
 
 export default async function DevolucionDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -14,7 +11,6 @@ export default async function DevolucionDetallePage({ params }: { params: Promis
     include: {
       chofer: true,
       registradoPor: true,
-      enviadoPor: true,
       productos: true,
       cambios: true,
     },
@@ -26,23 +22,7 @@ export default async function DevolucionDetallePage({ params }: { params: Promis
       <BackButton fallbackHref="/guardia/devoluciones" />
 
       <section className="space-y-3 rounded-lg border p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-semibold">1. Devoluciones</h2>
-          {devolucion.enviadoEn ? (
-            <Badge variant="success">
-              Enviado el {devolucion.enviadoEn.toLocaleString("es-AR")} por {devolucion.enviadoPor?.nombre}
-            </Badge>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Badge variant="warning">Pendiente de enviar</Badge>
-              <form action={enviarDevolucion.bind(null, devolucion.id)}>
-                <Button type="submit" size="sm">
-                  Enviar
-                </Button>
-              </form>
-            </div>
-          )}
-        </div>
+        <h2 className="font-semibold">1. Devoluciones</h2>
         <div className="grid gap-2 text-sm sm:grid-cols-2">
           <p>
             <span className="text-muted-foreground">Fecha:</span>{" "}
