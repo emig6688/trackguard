@@ -192,7 +192,7 @@ export default async function OrdenesTrabajoPage({
         <div className="flex gap-2">
           {!esMecanico && (
             <a href="/api/export/ordenes-trabajo" className={buttonVariants({ variant: "outline" })}>
-              Exportar CSV
+              Exportar Excel
             </a>
           )}
           {puedeCrear && (
@@ -244,10 +244,8 @@ export default async function OrdenesTrabajoPage({
             <TableHead>Número</TableHead>
             <TableHead>Vehículo</TableHead>
             <TableHead>Título</TableHead>
-            <TableHead className="hidden md:table-cell">Área</TableHead>
             <TableHead>Prioridad</TableHead>
-            <TableHead className="hidden md:table-cell">Asignado a</TableHead>
-            <TableHead className="hidden md:table-cell">Fecha estimada</TableHead>
+            <TableHead className="hidden md:table-cell">Asignado / fecha</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead>Acciones</TableHead>
           </TableRow>
@@ -271,7 +269,7 @@ export default async function OrdenesTrabajoPage({
                 </TableCell>
                 <TableCell>{ot.vehiculo.patente}</TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                     <span>{ot.titulo}</span>
                     <OrigenOTBadge origen={ot.origen} />
                     {ot.itemsPreventivos.length > 0 && (
@@ -281,22 +279,20 @@ export default async function OrdenesTrabajoPage({
                       </span>
                     )}
                   </div>
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
-                  {ot.areaReparacion ? AREA_REPARACION_LABEL[ot.areaReparacion] : "—"}
+                  {ot.areaReparacion && (
+                    <p className="text-xs text-muted-foreground">{AREA_REPARACION_LABEL[ot.areaReparacion]}</p>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Badge variant={PRIORIDAD_VARIANT[ot.prioridad]}>{PRIORIDAD_LABEL[ot.prioridad]}</Badge>
                 </TableCell>
-                <TableCell className="hidden md:table-cell">{ot.asignadoA?.nombre ?? "—"}</TableCell>
                 <TableCell className="hidden md:table-cell">
-                  {fechaMostrada ? (
-                    <span className={atrasada ? "font-medium text-destructive" : ""}>
+                  <p>{ot.asignadoA?.nombre ?? "—"}</p>
+                  {fechaMostrada && (
+                    <p className={`text-xs ${atrasada ? "font-medium text-destructive" : "text-muted-foreground"}`}>
                       {fechaMostrada.toLocaleDateString("es-AR")}
                       {atrasada ? " · Atrasada" : ""}
-                    </span>
-                  ) : (
-                    "—"
+                    </p>
                   )}
                 </TableCell>
                 <TableCell>
@@ -313,7 +309,7 @@ export default async function OrdenesTrabajoPage({
           })}
           {ordenes.length === 0 && (
             <TableRow>
-              <TableCell colSpan={9} className="text-center text-muted-foreground">
+              <TableCell colSpan={7} className="text-center text-muted-foreground">
                 No hay órdenes de trabajo para mostrar.
               </TableCell>
             </TableRow>
