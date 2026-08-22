@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { requireEmpresa } from "@/lib/permisos";
 import { construirCondicionOTCompra } from "@/lib/compras-filtro";
 import { rangoExportPorDefecto } from "@/lib/export-rango";
+import type { EstadoCompra } from "@/app/generated/prisma/client";
 
 // Armar el workbook con varias hojas puede acercarse al límite por defecto.
 export const maxDuration = 60;
@@ -11,10 +12,20 @@ const SIN_CAMION = "Sin camión asignado";
 const SIN_CHOFER = "Sin chofer identificado";
 const SIN_PROVEEDOR = "Sin proveedor registrado";
 
+const ESTADO_LABEL: Record<EstadoCompra, string> = {
+  PENDIENTE: "Pendiente (a comprar)",
+  REALIZADA: "Realizada",
+  DOCUMENTADA: "Documentada",
+  CANCELADA: "Cancelada",
+};
+
 /**
- * Reporte de compras valorizadas (solo las que ya tienen montoTotal cargado)
- * a partir de los mismos filtros que /compras (estado, vehiculoId, choferId)
- * — respeta exactamente lo que el usuario está viendo cuando pide el reporte.
+ * Reporte de compras a partir de los mismos filtros que /compras (estado,
+ * vehiculoId, choferId, búsqueda) — respeta exactamente lo que el usuario
+ * está viendo cuando pide el reporte. Incluye tanto las pendientes de
+ * comprar (para que el responsable de compras las pueda resolver desde acá)
+ * como las ya realizadas/documentadas — la columna "Estado" distingue unas
+ * de otras, y "Monto" muestra el estimado o el real según corresponda.
  */
 export async function GET(request: Request) {
   const { prisma } = await requireEmpresa();
@@ -23,6 +34,8 @@ export async function GET(request: Request) {
   const filtroVehiculoId = searchParams.get("vehiculoId") ?? undefined;
   const filtroChoferId = searchParams.get("choferId") ?? undefined;
   const filtroBusqueda = searchParams.get("busqueda") ?? undefined;
+  // fechaSolicitud (no fechaCompra) porque una compra pendiente todavía no
+  // tiene fecha de compra — así el rango de fechas también las incluye.
   const { desde, hasta } = rangoExportPorDefecto(searchParams);
 
   const condicionOT = construirCondicionOTCompra({ vehiculoId: filtroVehiculoId, choferId: filtroChoferId });
@@ -30,8 +43,7 @@ export async function GET(request: Request) {
   const compras = await prisma.ordenCompra.findMany({
     where: {
       eliminadoEn: null,
-      montoTotal: { not: null },
-      fechaCompra: { gte: desde, lte: hasta },
+      fechaSolicitud: { gte: desde, lte: hasta },
       ...(filtroEstado
         ? { estado: filtroEstado as "PENDIENTE" | "REALIZADA" | "DOCUMENTADA" | "CANCELADA" }
         : {}),
@@ -57,36 +69,47 @@ export async function GET(request: Request) {
         include: { articuloPanol: { select: { nombre: true } } },
       },
     },
-    orderBy: { fechaCompra: "desc" },
+    orderBy: [{ estado: "asc" }, { fechaSolicitud: "desc" }],
   });
 
   type Fila = {
     numero: string;
-    fecha: Date | null;
+    estado: EstadoCompra;
+    fechaSolicitud: Date;
+    fechaCompra: Date | null;
     camion: string;
     chofer: string;
     proveedor: string;
-    monto: number;
+    montoEstimado: number | null;
+    montoReal: number | null;
   };
 
   const filas: Fila[] = compras.map((c) => ({
     numero: c.numero,
-    fecha: c.fechaCompra,
+    estado: c.estado,
+    fechaSolicitud: c.fechaSolicitud,
+    fechaCompra: c.fechaCompra,
     camion: c.ordenDeTrabajo?.vehiculo?.patente ?? SIN_CAMION,
     chofer:
       c.ordenDeTrabajo?.checklistRealizado?.chofer.nombre ??
       c.ordenDeTrabajo?.eventoRuta?.chofer.nombre ??
       SIN_CHOFER,
     proveedor: c.proveedor ?? SIN_PROVEEDOR,
-    monto: Number(c.montoTotal),
+    montoEstimado: c.montoEstimado != null ? Number(c.montoEstimado) : null,
+    montoReal: c.montoTotal != null ? Number(c.montoTotal) : null,
   }));
+
+  // Los totales "valorizados" (por camión/chofer/proveedor) solo suman
+  // compras ya realizadas: mezclar montos estimados de pendientes ahí
+  // haría parecer gasto real algo que todavía no se compró.
+  const filasRealizadas = filas.filter((f) => f.montoReal != null);
 
   function agrupar(clave: keyof Pick<Fila, "camion" | "chofer" | "proveedor">) {
     const mapa = new Map<string, { cantidad: number; total: number }>();
-    for (const f of filas) {
+    for (const f of filasRealizadas) {
       const actual = mapa.get(f[clave]) ?? { cantidad: 0, total: 0 };
       actual.cantidad++;
-      actual.total += f.monto;
+      actual.total += f.montoReal ?? 0;
       mapa.set(f[clave], actual);
     }
     return [...mapa.entries()]
@@ -101,29 +124,37 @@ export async function GET(request: Request) {
   const detalle = workbook.addWorksheet("Detalle");
   detalle.columns = [
     { header: "Número", key: "numero", width: 16 },
-    { header: "Fecha de compra", key: "fecha", width: 16 },
+    { header: "Estado", key: "estado", width: 20 },
+    { header: "Fecha solicitud", key: "fechaSolicitud", width: 16 },
+    { header: "Fecha de compra", key: "fechaCompra", width: 16 },
     { header: "Camión", key: "camion", width: 14 },
     { header: "Chofer", key: "chofer", width: 22 },
     { header: "Proveedor", key: "proveedor", width: 24 },
-    { header: "Monto", key: "monto", width: 14 },
+    { header: "Monto estimado", key: "montoEstimado", width: 16 },
+    { header: "Monto real", key: "montoReal", width: 16 },
   ];
   detalle.getRow(1).font = { bold: true };
   for (const f of filas) {
     detalle.addRow({
       numero: f.numero,
-      fecha: f.fecha ? f.fecha.toLocaleDateString("es-AR") : "",
+      estado: ESTADO_LABEL[f.estado],
+      fechaSolicitud: f.fechaSolicitud.toLocaleDateString("es-AR"),
+      fechaCompra: f.fechaCompra ? f.fechaCompra.toLocaleDateString("es-AR") : "",
       camion: f.camion,
       chofer: f.chofer,
       proveedor: f.proveedor,
-      monto: f.monto,
+      montoEstimado: f.montoEstimado,
+      montoReal: f.montoReal,
     });
   }
-  detalle.getColumn("monto").numFmt = '"$"#,##0.00';
+  detalle.getColumn("montoEstimado").numFmt = '"$"#,##0.00';
+  detalle.getColumn("montoReal").numFmt = '"$"#,##0.00';
 
   const composicion = workbook.addWorksheet("Composición");
   composicion.columns = [
     { header: "Número de OC", key: "numero", width: 16 },
-    { header: "Fecha de compra", key: "fecha", width: 16 },
+    { header: "Estado", key: "estado", width: 20 },
+    { header: "Fecha solicitud", key: "fecha", width: 16 },
     { header: "Camión", key: "camion", width: 14 },
     { header: "Ítem", key: "descripcion", width: 32 },
     { header: "Artículo de pañol", key: "articulo", width: 24 },
@@ -135,7 +166,8 @@ export async function GET(request: Request) {
     for (const item of c.items) {
       composicion.addRow({
         numero: c.numero,
-        fecha: c.fechaCompra ? c.fechaCompra.toLocaleDateString("es-AR") : "",
+        estado: ESTADO_LABEL[c.estado],
+        fecha: c.fechaSolicitud.toLocaleDateString("es-AR"),
         camion: c.ordenDeTrabajo?.vehiculo?.patente ?? SIN_CAMION,
         descripcion: item.descripcion,
         articulo: item.articuloPanol?.nombre ?? "",
@@ -168,7 +200,7 @@ export async function GET(request: Request) {
   return new NextResponse(buffer, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": 'attachment; filename="compras-valorizadas.xlsx"',
+      "Content-Disposition": 'attachment; filename="compras.xlsx"',
     },
   });
 }
