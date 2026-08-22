@@ -15,13 +15,13 @@ Copiar `.env.example` como referencia y cargar en Vercel (Project Settings → E
 
 ## 2. Base de datos
 
-Antes del primer deploy (o después de cada `git pull` con migraciones nuevas):
+El script `build` de `package.json` corre `prisma migrate deploy && next build`, así que **Vercel aplica las migraciones pendientes automáticamente en cada deploy**, antes de buildear — no hace falta correrlo a mano. (Aplica las migraciones de `prisma/migrations/` contra `DIRECT_URL`/`DATABASE_URL` sin generar una nueva, a diferencia de `migrate dev`, pensado para desarrollo local.)
+
+Si de todas formas necesitás correrlo a mano contra producción (por ejemplo para probar antes de pushear), la connection string real no se puede sacar con `vercel env pull` si `DATABASE_URL`/`DIRECT_URL` están marcadas como "Sensitive" en Vercel (el pull trae un placeholder inválido) — conseguila desde el dashboard de Supabase (botón "Connect" del proyecto → Session pooler o Direct connection, puerto 5432) y corré:
 
 ```bash
-npx prisma migrate deploy
+set "DIRECT_URL=<connection string real>" && npx prisma migrate deploy
 ```
-
-Esto aplica las migraciones de `prisma/migrations/` contra `DATABASE_URL` sin generar una nueva (a diferencia de `migrate dev`, pensado para desarrollo local). Correrlo desde CI/CD o manualmente antes de que el deploy nuevo reciba tráfico.
 
 ## 3. Crons (`vercel.json`)
 
