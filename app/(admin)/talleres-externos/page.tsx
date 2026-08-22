@@ -57,7 +57,7 @@ export default async function TalleresExternosPage() {
           ))}
           {talleres.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="text-center text-muted-foreground">
+              <TableCell colSpan={5} className="whitespace-normal text-center text-muted-foreground">
                 No hay talleres cargados.
               </TableCell>
             </TableRow>

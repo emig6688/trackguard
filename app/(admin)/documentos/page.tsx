@@ -166,28 +166,38 @@ export default async function DocumentosPage({
           <TableRow>
             <TableHead>Entidad</TableHead>
             <TableHead className="hidden md:table-cell">Tipo</TableHead>
-            <TableHead>Vencimiento</TableHead>
+            <TableHead className="hidden md:table-cell">Vencimiento</TableHead>
             <TableHead>Estado</TableHead>
-            {user.rol === "ADMIN" && <TableHead>Acciones</TableHead>}
+            {user.rol === "ADMIN" && <TableHead className="hidden md:table-cell">Acciones</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {filasFiltradas.map(({ doc, estado, entidadLabel, entidadHref }) => (
             <TableRow key={doc.id}>
-              <TableCell>
+              <TableCell className="max-w-[150px] md:max-w-none">
                 <Link href={entidadHref} className="font-medium hover:underline">
                   {entidadLabel}
                 </Link>
+                <p className="text-xs text-muted-foreground md:hidden">
+                  {doc.tipoDocumento.nombre} · vence {doc.fechaVencimiento.toLocaleDateString("es-AR")}
+                </p>
               </TableCell>
               <TableCell className="hidden md:table-cell">{doc.tipoDocumento.nombre}</TableCell>
-              <TableCell>{doc.fechaVencimiento.toLocaleDateString("es-AR")}</TableCell>
+              <TableCell className="hidden md:table-cell">{doc.fechaVencimiento.toLocaleDateString("es-AR")}</TableCell>
               <TableCell>
-                <Badge variant={ESTADO_VENCIMIENTO_VARIANT[estado]}>
-                  {ESTADO_VENCIMIENTO_LABEL[estado]}
-                </Badge>
+                <div className="flex flex-col items-start gap-1">
+                  <Badge variant={ESTADO_VENCIMIENTO_VARIANT[estado]}>
+                    {ESTADO_VENCIMIENTO_LABEL[estado]}
+                  </Badge>
+                  {user.rol === "ADMIN" && (
+                    <span className="md:hidden">
+                      <EliminarButton tipo="documento" id={doc.id} redirectPath="/documentos" />
+                    </span>
+                  )}
+                </div>
               </TableCell>
               {user.rol === "ADMIN" && (
-                <TableCell>
+                <TableCell className="hidden md:table-cell">
                   <EliminarButton tipo="documento" id={doc.id} redirectPath="/documentos" />
                 </TableCell>
               )}
@@ -195,7 +205,7 @@ export default async function DocumentosPage({
           ))}
           {filasFiltradas.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="text-center text-muted-foreground">
+              <TableCell colSpan={5} className="whitespace-normal text-center text-muted-foreground">
                 No hay documentos para mostrar.
               </TableCell>
             </TableRow>

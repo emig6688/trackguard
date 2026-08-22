@@ -258,9 +258,11 @@ export default async function OrdenesTrabajoPage({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="sticky left-0 z-10 bg-card">Número / vehículo</TableHead>
-            <TableHead>Título</TableHead>
-            <TableHead>Prioridad</TableHead>
+            <TableHead className="sticky left-0 z-10 max-w-[100px] bg-card md:max-w-none">
+              Número / vehículo
+            </TableHead>
+            <TableHead className="max-w-[130px] md:max-w-none">Título</TableHead>
+            <TableHead className="hidden md:table-cell">Prioridad</TableHead>
             <TableHead className="hidden md:table-cell">Asignado / fecha</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead>Acciones</TableHead>
@@ -279,14 +281,17 @@ export default async function OrdenesTrabajoPage({
             return (
               <TableRow key={ot.id} className={PRIORIDAD_ROW_BG[ot.prioridad]}>
                 <TableCell
-                  className={`sticky left-0 z-10 bg-card ${PRIORIDAD_ACCENT_CLASS[ot.prioridad]}`}
+                  className={`sticky left-0 z-10 max-w-[100px] whitespace-normal bg-card md:max-w-none md:whitespace-nowrap ${PRIORIDAD_ACCENT_CLASS[ot.prioridad]}`}
                 >
                   <Link href={`/ordenes-trabajo/${ot.id}`} className="font-medium hover:underline">
                     {ot.numero}
                   </Link>
                   <p className="text-xs text-muted-foreground">{ot.vehiculo.patente}</p>
+                  <Badge variant={PRIORIDAD_VARIANT[ot.prioridad]} className="mt-1 md:hidden">
+                    {PRIORIDAD_LABEL[ot.prioridad]}
+                  </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell className="max-w-[130px] whitespace-normal md:max-w-none md:whitespace-nowrap">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                     <span>{ot.titulo}</span>
                     <OrigenOTBadge origen={ot.origen} />
@@ -301,7 +306,7 @@ export default async function OrdenesTrabajoPage({
                     <p className="text-xs text-muted-foreground">{AREA_REPARACION_LABEL[ot.areaReparacion]}</p>
                   )}
                 </TableCell>
-                <TableCell>
+                <TableCell className="hidden md:table-cell">
                   <Badge variant={PRIORIDAD_VARIANT[ot.prioridad]}>{PRIORIDAD_LABEL[ot.prioridad]}</Badge>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
@@ -327,7 +332,7 @@ export default async function OrdenesTrabajoPage({
           })}
           {ordenes.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground">
+              <TableCell colSpan={6} className="whitespace-normal text-center text-muted-foreground">
                 No hay órdenes de trabajo para mostrar.
               </TableCell>
             </TableRow>

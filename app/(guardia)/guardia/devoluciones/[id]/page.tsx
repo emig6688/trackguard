@@ -50,18 +50,23 @@ export default async function DevolucionDetallePage({ params }: { params: Promis
             <table className="w-full text-sm">
               <thead className="text-left text-muted-foreground">
                 <tr>
-                  <th className="p-2 font-medium">Producto</th>
-                  <th className="p-2 font-medium">Correlativo</th>
-                  <th className="p-2 font-medium">Ubicación guardado</th>
+                  <th className="max-w-[110px] p-2 font-medium md:max-w-none">Producto</th>
+                  <th className="hidden p-2 font-medium md:table-cell">Correlativo</th>
+                  <th className="hidden p-2 font-medium md:table-cell">Ubicación guardado</th>
                   <th className="p-2 font-medium">Observación</th>
                 </tr>
               </thead>
               <tbody>
                 {devolucion.productos.map((p) => (
                   <tr key={p.id} className="border-t">
-                    <td className="p-2">{p.producto}</td>
-                    <td className="p-2">{p.correlativo}</td>
-                    <td className="p-2">{p.ubicacionGuardado}</td>
+                    <td className="max-w-[110px] whitespace-normal p-2 md:max-w-none md:whitespace-nowrap">
+                      {p.producto}
+                      <p className="text-xs text-muted-foreground md:hidden">
+                        {p.correlativo} · {p.ubicacionGuardado}
+                      </p>
+                    </td>
+                    <td className="hidden p-2 md:table-cell">{p.correlativo}</td>
+                    <td className="hidden p-2 md:table-cell">{p.ubicacionGuardado}</td>
                     <td className="p-2 text-muted-foreground">{p.observacion || "—"}</td>
                   </tr>
                 ))}
@@ -80,20 +85,25 @@ export default async function DevolucionDetallePage({ params }: { params: Promis
             <table className="w-full text-sm">
               <thead className="text-left text-muted-foreground">
                 <tr>
-                  <th className="p-2 font-medium">Cliente al que se entregó</th>
-                  <th className="p-2 font-medium">Producto</th>
-                  <th className="p-2 font-medium">Correlativo</th>
-                  <th className="p-2 font-medium">Autoriz.</th>
+                  <th className="max-w-[110px] p-2 font-medium md:max-w-none">Cliente al que se entregó</th>
+                  <th className="hidden p-2 font-medium md:table-cell">Producto</th>
+                  <th className="hidden p-2 font-medium md:table-cell">Correlativo</th>
+                  <th className="hidden p-2 font-medium md:table-cell">Autoriz.</th>
                   <th className="p-2 font-medium">Observación</th>
                 </tr>
               </thead>
               <tbody>
                 {devolucion.cambios.map((c) => (
                   <tr key={c.id} className="border-t">
-                    <td className="p-2">{c.clienteEntregado}</td>
-                    <td className="p-2">{c.producto}</td>
-                    <td className="p-2">{c.correlativo}</td>
-                    <td className="p-2">{c.autoriz}</td>
+                    <td className="max-w-[110px] whitespace-normal p-2 md:max-w-none md:whitespace-nowrap">
+                      {c.clienteEntregado}
+                      <p className="text-xs text-muted-foreground md:hidden">
+                        {c.producto} · {c.correlativo} · Autoriz: {c.autoriz}
+                      </p>
+                    </td>
+                    <td className="hidden p-2 md:table-cell">{c.producto}</td>
+                    <td className="hidden p-2 md:table-cell">{c.correlativo}</td>
+                    <td className="hidden p-2 md:table-cell">{c.autoriz}</td>
                     <td className="p-2 text-muted-foreground">{c.observacion || "—"}</td>
                   </tr>
                 ))}

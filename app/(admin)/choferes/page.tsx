@@ -33,9 +33,8 @@ export default async function ChoferesPage() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Nombre</TableHead>
+            <TableHead>Nombre / DNI</TableHead>
             <TableHead className="hidden md:table-cell">Email</TableHead>
-            <TableHead>DNI</TableHead>
             <TableHead className="hidden md:table-cell">Legajo</TableHead>
             <TableHead className="hidden md:table-cell">Licencia</TableHead>
             <TableHead>Estado</TableHead>
@@ -48,9 +47,9 @@ export default async function ChoferesPage() {
                 <Link href={`/choferes/${c.id}`} className="font-medium hover:underline">
                   {c.nombre}
                 </Link>
+                <p className="text-xs text-muted-foreground">{c.dni ?? "—"}</p>
               </TableCell>
               <TableCell className="hidden md:table-cell">{c.email}</TableCell>
-              <TableCell>{c.dni ?? "—"}</TableCell>
               <TableCell className="hidden md:table-cell">{c.perfilChofer?.legajo ?? "—"}</TableCell>
               <TableCell className="hidden md:table-cell">{c.perfilChofer?.numeroLicencia ?? "—"}</TableCell>
               <TableCell>
@@ -62,7 +61,7 @@ export default async function ChoferesPage() {
           ))}
           {choferes.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground">
+              <TableCell colSpan={5} className="whitespace-normal text-center text-muted-foreground">
                 No hay choferes cargados.
               </TableCell>
             </TableRow>

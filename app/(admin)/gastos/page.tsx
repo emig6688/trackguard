@@ -145,27 +145,39 @@ export default async function GastosPage({
         <TableHeader>
           <TableRow>
             <TableHead className="hidden md:table-cell">Chofer</TableHead>
-            <TableHead>Vehículo</TableHead>
+            <TableHead className="max-w-[110px] md:max-w-none">Vehículo</TableHead>
             <TableHead>Tipo</TableHead>
             <TableHead>Monto</TableHead>
             <TableHead className="hidden md:table-cell">Fecha</TableHead>
             <TableHead>Estado</TableHead>
-            {session.rol === "ADMIN" && <TableHead>Acciones</TableHead>}
+            {session.rol === "ADMIN" && <TableHead className="hidden md:table-cell">Acciones</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {gastos.map((g) => (
             <TableRow key={g.id}>
               <TableCell className="hidden md:table-cell">{g.chofer.nombre}</TableCell>
-              <TableCell>{g.vehiculo?.patente ?? "—"}</TableCell>
+              <TableCell className="max-w-[110px] md:max-w-none">
+                {g.vehiculo?.patente ?? "—"}
+                <p className="text-xs text-muted-foreground md:hidden">
+                  {g.chofer.nombre} · {g.fecha.toLocaleDateString("es-AR")}
+                </p>
+              </TableCell>
               <TableCell>{TIPO_LABEL[g.tipo]}</TableCell>
               <TableCell>${g.monto.toString()}</TableCell>
               <TableCell className="hidden md:table-cell">{g.fecha.toLocaleDateString("es-AR")}</TableCell>
               <TableCell>
-                <Badge variant="secondary">{g.estado}</Badge>
+                <div className="flex flex-col items-start gap-1">
+                  <Badge variant="secondary">{g.estado}</Badge>
+                  {session.rol === "ADMIN" && (
+                    <span className="md:hidden">
+                      <EliminarButton tipo="gasto" id={g.id} redirectPath="/gastos" />
+                    </span>
+                  )}
+                </div>
               </TableCell>
               {session.rol === "ADMIN" && (
-                <TableCell>
+                <TableCell className="hidden md:table-cell">
                   <EliminarButton tipo="gasto" id={g.id} redirectPath="/gastos" />
                 </TableCell>
               )}
@@ -173,7 +185,7 @@ export default async function GastosPage({
           ))}
           {gastos.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">
+              <TableCell colSpan={7} className="whitespace-normal text-center text-muted-foreground">
                 No hay gastos cargados.
               </TableCell>
             </TableRow>

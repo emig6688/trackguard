@@ -205,7 +205,7 @@ export default async function CostosPage({
             ))}
             {porVehiculo.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="whitespace-normal text-center text-muted-foreground">
                   No hay vehículos cargados.
                 </TableCell>
               </TableRow>
@@ -248,7 +248,7 @@ export default async function CostosPage({
             ))}
             {porChofer.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground">
+                <TableCell colSpan={4} className="whitespace-normal text-center text-muted-foreground">
                   No hay choferes cargados.
                 </TableCell>
               </TableRow>

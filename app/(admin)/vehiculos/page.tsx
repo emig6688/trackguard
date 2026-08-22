@@ -43,7 +43,7 @@ export default async function VehiculosPage() {
             <TableHead className="hidden md:table-cell">Tipo</TableHead>
             <TableHead>Km actual</TableHead>
             <TableHead className="hidden md:table-cell">Equipo de frío</TableHead>
-            <TableHead>Estado</TableHead>
+            <TableHead className="hidden md:table-cell">Estado</TableHead>
             <TableHead>Operativo</TableHead>
           </TableRow>
         </TableHeader>
@@ -61,7 +61,7 @@ export default async function VehiculosPage() {
               <TableCell className="hidden md:table-cell">{v.tipoCarroceria ?? v.tipo}</TableCell>
               <TableCell>{v.kmActual.toLocaleString("es-AR")} km</TableCell>
               <TableCell className="hidden md:table-cell">{v.equipoFrioTipo ?? "—"}</TableCell>
-              <TableCell>
+              <TableCell className="hidden md:table-cell">
                 <Badge variant={v.activo ? "success" : "secondary"}>
                   {v.activo ? "Activo" : "Inactivo"}
                 </Badge>
@@ -78,7 +78,7 @@ export default async function VehiculosPage() {
           ))}
           {vehiculos.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">
+              <TableCell colSpan={7} className="whitespace-normal text-center text-muted-foreground">
                 No hay vehículos cargados.
               </TableCell>
             </TableRow>

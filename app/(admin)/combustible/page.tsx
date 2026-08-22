@@ -113,13 +113,13 @@ export default async function CombustiblePage({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Vehículo</TableHead>
+            <TableHead className="max-w-[130px] md:max-w-none">Vehículo</TableHead>
             <TableHead className="hidden md:table-cell">Chofer</TableHead>
-            <TableHead>Fecha</TableHead>
+            <TableHead className="hidden md:table-cell">Fecha</TableHead>
             <TableHead className="hidden md:table-cell">Km odómetro</TableHead>
             <TableHead>Litros</TableHead>
             <TableHead>Consumo</TableHead>
-            {session.rol === "ADMIN" && <TableHead>Acciones</TableHead>}
+            {session.rol === "ADMIN" && <TableHead className="hidden md:table-cell">Acciones</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -131,23 +131,35 @@ export default async function CombustiblePage({
 
             return (
               <TableRow key={c.id}>
-                <TableCell>{c.vehiculo.patente}</TableCell>
+                <TableCell className="max-w-[130px] md:max-w-none">
+                  {c.vehiculo.patente}
+                  <p className="text-xs text-muted-foreground md:hidden">
+                    {c.chofer.nombre} · {c.fechaHora.toLocaleDateString("es-AR")}
+                  </p>
+                </TableCell>
                 <TableCell className="hidden md:table-cell">{c.chofer.nombre}</TableCell>
-                <TableCell>{c.fechaHora.toLocaleDateString("es-AR")}</TableCell>
+                <TableCell className="hidden md:table-cell">{c.fechaHora.toLocaleDateString("es-AR")}</TableCell>
                 <TableCell className="hidden md:table-cell">{c.kmOdometro.toLocaleString("es-AR")}</TableCell>
                 <TableCell>{c.litrosCargados.toString()}</TableCell>
                 <TableCell>
-                  {consumo != null ? (
-                    <span className="flex items-center gap-2">
-                      {consumo} L/100km
-                      {esAnomalia && <Badge variant="destructive">Anómalo</Badge>}
-                    </span>
-                  ) : (
-                    "—"
-                  )}
+                  <div className="flex flex-col items-start gap-1">
+                    {consumo != null ? (
+                      <span className="flex flex-wrap items-center gap-2">
+                        {consumo} L/100km
+                        {esAnomalia && <Badge variant="destructive">Anómalo</Badge>}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                    {session.rol === "ADMIN" && (
+                      <span className="md:hidden">
+                        <EliminarButton tipo="cargaCombustible" id={c.id} redirectPath="/combustible" />
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
                 {session.rol === "ADMIN" && (
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <EliminarButton tipo="cargaCombustible" id={c.id} redirectPath="/combustible" />
                   </TableCell>
                 )}
@@ -156,7 +168,7 @@ export default async function CombustiblePage({
           })}
           {cargas.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">
+              <TableCell colSpan={7} className="whitespace-normal text-center text-muted-foreground">
                 No hay cargas de combustible registradas.
               </TableCell>
             </TableRow>

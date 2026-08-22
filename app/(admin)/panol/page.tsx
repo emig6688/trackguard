@@ -31,7 +31,7 @@ export default async function PanolPage() {
         <TableHeader>
           <TableRow>
             <TableHead>Artículo</TableHead>
-            <TableHead>Unidad</TableHead>
+            <TableHead className="hidden md:table-cell">Unidad</TableHead>
             <TableHead>Stock actual</TableHead>
             <TableHead className="hidden md:table-cell">Stock mínimo</TableHead>
             <TableHead>Estado</TableHead>
@@ -47,10 +47,10 @@ export default async function PanolPage() {
                     {a.nombre}
                   </Link>
                 </TableCell>
-                <TableCell>{a.unidadMedida ?? "—"}</TableCell>
+                <TableCell className="hidden md:table-cell">{a.unidadMedida ?? "—"}</TableCell>
                 <TableCell>{a.stockActual}</TableCell>
                 <TableCell className="hidden md:table-cell">{a.stockMinimo}</TableCell>
-                <TableCell className="flex gap-2">
+                <TableCell className="flex flex-wrap gap-2">
                   {bajoMinimo && <Badge variant="warning">Al mínimo</Badge>}
                   <Badge variant={a.activo ? "success" : "secondary"}>
                     {a.activo ? "Activo" : "Inactivo"}
@@ -61,7 +61,7 @@ export default async function PanolPage() {
           })}
           {articulos.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="text-center text-muted-foreground">
+              <TableCell colSpan={5} className="whitespace-normal text-center text-muted-foreground">
                 No hay artículos cargados en el pañol.
               </TableCell>
             </TableRow>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireEmpresa } from "@/lib/permisos";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ROL_LABEL } from "@/lib/roles";
 import {
   Table,
   TableBody,
@@ -39,7 +40,7 @@ export default async function UsuariosPage() {
           <TableRow>
             <TableHead>Nombre</TableHead>
             <TableHead className="hidden md:table-cell">Email</TableHead>
-            <TableHead>Rol</TableHead>
+            <TableHead className="hidden md:table-cell">Rol</TableHead>
             <TableHead>Estado</TableHead>
           </TableRow>
         </TableHeader>
@@ -50,9 +51,10 @@ export default async function UsuariosPage() {
                 <Link href={`/usuarios/${u.id}`} className="hover:underline">
                   {u.nombre}
                 </Link>
+                <p className="text-xs font-normal text-muted-foreground md:hidden">{ROL_LABEL[u.rol]}</p>
               </TableCell>
               <TableCell className="hidden md:table-cell">{u.email}</TableCell>
-              <TableCell>{u.rol}</TableCell>
+              <TableCell className="hidden md:table-cell">{ROL_LABEL[u.rol]}</TableCell>
               <TableCell>
                 <Badge variant={u.activo ? "success" : "secondary"}>
                   {u.activo ? "Activo" : "Inactivo"}

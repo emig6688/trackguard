@@ -38,25 +38,38 @@ export default async function PlataformaPage() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Nombre</TableHead>
-            <TableHead>Usuarios</TableHead>
-            <TableHead>Alta</TableHead>
+            <TableHead className="max-w-[120px] md:max-w-none">Nombre</TableHead>
+            <TableHead className="hidden md:table-cell">Usuarios</TableHead>
+            <TableHead className="hidden md:table-cell">Alta</TableHead>
             <TableHead>Estado</TableHead>
-            <TableHead>Acciones</TableHead>
+            <TableHead className="hidden md:table-cell">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {empresas.map((e) => (
             <TableRow key={e.id}>
-              <TableCell className="font-medium">{e.nombre}</TableCell>
-              <TableCell>{e._count.usuarios}</TableCell>
-              <TableCell>{e.createdAt.toLocaleDateString("es-AR")}</TableCell>
-              <TableCell>
-                <Badge variant={e.activo ? "success" : "secondary"}>
-                  {e.activo ? "Activa" : "Inactiva"}
-                </Badge>
+              <TableCell className="max-w-[120px] whitespace-normal font-medium md:max-w-none md:whitespace-nowrap">
+                {e.nombre}
+                <p className="text-xs font-normal text-muted-foreground md:hidden">
+                  {e._count.usuarios} usuarios · alta {e.createdAt.toLocaleDateString("es-AR")}
+                </p>
               </TableCell>
+              <TableCell className="hidden md:table-cell">{e._count.usuarios}</TableCell>
+              <TableCell className="hidden md:table-cell">{e.createdAt.toLocaleDateString("es-AR")}</TableCell>
               <TableCell>
+                <div className="flex flex-col items-start gap-1">
+                  <Badge variant={e.activo ? "success" : "secondary"}>
+                    {e.activo ? "Activa" : "Inactiva"}
+                  </Badge>
+                  <div className="flex flex-wrap items-center gap-2 md:hidden">
+                    <Link href={`/plataforma/${e.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+                      Editar
+                    </Link>
+                    <ToggleActivoEmpresaButton empresaId={e.id} activo={e.activo} />
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell className="hidden md:table-cell">
                 <div className="flex items-center gap-2">
                   <Link href={`/plataforma/${e.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
                     Editar
@@ -68,7 +81,7 @@ export default async function PlataformaPage() {
           ))}
           {empresas.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="text-center text-muted-foreground">
+              <TableCell colSpan={5} className="whitespace-normal text-center text-muted-foreground">
                 Todavía no hay empresas dadas de alta.
               </TableCell>
             </TableRow>

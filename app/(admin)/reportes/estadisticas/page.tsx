@@ -143,10 +143,10 @@ export default async function EstadisticasPage({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Vehículo</TableHead>
-                    <TableHead>Score</TableHead>
-                    <TableHead>Costo/km (12m)</TableHead>
+                    <TableHead className="hidden md:table-cell">Score</TableHead>
+                    <TableHead className="max-w-[90px] md:max-w-none">Costo/km (12m)</TableHead>
                     <TableHead className="hidden md:table-cell">Costo total (12m)</TableHead>
-                    <TableHead>Correctivas (12m)</TableHead>
+                    <TableHead className="hidden md:table-cell">Correctivas (12m)</TableHead>
                     <TableHead className="hidden md:table-cell">Antigüedad</TableHead>
                     <TableHead className="hidden md:table-cell">Áreas repetidas</TableHead>
                   </TableRow>
@@ -154,15 +154,21 @@ export default async function EstadisticasPage({
                 <TableBody>
                   {candidatos.map((c) => (
                     <TableRow key={c.vehiculoId}>
-                      <TableCell className="font-medium">{c.patente}</TableCell>
-                      <TableCell>{badgeScore(c.score)}</TableCell>
-                      <TableCell className="tabular-nums">
+                      <TableCell className="font-medium">
+                        {c.patente}
+                        <div className="mt-1 flex flex-wrap items-center gap-1 md:hidden">
+                          {badgeScore(c.score)}
+                          <span className="text-xs text-muted-foreground">{c.correctivas12m} correctivas</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">{badgeScore(c.score)}</TableCell>
+                      <TableCell className="max-w-[90px] tabular-nums md:max-w-none">
                         {c.kmActual > 0 ? formatearMoneda(c.costoPorKm) : "—"}
                       </TableCell>
                       <TableCell className="hidden tabular-nums md:table-cell">
                         {formatearMoneda(c.costoTotal12m)}
                       </TableCell>
-                      <TableCell className="tabular-nums">{c.correctivas12m}</TableCell>
+                      <TableCell className="hidden tabular-nums md:table-cell">{c.correctivas12m}</TableCell>
                       <TableCell className="hidden md:table-cell">
                         {c.antiguedadAnios != null ? `${c.antiguedadAnios} años` : "—"}
                       </TableCell>
@@ -183,7 +189,7 @@ export default async function EstadisticasPage({
                   ))}
                   {candidatos.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      <TableCell colSpan={7} className="whitespace-normal text-center text-muted-foreground">
                         No hay vehículos activos.
                       </TableCell>
                     </TableRow>
@@ -241,17 +247,22 @@ export default async function EstadisticasPage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Chofer</TableHead>
-                    <TableHead>Total correctivas</TableHead>
-                    <TableHead>Por camión</TableHead>
+                    <TableHead className="max-w-[100px] md:max-w-none">Chofer</TableHead>
+                    <TableHead className="hidden md:table-cell">Total correctivas</TableHead>
+                    <TableHead className="max-w-[160px] md:max-w-none">Por camión</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {choferes.map((c) => (
                     <TableRow key={c.choferId}>
-                      <TableCell className="font-medium">{c.choferNombre}</TableCell>
-                      <TableCell className="tabular-nums">{c.total}</TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-[100px] font-medium md:max-w-none">
+                        {c.choferNombre}
+                        <p className="text-xs font-normal text-muted-foreground md:hidden">
+                          {c.total} correctivas
+                        </p>
+                      </TableCell>
+                      <TableCell className="hidden tabular-nums md:table-cell">{c.total}</TableCell>
+                      <TableCell className="max-w-[160px] md:max-w-none">
                         <div className="flex flex-wrap gap-1">
                           {c.porVehiculo.map((v) => (
                             <Badge key={v.vehiculoId} variant="outline">
@@ -264,7 +275,7 @@ export default async function EstadisticasPage({
                   ))}
                   {choferes.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground">
+                      <TableCell colSpan={3} className="whitespace-normal text-center text-muted-foreground">
                         Todavía no hay correctivas originadas por un chofer.
                       </TableCell>
                     </TableRow>
@@ -370,31 +381,41 @@ export default async function EstadisticasPage({
                     <Table>
                       <TableBody>
                         <TableRow>
-                          <TableCell className="font-medium">Días operados</TableCell>
+                          <TableCell className="max-w-[180px] whitespace-normal font-medium md:max-w-none md:whitespace-nowrap">
+                            Días operados
+                          </TableCell>
                           <TableCell className="tabular-nums">{reporteChofer.diasOperados}</TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell className="font-medium">Checklist pre-salida cumplidos</TableCell>
+                          <TableCell className="max-w-[180px] whitespace-normal font-medium md:max-w-none md:whitespace-nowrap">
+                            Checklist pre-salida cumplidos
+                          </TableCell>
                           <TableCell className="tabular-nums">
                             {reporteChofer.checklistPresalidaCumplidos} / {reporteChofer.diasOperados}
                           </TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell className="font-medium">Cierres de ruta cumplidos</TableCell>
+                          <TableCell className="max-w-[180px] whitespace-normal font-medium md:max-w-none md:whitespace-nowrap">
+                            Cierres de ruta cumplidos
+                          </TableCell>
                           <TableCell className="tabular-nums">
                             {reporteChofer.cierresRutaCumplidos} / {reporteChofer.diasOperados}
                           </TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell className="font-medium">Veces con el tanque sin llenar</TableCell>
+                          <TableCell className="max-w-[180px] whitespace-normal font-medium md:max-w-none md:whitespace-nowrap">
+                            Veces con el tanque sin llenar
+                          </TableCell>
                           <TableCell className="tabular-nums">{reporteChofer.tanqueNoLlenoCount}</TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell className="font-medium">Roturas reportadas (OT correctivas)</TableCell>
+                          <TableCell className="max-w-[180px] whitespace-normal font-medium md:max-w-none md:whitespace-nowrap">
+                            Roturas reportadas (OT correctivas)
+                          </TableCell>
                           <TableCell className="tabular-nums">{reporteChofer.roturasReportadas}</TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell className="font-medium">
+                          <TableCell className="max-w-[180px] whitespace-normal font-medium md:max-w-none md:whitespace-nowrap">
                             Observaciones del guardia por incumplimiento
                           </TableCell>
                           <TableCell className="tabular-nums">{reporteChofer.observacionesGuardia}</TableCell>
