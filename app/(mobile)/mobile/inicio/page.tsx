@@ -43,19 +43,6 @@ export default async function MobileInicioPage() {
     },
   });
 
-  const accesos = [
-    ...ACCESOS,
-    {
-      href: "/mobile/reparaciones",
-      label: "Confirmar reparaciones",
-      desc:
-        reparacionesPendientes > 0
-          ? `${reparacionesPendientes} esperando tu confirmación`
-          : "Revisá si tus novedades ya se resolvieron",
-      icon: <Wrench {...ICON_PROPS} />,
-    },
-  ];
-
   const bloqueado =
     session.rol === "CHOFER" && (await checklistObligatorioPendiente(prisma, session.empresaId!, session.id));
 
@@ -100,7 +87,27 @@ export default async function MobileInicioPage() {
         motivo={bloqueado ? MOTIVO_CHECKLIST_PENDIENTE : MOTIVO_SIN_RONDA}
       />
 
-      <AccesosList accesos={accesos} bloqueado={bloqueado} motivo={MOTIVO_CHECKLIST_PENDIENTE} />
+      <AccesosList accesos={ACCESOS} bloqueado={bloqueado} motivo={MOTIVO_CHECKLIST_PENDIENTE} />
+
+      {/* Sin checklist pre-salida, esto queda como la única opción disponible:
+          el chofer necesita poder confirmar/rechazar una reparación ya hecha
+          aunque todavía no haya arrancado el día de hoy. */}
+      <Link
+        href="/mobile/reparaciones"
+        className="flex items-center gap-4 rounded-lg border p-4 transition-colors duration-150 hover:bg-accent active:scale-[0.98] active:bg-accent"
+      >
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
+          <Wrench className="size-5" strokeWidth={2} />
+        </span>
+        <span>
+          <p className="font-medium">Confirmar reparaciones</p>
+          <p className="text-sm text-muted-foreground">
+            {reparacionesPendientes > 0
+              ? `${reparacionesPendientes} esperando tu confirmación`
+              : "Revisá si tus novedades ya se resolvieron"}
+          </p>
+        </span>
+      </Link>
     </div>
   );
 }
