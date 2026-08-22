@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,6 +57,19 @@ export function OTAcciones({
 
   const [aprobarState, aprobarAction] = useActionState(aprobarOT.bind(null, ot.id), undefined);
   const aprobarErrors = aprobarState?.fieldErrors ?? {};
+
+  // La aprobación pasa el estado de PENDIENTE_APROBACION a APROBADA, así que
+  // el formulario de arriba desaparece solo (deja de cumplir la condición de
+  // abajo) — acá solo falta el aviso de que quedó aprobada y asignada, para
+  // que el encargado sepa que la acción se completó sin tener que adivinarlo
+  // por la desaparición del formulario.
+  const estadoAnteriorRef = useRef(ot.estado);
+  useEffect(() => {
+    if (estadoAnteriorRef.current === "PENDIENTE_APROBACION" && ot.estado === "APROBADA") {
+      toast.success("Orden aprobada y asignada.");
+    }
+    estadoAnteriorRef.current = ot.estado;
+  }, [ot.estado]);
 
   return (
     <div className="space-y-6">

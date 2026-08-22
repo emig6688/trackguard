@@ -30,6 +30,10 @@ export const ROLES_AUTORIZAR_COMPRA: Rol[] = ["GERENTE", "ADMIN"];
 // Quien aprueba/rechaza una compra de un mecánico sujeta a autorización de
 // mantenimiento (compuerta aparte de la de gerencia de arriba).
 export const ROLES_AUTORIZAR_COMPRA_MECANICO: Rol[] = ["ENCARGADO_MANTENIMIENTO", "ADMIN"];
+// Quien puede reasignar a otro mecánico una OT aprobada que todavía no
+// arrancó — un mecánico interno nunca puede reasignarse ni reasignar a
+// otro, ni siquiera la OT que tiene asignada.
+export const ROLES_REASIGNAR_MECANICO: Rol[] = ["ADMIN", "ENCARGADO_MANTENIMIENTO", "GERENTE"];
 
 export class AutorizacionError extends Error {
   constructor(message = "No tenés permisos para realizar esta acción.") {

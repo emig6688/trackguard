@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Wrench } from "lucide-react";
-import { requireEmpresa } from "@/lib/permisos";
+import { requireEmpresa, ROLES_REASIGNAR_MECANICO } from "@/lib/permisos";
 import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/back-button";
 import { EliminarButton } from "@/components/eliminar-button";
@@ -18,6 +18,7 @@ import { ItemsPreventivosForm } from "./items-preventivos-form";
 import { OCForm } from "./oc-form";
 import { EliminarRepuestoButton } from "./eliminar-repuesto-button";
 import { CompletarOTForm } from "@/components/ordenes-trabajo/completar-ot-form";
+import { ReasignarMecanicoForm } from "@/components/ordenes-trabajo/reasignar-mecanico-form";
 
 const ESTADO_LABEL: Record<string, string> = {
   PENDIENTE_APROBACION: "Pendiente de aprobación",
@@ -285,6 +286,10 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
           mecanicos={mecanicos}
           talleres={talleres}
         />
+      )}
+
+      {ot.estado === "APROBADA" && ROLES_REASIGNAR_MECANICO.includes(session.rol) && (
+        <ReasignarMecanicoForm otId={ot.id} asignadoActualId={ot.asignadoAId} mecanicos={mecanicos} />
       )}
 
       {ot.itemsPreventivos.length > 0 && (

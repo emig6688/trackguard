@@ -9,6 +9,7 @@ import {
   AutorizacionError,
   ROLES_ADMIN_MANTENIMIENTO,
   ROLES_MOBILE_CHOFER,
+  ROLES_REASIGNAR_MECANICO,
   usuariosDeEmpresaPorRol,
 } from "@/lib/permisos";
 import { puedeTransicionar } from "@/lib/ot-state-machine";
@@ -275,6 +276,55 @@ export async function aprobarOT(
     ordenSecuencia: parsed.data.ordenSecuencia,
     aprobadoPorId: user.id,
   });
+}
+
+const reasignarSchema = z.object({
+  asignadoAId: z.string().min(1, "Elegí un mecánico"),
+});
+
+export type ReasignarMecanicoState = { error?: string; fieldErrors?: Record<string, string[]> } | undefined;
+
+/**
+ * Cambiar el mecánico asignado a una OT ya aprobada, mientras todavía no la
+ * empezó (estado APROBADA, no EN_PROGRESO) — facultad exclusiva de
+ * encargado de mantenimiento, gerente o admin. Un mecánico interno nunca
+ * puede reasignar, ni siquiera la OT que tiene asignada (por eso esta
+ * acción no está en ROLES_ADMIN_MANTENIMIENTO, que sí incluiría de más).
+ */
+export async function reasignarMecanico(
+  otId: string,
+  _prevState: ReasignarMecanicoState,
+  formData: FormData
+): Promise<ReasignarMecanicoState> {
+  const { user, prisma } = await requireRole(ROLES_REASIGNAR_MECANICO);
+  const parsed = reasignarSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  const ot = await prisma.ordenDeTrabajo.findUniqueOrThrow({ where: { id: otId } });
+  if (ot.estado !== "APROBADA") {
+    return { error: "Solo se puede reasignar una OT aprobada que el mecánico todavía no comenzó." };
+  }
+
+  await prisma.$transaction([
+    prisma.ordenDeTrabajo.update({
+      where: { id: otId },
+      data: { asignadoAId: parsed.data.asignadoAId },
+    }),
+    prisma.oTHistorialEstado.create({
+      data: {
+        ordenDeTrabajoId: otId,
+        actorId: user.id,
+        estadoAnterior: ot.estado,
+        estadoNuevo: ot.estado,
+        comentario: "Reasignada a otro mecánico",
+      },
+    }),
+  ]);
+
+  revalidatePath("/ordenes-trabajo");
+  revalidatePath(`/ordenes-trabajo/${otId}`);
 }
 
 const iniciarSchema = z.object({

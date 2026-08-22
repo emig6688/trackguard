@@ -91,7 +91,7 @@ export default async function GuardiaPage({
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-left">
             <tr>
-              <th className="p-3 font-medium">Vehículo</th>
+              <th className="sticky left-0 z-10 bg-muted/50 p-3 font-medium">Vehículo</th>
               <th className="p-3 font-medium">Checklist pre-salida</th>
               <th className="p-3 font-medium">Observación (salida)</th>
               <th className="p-3 font-medium">Cierre de ruta</th>
@@ -109,7 +109,7 @@ export default async function GuardiaPage({
 
               return (
                 <tr key={v.id} className="border-t align-top">
-                  <td className="p-3 whitespace-nowrap">
+                  <td className="sticky left-0 z-10 whitespace-nowrap border-r bg-card p-3">
                     <span className="font-medium">{v.patente}</span>
                     {checklist && (
                       <span className="block text-xs text-muted-foreground">{checklist.chofer.nombre}</span>

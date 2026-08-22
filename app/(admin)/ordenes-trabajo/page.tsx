@@ -241,8 +241,7 @@ export default async function OrdenesTrabajoPage({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Número</TableHead>
-            <TableHead>Vehículo</TableHead>
+            <TableHead className="sticky left-0 z-10 bg-card">Número / vehículo</TableHead>
             <TableHead>Título</TableHead>
             <TableHead>Prioridad</TableHead>
             <TableHead className="hidden md:table-cell">Asignado / fecha</TableHead>
@@ -262,12 +261,14 @@ export default async function OrdenesTrabajoPage({
               (puedeGestionar || (esMecanico && puedeMecanicoAccionar(ot, session.id)));
             return (
               <TableRow key={ot.id} className={PRIORIDAD_ROW_BG[ot.prioridad]}>
-                <TableCell className={PRIORIDAD_ACCENT_CLASS[ot.prioridad]}>
+                <TableCell
+                  className={`sticky left-0 z-10 bg-card ${PRIORIDAD_ACCENT_CLASS[ot.prioridad]}`}
+                >
                   <Link href={`/ordenes-trabajo/${ot.id}`} className="font-medium hover:underline">
                     {ot.numero}
                   </Link>
+                  <p className="text-xs text-muted-foreground">{ot.vehiculo.patente}</p>
                 </TableCell>
-                <TableCell>{ot.vehiculo.patente}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                     <span>{ot.titulo}</span>
@@ -309,7 +310,7 @@ export default async function OrdenesTrabajoPage({
           })}
           {ordenes.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">
+              <TableCell colSpan={6} className="text-center text-muted-foreground">
                 No hay órdenes de trabajo para mostrar.
               </TableCell>
             </TableRow>
