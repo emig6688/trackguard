@@ -75,7 +75,7 @@ export default async function GastosPage({
           href={`/api/export/gastos${queryString ? `?${queryString}` : ""}`}
           className={buttonVariants({ variant: "outline" })}
         >
-          Exportar CSV
+          Exportar Excel
         </a>
       </div>
 

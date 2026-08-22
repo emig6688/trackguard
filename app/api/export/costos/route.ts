@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
+import ExcelJS from "exceljs";
 import { requireSession } from "@/lib/permisos";
-import { generarCsv } from "@/lib/csv";
 import { calcularCostosPorChofer, calcularCostosPorVehiculo } from "@/lib/costos";
 import { rangoExportPorDefecto } from "@/lib/export-rango";
 
@@ -11,29 +11,53 @@ export async function GET(request: Request) {
   const tipo = searchParams.get("tipo");
   const filtro = rangoExportPorDefecto(searchParams);
 
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "TruckGuard";
+  workbook.created = new Date();
+
   if (tipo === "chofer") {
     const filas = await calcularCostosPorChofer(prisma, user.empresaId!, filtro);
-    const csv = generarCsv(
-      ["Chofer", "Combustible", "Gastos", "Total"],
-      filas.map((f) => [f.nombre, f.combustible, f.gastos, f.total])
-    );
-    return new NextResponse(csv, {
+    const hoja = workbook.addWorksheet("Por chofer");
+    hoja.columns = [
+      { header: "Chofer", key: "nombre", width: 24 },
+      { header: "Combustible", key: "combustible", width: 16 },
+      { header: "Gastos", key: "gastos", width: 16 },
+      { header: "Total", key: "total", width: 16 },
+    ];
+    hoja.getRow(1).font = { bold: true };
+    for (const f of filas) hoja.addRow(f);
+    for (const key of ["combustible", "gastos", "total"]) hoja.getColumn(key).numFmt = '"$"#,##0.00';
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return new NextResponse(buffer, {
       headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": 'attachment; filename="costos-por-chofer.csv"',
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": 'attachment; filename="costos-por-chofer.xlsx"',
       },
     });
   }
 
   const filas = await calcularCostosPorVehiculo(prisma, filtro);
-  const csv = generarCsv(
-    ["Vehículo", "Combustible", "Gastos", "Repuestos", "Facturas", "Total"],
-    filas.map((f) => [f.patente, f.combustible, f.gastos, f.repuestos, f.facturas, f.total])
-  );
-  return new NextResponse(csv, {
+  const hoja = workbook.addWorksheet("Por vehículo");
+  hoja.columns = [
+    { header: "Vehículo", key: "patente", width: 14 },
+    { header: "Combustible", key: "combustible", width: 16 },
+    { header: "Gastos", key: "gastos", width: 16 },
+    { header: "Repuestos", key: "repuestos", width: 16 },
+    { header: "Facturas", key: "facturas", width: 16 },
+    { header: "Total", key: "total", width: 16 },
+  ];
+  hoja.getRow(1).font = { bold: true };
+  for (const f of filas) hoja.addRow(f);
+  for (const key of ["combustible", "gastos", "repuestos", "facturas", "total"]) {
+    hoja.getColumn(key).numFmt = '"$"#,##0.00';
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return new NextResponse(buffer, {
     headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": 'attachment; filename="costos-por-vehiculo.csv"',
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": 'attachment; filename="costos-por-vehiculo.xlsx"',
     },
   });
 }

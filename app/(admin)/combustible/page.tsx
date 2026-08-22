@@ -67,7 +67,7 @@ export default async function CombustiblePage({
           href={`/api/export/combustible${queryString ? `?${queryString}` : ""}`}
           className={buttonVariants({ variant: "outline" })}
         >
-          Exportar CSV
+          Exportar Excel
         </a>
       </div>
 

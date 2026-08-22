@@ -66,24 +66,11 @@ export function TrazabilidadPanel({
             >
               Exportar PDF
             </a>
-            <span className="text-muted-foreground">CSV:</span>
             <a
-              href={`/api/export/trazabilidad-csv?${queryString}&tipo=mantenimientos`}
-              className={buttonVariants({ variant: "ghost", size: "sm" })}
+              href={`/api/export/trazabilidad-excel?${queryString}`}
+              className={buttonVariants({ variant: "outline", size: "sm" })}
             >
-              Correctivos
-            </a>
-            <a
-              href={`/api/export/trazabilidad-csv?${queryString}&tipo=preventivo`}
-              className={buttonVariants({ variant: "ghost", size: "sm" })}
-            >
-              Preventivo
-            </a>
-            <a
-              href={`/api/export/trazabilidad-csv?${queryString}&tipo=documentacion`}
-              className={buttonVariants({ variant: "ghost", size: "sm" })}
-            >
-              Documentación
+              Exportar Excel
             </a>
           </div>
           <p className="text-xs text-muted-foreground">Sin período elegido, el reporte toma el último año.</p>

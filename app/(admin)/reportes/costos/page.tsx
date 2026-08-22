@@ -169,7 +169,7 @@ export default async function CostosPage({
             href={`/api/export/costos?tipo=vehiculo${queryString ? `&${queryString}` : ""}`}
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
-            Exportar CSV
+            Exportar Excel
           </a>
         </div>
         <Table>
@@ -212,7 +212,7 @@ export default async function CostosPage({
             href={`/api/export/costos?tipo=chofer${queryString ? `&${queryString}` : ""}`}
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
-            Exportar CSV
+            Exportar Excel
           </a>
         </div>
         <p className="text-sm text-muted-foreground">

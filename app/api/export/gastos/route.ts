@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
+import ExcelJS from "exceljs";
 import { requireSession } from "@/lib/permisos";
-import { generarCsv } from "@/lib/csv";
 import { rangoExportPorDefecto } from "@/lib/export-rango";
 
 export async function GET(request: Request) {
@@ -23,23 +23,41 @@ export async function GET(request: Request) {
     orderBy: { fecha: "desc" },
   });
 
-  const csv = generarCsv(
-    ["Chofer", "Vehículo", "Tipo", "Monto", "Fecha", "Estado", "Descripción"],
-    gastos.map((g) => [
-      g.chofer.nombre,
-      g.vehiculo?.patente,
-      g.tipo,
-      g.monto.toString(),
-      g.fecha.toISOString(),
-      g.estado,
-      g.descripcion,
-    ])
-  );
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "TruckGuard";
+  workbook.created = new Date();
 
-  return new NextResponse(csv, {
+  const hoja = workbook.addWorksheet("Gastos");
+  hoja.columns = [
+    { header: "Chofer", key: "chofer", width: 22 },
+    { header: "Vehículo", key: "vehiculo", width: 14 },
+    { header: "Tipo", key: "tipo", width: 16 },
+    { header: "Monto", key: "monto", width: 14 },
+    { header: "Fecha", key: "fecha", width: 18 },
+    { header: "Estado", key: "estado", width: 16 },
+    { header: "Descripción", key: "descripcion", width: 32 },
+  ];
+  hoja.getRow(1).font = { bold: true };
+  for (const g of gastos) {
+    hoja.addRow({
+      chofer: g.chofer.nombre,
+      vehiculo: g.vehiculo?.patente ?? "",
+      tipo: g.tipo,
+      monto: Number(g.monto),
+      fecha: g.fecha,
+      estado: g.estado,
+      descripcion: g.descripcion,
+    });
+  }
+  hoja.getColumn("fecha").numFmt = "dd/mm/yyyy hh:mm";
+  hoja.getColumn("monto").numFmt = '"$"#,##0.00';
+
+  const buffer = await workbook.xlsx.writeBuffer();
+
+  return new NextResponse(buffer, {
     headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": 'attachment; filename="gastos.csv"',
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": 'attachment; filename="gastos.xlsx"',
     },
   });
 }
