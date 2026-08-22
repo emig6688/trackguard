@@ -11,20 +11,17 @@ export async function actualizarReglaNotificacion(
   roles: Rol[],
   canales: CanalNotificacion[],
   diasAviso: number[],
-  activo: boolean,
-  horaEnvio: number | null = null
+  activo: boolean
 ) {
   const { user, prisma } = await requireRole(ROLES_ADMIN_MANTENIMIENTO);
 
   const diasAvisoLimpios = [...new Set(diasAviso.filter((d) => Number.isInteger(d) && d > 0))].sort(
     (a, b) => b - a
   );
-  const horaEnvioLimpia =
-    horaEnvio != null && Number.isInteger(horaEnvio) && horaEnvio >= 0 && horaEnvio <= 23 ? horaEnvio : null;
 
   await prisma.reglaNotificacion.upsert({
     where: { empresaId_tipo: { empresaId: user.empresaId!, tipo } },
-    update: { roles, canales, diasAviso: diasAvisoLimpios, activo, horaEnvio: horaEnvioLimpia },
+    update: { roles, canales, diasAviso: diasAvisoLimpios, activo },
     create: {
       empresaId: user.empresaId!,
       tipo,
@@ -32,7 +29,6 @@ export async function actualizarReglaNotificacion(
       canales,
       diasAviso: diasAvisoLimpios,
       activo,
-      horaEnvio: horaEnvioLimpia,
     },
   });
 

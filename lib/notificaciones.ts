@@ -11,10 +11,6 @@ export type InfoTipoNotificacion = {
   disparador: string;
   destinatarioFijo: string | null;
   usaDiasAviso: boolean;
-  // Muestra el selector de hora del día (además de los controles habituales
-  // de roles/canales) para los tipos que se evalúan una vez al día a una
-  // hora fija en vez de en el momento del evento.
-  usaHoraEnvio?: boolean;
 };
 
 /**
@@ -75,18 +71,16 @@ export const CATALOGO_NOTIFICACIONES: Partial<Record<TipoNotificacion, InfoTipoN
   RESUMEN_VEHICULOS_OPERATIVOS: {
     label: "Resumen diario de vehículos operativos",
     disparador:
-      "Una vez al día, un resumen de cuántos vehículos están operativos. Elegir una hora abajo activa este aviso, pero no elige a qué hora se manda: con el plan actual de Vercel (crons diarios, no horarios) el envío real es siempre a las 23:00 (hora Argentina), sin importar qué hora elijas.",
+      "Un resumen de cuántos vehículos están operativos. Llega todos los días a las 23:00 (hora Argentina) a los roles que elijas abajo.",
     destinatarioFijo: null,
     usaDiasAviso: false,
-    usaHoraEnvio: true,
   },
   DEVOLUCION_SIN_ENVIAR: {
     label: "Resumen diario de guardia",
     disparador:
-      "Una vez al día, un PDF con vehículos sin checklist pre-salida, sin cierre de ruta, con el tanque sin llenar, y las devoluciones registradas. Elegir una hora abajo activa este aviso, pero no elige a qué hora se manda: con el plan actual de Vercel (crons diarios, no horarios) el envío real es siempre a las 18:00 (hora Argentina), sin importar qué hora elijas. El PDF solo va por email; WhatsApp y la app reciben un resumen en texto.",
+      "Un PDF con vehículos sin checklist pre-salida, sin cierre de ruta, con el tanque sin llenar, y las devoluciones registradas. Llega todos los días a las 18:00 (hora Argentina) a los roles que elijas abajo. El PDF solo va por email; WhatsApp y la app reciben un resumen en texto.",
     destinatarioFijo: null,
     usaDiasAviso: false,
-    usaHoraEnvio: true,
   },
   COMPRA_PENDIENTE_AUTORIZACION: {
     label: "Compra pendiente de autorización",

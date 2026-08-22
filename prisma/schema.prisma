@@ -249,10 +249,6 @@ model ReglaNotificacion {
   // del vencimiento se avisa. Sin uso en los demás tipos (disparados por un
   // evento, no por una fecha límite).
   diasAviso     Int[]               @default([15, 7])
-  // Solo aplica a RESUMEN_VEHICULOS_OPERATIVOS: hora del día (0-23, huso
-  // horario Argentina) en la que se manda el resumen diario. El cron corre
-  // cada hora y compara contra esto (ver app/api/cron/resumen-operativos).
-  horaEnvio     Int?
   activo        Boolean             @default(true)
   // Solo aplica a los avisos horarios recurrentes (RESUMEN_VEHICULOS_OPERATIVOS,
   // DEVOLUCION_SIN_ENVIAR): última vez que efectivamente se mandó, para que un

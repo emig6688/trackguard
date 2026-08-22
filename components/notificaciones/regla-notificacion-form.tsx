@@ -30,8 +30,6 @@ export function ReglaNotificacionForm({
   diasAvisoIniciales,
   activoInicial,
   usaDiasAviso,
-  usaHoraEnvio = false,
-  horaEnvioInicial = null,
 }: {
   tipo: TipoNotificacion;
   rolesIniciales: Rol[];
@@ -39,21 +37,17 @@ export function ReglaNotificacionForm({
   diasAvisoIniciales: number[];
   activoInicial: boolean;
   usaDiasAviso: boolean;
-  usaHoraEnvio?: boolean;
-  horaEnvioInicial?: number | null;
 }) {
   const [roles, setRoles] = useState<Rol[]>(rolesIniciales);
   const [canales, setCanales] = useState<CanalNotificacion[]>(canalesIniciales);
   const [diasAviso, setDiasAviso] = useState<number[]>(diasAvisoIniciales);
   const [nuevoDia, setNuevoDia] = useState("");
   const [activo, setActivo] = useState(activoInicial);
-  const [horaEnvio, setHoraEnvio] = useState<number | null>(horaEnvioInicial);
   const [pending, startTransition] = useTransition();
   const [guardado, setGuardado] = useState(false);
 
   const sinCambios =
     activo === activoInicial &&
-    horaEnvio === horaEnvioInicial &&
     mismoConjunto(roles, rolesIniciales) &&
     mismoConjunto(canales, canalesIniciales) &&
     mismoConjunto(diasAviso, diasAvisoIniciales);
@@ -84,37 +78,13 @@ export function ReglaNotificacionForm({
 
   function guardar() {
     startTransition(async () => {
-      await actualizarReglaNotificacion(tipo, roles, canales, diasAviso, activo, horaEnvio);
+      await actualizarReglaNotificacion(tipo, roles, canales, diasAviso, activo);
       setGuardado(true);
     });
   }
 
   return (
     <div className="space-y-3">
-      {usaHoraEnvio && (
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium text-muted-foreground">Hora del día (Argentina)</p>
-          <select
-            value={horaEnvio ?? ""}
-            onChange={(e) => {
-              setGuardado(false);
-              setHoraEnvio(e.target.value === "" ? null : Number(e.target.value));
-            }}
-            className="block rounded-md border border-input bg-transparent p-2 text-sm"
-          >
-            <option value="">Elegí una hora</option>
-            {Array.from({ length: 24 }, (_, h) => (
-              <option key={h} value={h}>
-                {String(h).padStart(2, "0")}:00
-              </option>
-            ))}
-          </select>
-          {horaEnvio == null && (
-            <p className="text-xs text-destructive">Sin hora elegida: esta notificación no se va a enviar.</p>
-          )}
-        </div>
-      )}
-
       {usaDiasAviso && (
         <div className="space-y-1.5">
           <p className="text-xs font-medium text-muted-foreground">Avisar con cuántos días de anticipación</p>

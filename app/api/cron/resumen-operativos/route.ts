@@ -5,14 +5,10 @@ import { enviarEmail } from "@/lib/email";
 import { disponibilidadEfectiva } from "@/lib/disponibilidad";
 
 /**
- * Corre una vez al día (ver vercel.json — el plan Hobby de Vercel no permite
- * crons horarios, solo diarios). Por eso NO se compara horaEnvio contra la
- * hora actual: cualquier empresa con la regla RESUMEN_VEHICULOS_OPERATIVOS
- * activa y una hora configurada (el campo sigue sirviendo como "encendido/
- * apagado" de este aviso) recibe el resumen en esta única corrida diaria,
- * protegido por idempotencia de "una vez por día" más abajo. Si el proyecto
- * pasa a un plan que soporte crons horarios, se puede volver a comparar
- * horaEnvio contra la hora UTC actual para precisión de horario real.
+ * Corre una vez al día, a la hora fija en vercel.json (el plan Hobby de
+ * Vercel no permite crons horarios, solo diarios) — cualquier empresa con la
+ * regla RESUMEN_VEHICULOS_OPERATIVOS activa recibe el resumen en esta única
+ * corrida diaria, protegido por idempotencia de "una vez por día" más abajo.
  */
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -34,7 +30,6 @@ export async function GET(request: Request) {
 
   for (const regla of reglas) {
     try {
-      if (regla.horaEnvio == null) continue;
       if (regla.roles.length === 0 || regla.canales.length === 0) continue;
 
       const [vehiculos, otsEnTaller, destinatarios] = await Promise.all([

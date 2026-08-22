@@ -16,12 +16,10 @@ function documentoResumen(props: React.ComponentProps<typeof ReporteGuardiaDiari
 }
 
 /**
- * Corre una vez al día (ver vercel.json — el plan Hobby de Vercel no permite
- * crons horarios, solo diarios). Por eso NO se compara horaEnvio contra la
- * hora actual: cualquier empresa con la regla DEVOLUCION_SIN_ENVIAR activa y
- * una hora configurada (el campo sigue sirviendo como "encendido/apagado" de
- * este aviso) recibe el resumen en esta única corrida diaria, protegido por
- * idempotencia de "una vez por día" más abajo.
+ * Corre una vez al día, a la hora fija en vercel.json (el plan Hobby de
+ * Vercel no permite crons horarios, solo diarios) — cualquier empresa con la
+ * regla DEVOLUCION_SIN_ENVIAR activa recibe el resumen en esta única corrida
+ * diaria, protegido por idempotencia de "una vez por día" más abajo.
  *
  * Antes este cron solo avisaba si había devoluciones sin que el guardia las
  * "enviara" a mano. Ahora el guardia ya no envía nada manualmente — este
@@ -49,7 +47,6 @@ export async function GET(request: Request) {
 
   for (const regla of reglas) {
     try {
-      if (regla.horaEnvio == null) continue;
       if (regla.roles.length === 0 || regla.canales.length === 0) continue;
 
       const destinatarios = await prisma.usuario.findMany({
