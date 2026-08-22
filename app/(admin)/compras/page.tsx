@@ -158,6 +158,17 @@ export default async function ComprasPage({
         <div className="flex flex-wrap items-center gap-2">
           <FiltrosCompra vehiculos={vehiculos} choferes={choferes} sugerencias={sugerencias} />
           <a
+            href={`/api/export/compras-pdf?${new URLSearchParams({
+              ...(filtroEstado ? { estado: filtroEstado } : {}),
+              ...(filtroVehiculoId ? { vehiculoId: filtroVehiculoId } : {}),
+              ...(filtroChoferId ? { choferId: filtroChoferId } : {}),
+              ...(filtroBusqueda ? { busqueda: filtroBusqueda } : {}),
+            }).toString()}`}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Generar reporte (PDF)
+          </a>
+          <a
             href={`/api/export/compras-excel?${new URLSearchParams({
               ...(filtroEstado ? { estado: filtroEstado } : {}),
               ...(filtroVehiculoId ? { vehiculoId: filtroVehiculoId } : {}),

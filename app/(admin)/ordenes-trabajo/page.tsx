@@ -199,9 +199,14 @@ export default async function OrdenesTrabajoPage({
         </h1>
         <div className="flex gap-2">
           {!esMecanico && (
-            <a href="/api/export/ordenes-trabajo" className={buttonVariants({ variant: "outline" })}>
-              Exportar Excel
-            </a>
+            <>
+              <a href="/api/export/ordenes-trabajo-pdf" className={buttonVariants({ variant: "outline" })}>
+                Exportar PDF
+              </a>
+              <a href="/api/export/ordenes-trabajo" className={buttonVariants({ variant: "outline" })}>
+                Exportar Excel
+              </a>
+            </>
           )}
           {puedeCrear && (
             <Link href="/ordenes-trabajo/nueva" className={buttonVariants()}>

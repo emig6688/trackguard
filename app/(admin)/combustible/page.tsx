@@ -64,12 +64,20 @@ export default async function CombustiblePage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Consumo de combustible</h1>
-        <a
-          href={`/api/export/combustible${queryString ? `?${queryString}` : ""}`}
-          className={buttonVariants({ variant: "outline" })}
-        >
-          Exportar Excel
-        </a>
+        <div className="flex gap-2">
+          <a
+            href={`/api/export/combustible-pdf${queryString ? `?${queryString}` : ""}`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            Exportar PDF
+          </a>
+          <a
+            href={`/api/export/combustible${queryString ? `?${queryString}` : ""}`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            Exportar Excel
+          </a>
+        </div>
       </div>
 
       <form className="flex flex-wrap items-end gap-3">
