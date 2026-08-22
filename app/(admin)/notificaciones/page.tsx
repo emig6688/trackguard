@@ -3,6 +3,7 @@ import { BackToDashboard } from "@/components/back-to-dashboard";
 import { CATALOGO_NOTIFICACIONES } from "@/lib/notificaciones";
 import { ReglaNotificacionForm } from "@/components/notificaciones/regla-notificacion-form";
 import { MontoAutorizacionForm } from "@/components/notificaciones/monto-autorizacion-form";
+import { AutoAprobacionMecanicosForm } from "@/components/notificaciones/auto-aprobacion-mecanicos-form";
 import { actualizarMontoAutorizacionCompraMecanico } from "@/app/_actions/reglasNotificacion";
 import { ChecklistTemplateForm } from "@/components/notificaciones/checklist-template-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,6 +71,24 @@ export default async function NotificacionesPage() {
             action={actualizarMontoAutorizacionCompraMecanico}
             descripcion="Si está desactivado, las compras de mecánicos no requieren autorización de mantenimiento sin importar el monto (siguen requiriendo la de gerencia de arriba, si aplica)."
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Auto-aprobación de OT para mecánicos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Si está activo, una orden de trabajo generada por el reporte de un chofer nace ya
+            aprobada y sin mecánico asignado — igual que ya nace hoy una orden de mantenimiento
+            preventivo generada automáticamente. Cualquier mecánico interno la va a ver y la puede
+            tomar, sin esperar que el encargado de mantenimiento la apruebe y asigne primero. En
+            cuanto un mecánico la toma, desaparece para el resto. Si está desactivado (por
+            defecto), esas órdenes siguen necesitando que el encargado de mantenimiento las
+            apruebe y asigne a mano — las preventivas no cambian, siempre se auto-aprueban.
+          </p>
+          <AutoAprobacionMecanicosForm activoInicial={empresa.autoAprobacionMecanicosActiva} />
         </CardContent>
       </Card>
 

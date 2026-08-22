@@ -45,7 +45,7 @@ export async function actualizarMontoAutorizacionCompra(monto: number | null) {
 
   await prisma.empresa.update({
     where: { id: user.empresaId! },
-    data: { montoAutorizacionCompra: monto != null && monto > 0 ? monto : null },
+    data: { montoAutorizacionCompra: monto != null && monto >= 0 ? monto : null },
   });
 
   revalidatePath(RUTA);
@@ -61,7 +61,24 @@ export async function actualizarMontoAutorizacionCompraMecanico(monto: number | 
 
   await prisma.empresa.update({
     where: { id: user.empresaId! },
-    data: { montoAutorizacionCompraMecanico: monto != null && monto > 0 ? monto : null },
+    data: { montoAutorizacionCompraMecanico: monto != null && monto >= 0 ? monto : null },
+  });
+
+  revalidatePath(RUTA);
+}
+
+/**
+ * Si está activo, una OT generada por el reporte de un chofer nace directo
+ * APROBADA y sin mecánico asignado (igual que ya nace una preventiva
+ * generada por cron) — cualquier mecánico interno la ve y la puede tomar,
+ * sin esperar que el encargado de mantenimiento la apruebe y asigne.
+ */
+export async function actualizarAutoAprobacionMecanicos(activo: boolean) {
+  const { user, prisma } = await requireRole(ROLES_ADMIN_MANTENIMIENTO);
+
+  await prisma.empresa.update({
+    where: { id: user.empresaId! },
+    data: { autoAprobacionMecanicosActiva: activo },
   });
 
   revalidatePath(RUTA);

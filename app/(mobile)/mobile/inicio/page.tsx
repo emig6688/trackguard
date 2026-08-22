@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ClipboardCheck, Fuel, TriangleAlert, Receipt, Wrench } from "lucide-react";
 import { requireEmpresa } from "@/lib/permisos";
-import { checklistObligatorioPendiente, MOTIVO_CHECKLIST_PENDIENTE } from "@/lib/checklist";
+import { checklistObligatorioPendiente, vehiculoActivoParaCierre, MOTIVO_CHECKLIST_PENDIENTE } from "@/lib/checklist";
 import { SinNovedadesForm } from "./sin-novedades-form";
 import { AccesosList } from "./accesos-list";
 
@@ -31,11 +31,6 @@ const ACCESOS = [
 export default async function MobileInicioPage() {
   const { user: session, prisma } = await requireEmpresa();
 
-  const vehiculos = await prisma.vehiculo.findMany({
-    where: { activo: true, eliminadoEn: null },
-    orderBy: { patente: "asc" },
-  });
-
   const reparacionesPendientes = await prisma.ordenDeTrabajo.count({
     where: {
       eliminadoEn: null,
@@ -64,6 +59,17 @@ export default async function MobileInicioPage() {
   const bloqueado =
     session.rol === "CHOFER" && (await checklistObligatorioPendiente(prisma, session.empresaId!, session.id));
 
+  const vehiculoActivo =
+    session.rol === "CHOFER" && !bloqueado ? await vehiculoActivoParaCierre(prisma, session.id) : null;
+  const sinRondaAbierta = session.rol === "CHOFER" && !bloqueado && !vehiculoActivo;
+  const MOTIVO_SIN_RONDA =
+    "No tenés ningún reparto abierto — hacé el checklist pre-salida del vehículo con el que vas a salir primero.";
+
+  const vehiculos =
+    session.rol === "CHOFER"
+      ? []
+      : await prisma.vehiculo.findMany({ where: { activo: true, eliminadoEn: null }, orderBy: { patente: "asc" } });
+
   return (
     <div className="space-y-4">
       <h1 className="text-lg font-semibold">Hola, {session.nombre}</h1>
@@ -87,7 +93,12 @@ export default async function MobileInicioPage() {
         </span>
       </Link>
 
-      <SinNovedadesForm vehiculos={vehiculos} bloqueado={bloqueado} motivo={MOTIVO_CHECKLIST_PENDIENTE} />
+      <SinNovedadesForm
+        vehiculos={vehiculos}
+        vehiculoActivo={vehiculoActivo}
+        bloqueado={bloqueado || sinRondaAbierta}
+        motivo={bloqueado ? MOTIVO_CHECKLIST_PENDIENTE : MOTIVO_SIN_RONDA}
+      />
 
       <AccesosList accesos={accesos} bloqueado={bloqueado} motivo={MOTIVO_CHECKLIST_PENDIENTE} />
     </div>

@@ -7,10 +7,12 @@ import { cerrarRutaSinNovedades } from "@/app/_actions/eventosRuta";
 
 export function SinNovedadesForm({
   vehiculos,
+  vehiculoActivo,
   bloqueado,
   motivo,
 }: {
   vehiculos: { id: string; patente: string }[];
+  vehiculoActivo?: { id: string; patente: string } | null;
   bloqueado?: boolean;
   motivo?: string;
 }) {
@@ -37,18 +39,28 @@ export function SinNovedadesForm({
         <CircleCheck className="size-5 shrink-0 text-success" strokeWidth={2} />
         <p className="font-medium">Cerrar ruta sin novedades</p>
       </div>
-      <select
-        name="vehiculoId"
-        required
-        className="w-full rounded-md border border-input bg-transparent p-2 text-sm"
-      >
-        <option value="">Elegí un vehículo</option>
-        {vehiculos.map((v) => (
-          <option key={v.id} value={v.id}>
-            {v.patente}
-          </option>
-        ))}
-      </select>
+      {vehiculoActivo ? (
+        <>
+          <input type="hidden" name="vehiculoId" value={vehiculoActivo.id} />
+          <p className="rounded-md border bg-background p-2 text-sm font-medium">
+            {vehiculoActivo.patente}{" "}
+            <span className="font-normal text-muted-foreground">(el que usaste en tu checklist de hoy)</span>
+          </p>
+        </>
+      ) : (
+        <select
+          name="vehiculoId"
+          required
+          className="w-full rounded-md border border-input bg-transparent p-2 text-sm"
+        >
+          <option value="">Elegí un vehículo</option>
+          {vehiculos.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.patente}
+            </option>
+          ))}
+        </select>
+      )}
       <input
         name="kmAlMomento"
         type="number"

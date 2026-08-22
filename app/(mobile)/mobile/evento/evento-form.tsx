@@ -7,7 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { registrarEventoRuta } from "@/app/_actions/eventosRuta";
 
-export function EventoForm({ vehiculos }: { vehiculos: { id: string; patente: string }[] }) {
+export function EventoForm({
+  vehiculos,
+  vehiculoActivo,
+}: {
+  vehiculos: { id: string; patente: string }[];
+  vehiculoActivo?: { id: string; patente: string } | null;
+}) {
   const [state, formAction, pending] = useActionState(registrarEventoRuta, undefined);
 
   return (
@@ -22,19 +28,29 @@ export function EventoForm({ vehiculos }: { vehiculos: { id: string; patente: st
 
       <div className="space-y-2">
         <Label htmlFor="vehiculoId">Vehículo</Label>
-        <select
-          id="vehiculoId"
-          name="vehiculoId"
-          required
-          className="w-full rounded-md border border-input bg-transparent p-2 text-sm"
-        >
-          <option value="">Elegí un vehículo</option>
-          {vehiculos.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.patente}
-            </option>
-          ))}
-        </select>
+        {vehiculoActivo ? (
+          <>
+            <input type="hidden" name="vehiculoId" value={vehiculoActivo.id} />
+            <p className="rounded-md border bg-muted/40 p-2 text-sm font-medium">
+              {vehiculoActivo.patente}{" "}
+              <span className="font-normal text-muted-foreground">(el que usaste en tu checklist de hoy)</span>
+            </p>
+          </>
+        ) : (
+          <select
+            id="vehiculoId"
+            name="vehiculoId"
+            required
+            className="w-full rounded-md border border-input bg-transparent p-2 text-sm"
+          >
+            <option value="">Elegí un vehículo</option>
+            {vehiculos.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.patente}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div className="space-y-2">

@@ -201,6 +201,13 @@ model Empresa {
   // por un mecánico interno, y la autoriza encargado de mantenimiento (no
   // gerencia) — es una compuerta aparte, independiente de la de arriba.
   montoAutorizacionCompraMecanico Decimal? @db.Decimal(12, 2)
+  // Si está activo, una OT generada por el reporte de un chofer nace
+  // directo APROBADA y sin mecánico asignado (igual que ya nace un
+  // preventivo generado por cron) — cualquier mecánico la ve y puede
+  // tomarla, sin esperar que el encargado de mantenimiento la apruebe y
+  // asigne. No cambia el comportamiento de las preventivas, que ya se
+  // auto-aprueban siempre.
+  autoAprobacionMecanicosActiva   Boolean  @default(false)
   createdAt                       DateTime @default(now())
   updatedAt                       DateTime @updatedAt
 

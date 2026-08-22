@@ -7,7 +7,11 @@ import { generarNumeroOT } from "@/app/_actions/ordenesTrabajo";
 import { clasificarAreaReparacion, AREA_REPARACION_LABEL } from "@/lib/clasificador-averias";
 import { notificarOTGeneradaChofer } from "@/lib/notificaciones";
 import { buscarOTAbiertaMismoProblema } from "@/lib/ot";
-import { verificarChecklistDelDia, registrarHorasEquipoFrioSiCorresponde } from "@/lib/checklist";
+import {
+  verificarChecklistDelDia,
+  registrarHorasEquipoFrioSiCorresponde,
+  vehiculoActivoParaCierre,
+} from "@/lib/checklist";
 
 const PRIORIDAD_POR_TIPO = {
   DESPERFECTO: "ALTA",
@@ -36,6 +40,12 @@ export async function registrarEventoRuta(
 
   const chequeo = await verificarChecklistDelDia(prisma, empresaId, chofer, vehiculoId);
   if (chequeo.bloqueado) return { error: chequeo.motivo };
+
+  const vehiculoActivo = await vehiculoActivoParaCierre(prisma, chofer.id);
+  if (!vehiculoActivo) return { error: "No tenés ningún reparto abierto para cerrar." };
+  if (vehiculoActivo.id !== vehiculoId) {
+    return { error: `Tenés que cerrar ruta con ${vehiculoActivo.patente}, el vehículo de tu checklist de hoy.` };
+  }
 
   const kmRaw = formData.get("kmAlMomento");
   const kmAlMomento = typeof kmRaw === "string" && kmRaw !== "" ? Number(kmRaw) : undefined;
@@ -89,13 +99,20 @@ export async function registrarEventoRuta(
   } else {
     const numero = await generarNumeroOT(prisma, empresaId);
     const titulo = `Evento de ruta: ${AREA_REPARACION_LABEL[areaReparacion]}`;
+
+    const empresa = await prisma.empresa.findUniqueOrThrow({
+      where: { id: empresaId },
+      select: { autoAprobacionMecanicosActiva: true },
+    });
+    const estadoInicial = empresa.autoAprobacionMecanicosActiva ? "APROBADA" : "PENDIENTE_APROBACION";
+
     const otCreada = await prisma.ordenDeTrabajo.create({
       data: {
         empresaId,
         numero,
         vehiculoId,
         origen: "EVENTO_RUTA",
-        estado: "PENDIENTE_APROBACION",
+        estado: estadoInicial,
         prioridad: PRIORIDAD_POR_TIPO[tipo as keyof typeof PRIORIDAD_POR_TIPO],
         areaReparacion,
         titulo,
@@ -103,7 +120,7 @@ export async function registrarEventoRuta(
         eventoRutaId: evento.id,
         creadoPorId: chofer.id,
         historial: {
-          create: { actorId: chofer.id, estadoAnterior: null, estadoNuevo: "PENDIENTE_APROBACION" },
+          create: { actorId: chofer.id, estadoAnterior: null, estadoNuevo: estadoInicial },
         },
       },
     });
@@ -134,6 +151,12 @@ export async function cerrarRutaSinNovedades(
 
   const chequeo = await verificarChecklistDelDia(prisma, empresaId, chofer, vehiculoId);
   if (chequeo.bloqueado) return { error: chequeo.motivo };
+
+  const vehiculoActivo = await vehiculoActivoParaCierre(prisma, chofer.id);
+  if (!vehiculoActivo) return { error: "No tenés ningún reparto abierto para cerrar." };
+  if (vehiculoActivo.id !== vehiculoId) {
+    return { error: `Tenés que cerrar ruta con ${vehiculoActivo.patente}, el vehículo de tu checklist de hoy.` };
+  }
 
   const kmRaw = formData.get("kmAlMomento");
   const kmAlMomento = typeof kmRaw === "string" && kmRaw !== "" ? Number(kmRaw) : undefined;

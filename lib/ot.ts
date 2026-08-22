@@ -68,22 +68,30 @@ export function fechaReferenciaAtraso(ot: {
  * El preventivo se genera directo APROBADA y sin asignar (ver cron de
  * planes-mantenimiento) para que no dependa de que el encargado la apruebe:
  * cualquier mecánico la puede ver y "tomarla" (se autoasigna al iniciarla).
- * Todo el resto de los orígenes sigue exigiendo asignación explícita.
+ * Una OT reportada por un chofer nace igual (APROBADA, sin asignar) cuando la
+ * empresa activó "auto-aprobación de mecánicos" en Mantenedor/Parámetros
+ * (ver app/_actions/eventosRuta.ts) — por eso esto ya no filtra por origen,
+ * solo por "aprobada y sin dueño todavía". Sin esa activación, una OT
+ * reportada por chofer nace PENDIENTE_APROBACION y no entra acá hasta que el
+ * encargado la apruebe y asigne explícitamente.
  */
 export function condicionVisibleParaMecanico(userId: string): Prisma.OrdenDeTrabajoWhereInput {
   return {
     OR: [
       { asignadoAId: userId },
-      { asignadoAId: null, origen: "PREVENTIVO", estado: { in: ["APROBADA", "EN_PROGRESO"] } },
+      { asignadoAId: null, estado: { in: ["APROBADA", "EN_PROGRESO"] } },
     ],
   };
 }
 
 export function puedeMecanicoAccionar(
-  ot: { asignadoAId: string | null; origen: string },
+  ot: { asignadoAId: string | null; estado: EstadoOT },
   userId: string
 ): boolean {
-  return ot.asignadoAId === userId || (ot.asignadoAId === null && ot.origen === "PREVENTIVO");
+  return (
+    ot.asignadoAId === userId ||
+    (ot.asignadoAId === null && (ot.estado === "APROBADA" || ot.estado === "EN_PROGRESO"))
+  );
 }
 
 /**
