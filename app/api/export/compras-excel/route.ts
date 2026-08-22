@@ -53,6 +53,9 @@ export async function GET(request: Request) {
           eventoRuta: { select: { chofer: { select: { nombre: true } } } },
         },
       },
+      items: {
+        include: { articuloPanol: { select: { nombre: true } } },
+      },
     },
     orderBy: { fechaCompra: "desc" },
   });
@@ -116,6 +119,31 @@ export async function GET(request: Request) {
     });
   }
   detalle.getColumn("monto").numFmt = '"$"#,##0.00';
+
+  const composicion = workbook.addWorksheet("Composición");
+  composicion.columns = [
+    { header: "Número de OC", key: "numero", width: 16 },
+    { header: "Fecha de compra", key: "fecha", width: 16 },
+    { header: "Camión", key: "camion", width: 14 },
+    { header: "Ítem", key: "descripcion", width: 32 },
+    { header: "Artículo de pañol", key: "articulo", width: 24 },
+    { header: "Cantidad solicitada", key: "cantidadSolicitada", width: 18 },
+    { header: "Cantidad recibida", key: "cantidadRecibida", width: 18 },
+  ];
+  composicion.getRow(1).font = { bold: true };
+  for (const c of compras) {
+    for (const item of c.items) {
+      composicion.addRow({
+        numero: c.numero,
+        fecha: c.fechaCompra ? c.fechaCompra.toLocaleDateString("es-AR") : "",
+        camion: c.ordenDeTrabajo?.vehiculo?.patente ?? SIN_CAMION,
+        descripcion: item.descripcion,
+        articulo: item.articuloPanol?.nombre ?? "",
+        cantidadSolicitada: item.cantidadSolicitada ?? "",
+        cantidadRecibida: item.cantidadRecibida ?? "",
+      });
+    }
+  }
 
   function agregarHojaAgrupada(nombreHoja: string, tituloColumna: string, clave: keyof Pick<Fila, "camion" | "chofer" | "proveedor">) {
     const hoja = workbook.addWorksheet(nombreHoja);
