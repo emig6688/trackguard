@@ -1,13 +1,10 @@
 import Link from "next/link";
 import { requireEmpresa, ROLES_GUARDIA } from "@/lib/permisos";
 import { inicioDeHoy } from "@/lib/checklist";
+import { formatearHora as hora } from "@/lib/fecha";
 import { Badge } from "@/components/ui/badge";
 import { ObservacionCell } from "@/components/guardia/observacion-cell";
 import { DiaNoOperadoControl } from "@/components/guardia/dia-no-operado-control";
-
-function hora(fecha: Date) {
-  return fecha.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
-}
 
 type FiltroEstado = "PENDIENTE" | "HECHO";
 

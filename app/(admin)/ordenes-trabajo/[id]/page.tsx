@@ -7,6 +7,7 @@ import { BackButton } from "@/components/back-button";
 import { EliminarButton } from "@/components/eliminar-button";
 import { AREA_REPARACION_LABEL } from "@/lib/clasificador-averias";
 import { otEstaAtrasada, puedeMecanicoAccionar } from "@/lib/ot";
+import { formatearFechaHora } from "@/lib/fecha";
 import { vehiculosEnTallerExterno } from "@/lib/disponibilidad";
 import { DisponibilidadToggle } from "@/components/vehiculos/disponibilidad-toggle";
 import { Button } from "@/components/ui/button";
@@ -218,7 +219,7 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
           <div className="mt-2 space-y-2">
             <p className="text-xs text-muted-foreground">
               Reportado por {ot.eventoRuta.chofer.nombre} el{" "}
-              {ot.eventoRuta.fechaHora.toLocaleString("es-AR")}
+              {formatearFechaHora(ot.eventoRuta.fechaHora)}
             </p>
             {ot.eventoRuta.archivo && (
               <a href={ot.eventoRuta.archivo.url} target="_blank" rel="noopener noreferrer" className="inline-block">
@@ -235,7 +236,7 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
         {ot.checklistRealizado && (
           <p className="mt-2 text-xs text-muted-foreground">
             Reportado por {ot.checklistRealizado.chofer.nombre} en el checklist pre-salida del{" "}
-            {ot.checklistRealizado.fechaHora.toLocaleString("es-AR")}
+            {formatearFechaHora(ot.checklistRealizado.fechaHora)}
           </p>
         )}
         {ot.confirmacionReparacion === "RECHAZADA" && ot.confirmacionReparacionComentario && (
@@ -508,7 +509,7 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
                 {ESTADO_LABEL[h.estadoNuevo]}
               </span>{" "}
               <span className="text-muted-foreground">
-                por {h.actor?.nombre ?? "sistema"} el {h.createdAt.toLocaleString("es-AR")}
+                por {h.actor?.nombre ?? "sistema"} el {formatearFechaHora(h.createdAt)}
               </span>
               {h.comentario && <p className="text-muted-foreground">{h.comentario}</p>}
             </div>

@@ -1,4 +1,5 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { formatearFechaHora } from "@/lib/fecha";
 import type {
   AreaReparacionOT,
   EstadoOT,
@@ -212,7 +213,7 @@ export function ReporteOTDocument({ ot }: { ot: ReporteOTData }) {
               </Text>
               <Text style={styles.historialMeta}>
                 {" "}
-                por {h.actorNombre ?? "sistema"} el {h.createdAt.toLocaleString("es-AR")}
+                por {h.actorNombre ?? "sistema"} el {formatearFechaHora(h.createdAt)}
               </Text>
             </Text>
           ))}

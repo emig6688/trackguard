@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireEmpresa, ROLES_GUARDIA } from "@/lib/permisos";
+import { formatearFechaHora } from "@/lib/fecha";
 import { BackButton } from "@/components/back-button";
 
 export default async function DevolucionDetallePage({ params }: { params: Promise<{ id: string }> }) {
@@ -104,7 +105,7 @@ export default async function DevolucionDetallePage({ params }: { params: Promis
 
       <p className="text-xs text-muted-foreground">
         Registrado por {devolucion.registradoPor.nombre} el{" "}
-        {devolucion.createdAt.toLocaleString("es-AR")}
+        {formatearFechaHora(devolucion.createdAt)}
       </p>
     </div>
   );

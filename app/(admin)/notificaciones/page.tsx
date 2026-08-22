@@ -6,6 +6,7 @@ import { MontoAutorizacionForm } from "@/components/notificaciones/monto-autoriz
 import { AutoAprobacionMecanicosForm } from "@/components/notificaciones/auto-aprobacion-mecanicos-form";
 import { actualizarMontoAutorizacionCompraMecanico } from "@/app/_actions/reglasNotificacion";
 import { ChecklistTemplateForm } from "@/components/notificaciones/checklist-template-form";
+import { formatearFechaHora } from "@/lib/fecha";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { TipoNotificacion } from "@/app/generated/prisma/client";
@@ -129,7 +130,7 @@ export default async function NotificacionesPage() {
                         : f.motivo}
                   </span>
                   <span className="ml-auto text-xs text-muted-foreground">
-                    {f.createdAt.toLocaleString("es-AR")}
+                    {formatearFechaHora(f.createdAt)}
                   </span>
                 </li>
               ))}
