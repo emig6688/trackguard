@@ -92,6 +92,7 @@ export default async function OrdenesTrabajoPage({
     sinFecha?: string;
     chofer?: string;
     numero?: string;
+    patente?: string;
   }>;
 }) {
   const { user: session, prisma } = await requireEmpresa();
@@ -102,6 +103,7 @@ export default async function OrdenesTrabajoPage({
     sinFecha: filtroSinFecha,
     chofer: filtroChoferId,
     numero: filtroNumero,
+    patente: filtroPatente,
   } = await searchParams;
   const rol = session.rol;
   const esMecanico = rol === "MECANICO_INTERNO";
@@ -130,8 +132,9 @@ export default async function OrdenesTrabajoPage({
     });
   }
   if (filtroNumero) condiciones.push({ numero: { contains: filtroNumero, mode: "insensitive" } });
+  if (filtroPatente) condiciones.push({ vehiculo: { patente: { contains: filtroPatente, mode: "insensitive" } } });
 
-  const [ordenes, choferes, numerosDisponibles] = await Promise.all([
+  const [ordenes, choferes, numerosDisponibles, patentesDisponibles] = await Promise.all([
     prisma.ordenDeTrabajo.findMany({
       where: { AND: condiciones },
       include: {
@@ -150,6 +153,11 @@ export default async function OrdenesTrabajoPage({
       where: { eliminadoEn: null },
       select: { numero: true },
       orderBy: { numero: "desc" },
+    }),
+    prisma.vehiculo.findMany({
+      where: { activo: true, eliminadoEn: null },
+      select: { patente: true },
+      orderBy: { patente: "asc" },
     }),
   ]);
 
@@ -235,7 +243,11 @@ export default async function OrdenesTrabajoPage({
             </Link>
           ))}
         </div>
-        <FiltrosOT choferes={choferes} numeros={numerosDisponibles.map((o) => o.numero)} />
+        <FiltrosOT
+          choferes={choferes}
+          numeros={numerosDisponibles.map((o) => o.numero)}
+          patentes={patentesDisponibles.map((v) => v.patente)}
+        />
       </div>
 
       <Table>

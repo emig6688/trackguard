@@ -10,14 +10,18 @@ const TODOS = "TODOS";
 export function FiltrosOT({
   choferes,
   numeros,
+  patentes,
 }: {
   choferes: { id: string; nombre: string }[];
   numeros: string[];
+  patentes: string[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [numero, setNumero] = useState(searchParams.get("numero") ?? "");
+  const [patente, setPatente] = useState(searchParams.get("patente") ?? "");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncePatenteRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function actualizarParam(clave: string, valor: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -32,9 +36,16 @@ export function FiltrosOT({
     debounceRef.current = setTimeout(() => actualizarParam("numero", v), 350);
   }
 
+  function onPatenteChange(v: string) {
+    setPatente(v);
+    if (debouncePatenteRef.current) clearTimeout(debouncePatenteRef.current);
+    debouncePatenteRef.current = setTimeout(() => actualizarParam("patente", v), 350);
+  }
+
   useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (debouncePatenteRef.current) clearTimeout(debouncePatenteRef.current);
     };
   }, []);
 
@@ -50,6 +61,19 @@ export function FiltrosOT({
         <datalist id="ot-numeros">
           {numeros.map((n) => (
             <option key={n} value={n} />
+          ))}
+        </datalist>
+      </div>
+      <div className="w-40">
+        <Input
+          list="ot-patentes"
+          placeholder="Buscar patente..."
+          value={patente}
+          onChange={(e) => onPatenteChange(e.target.value)}
+        />
+        <datalist id="ot-patentes">
+          {patentes.map((p) => (
+            <option key={p} value={p} />
           ))}
         </datalist>
       </div>
