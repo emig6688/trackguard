@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { ConsumoChart } from "@/components/combustible/consumo-chart";
 import { EliminarButton } from "@/components/eliminar-button";
+import { FiltroPeriodoAtajos } from "@/components/filtro-periodo-atajos";
 
 const UMBRAL_ANOMALIA = 1.3;
 
@@ -89,6 +90,8 @@ export default async function CombustiblePage({
           </Link>
         )}
       </form>
+
+      <FiltroPeriodoAtajos basePath="/combustible" params={{ desde, hasta }} />
 
       {dataChart.length > 0 && (
         <div className="rounded-lg border p-4">

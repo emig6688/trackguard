@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { EliminarButton } from "@/components/eliminar-button";
+import { FiltroPeriodoAtajos } from "@/components/filtro-periodo-atajos";
 import {
   Table,
   TableBody,
@@ -129,6 +130,8 @@ export default async function GastosPage({
           </Link>
         )}
       </form>
+
+      <FiltroPeriodoAtajos basePath="/gastos" params={{ chofer, vehiculo, desde, hasta }} />
 
       <Table>
         <TableHeader>

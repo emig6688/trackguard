@@ -16,6 +16,7 @@ import {
 } from "@/lib/costos";
 import { requireEmpresa } from "@/lib/permisos";
 import { CostosMensualesChart } from "@/components/costos/costos-mensuales-chart";
+import { FiltroPeriodoAtajos } from "@/components/filtro-periodo-atajos";
 
 function formatearMoneda(n: number) {
   return n.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
@@ -161,6 +162,8 @@ export default async function CostosPage({
           Filtrar
         </button>
       </form>
+
+      <FiltroPeriodoAtajos basePath="/reportes/costos" params={{ desde, hasta }} />
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">

@@ -225,6 +225,16 @@ export async function calcularReportePorChofer(
   };
 }
 
+/** Igual que calcularReportePorChofer, pero para "todos los choferes" a la vez (uno por columna en el reporte). */
+export async function calcularReportePorTodosLosChoferes(
+  prisma: ScopedPrismaClient,
+  choferIds: string[],
+  desde: Date,
+  hasta: Date
+): Promise<ReporteChofer[]> {
+  return Promise.all(choferIds.map((choferId) => calcularReportePorChofer(prisma, choferId, desde, hasta)));
+}
+
 /** Rango de años (inclusive) con al menos un registro del chofer, para saber qué años graficar. */
 async function rangoAniosConDatos(prisma: ScopedPrismaClient, choferId: string): Promise<[number, number] | null> {
   const [checklistMin, checklistMax, eventoMin, eventoMax] = await Promise.all([
