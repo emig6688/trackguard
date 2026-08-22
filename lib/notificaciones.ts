@@ -27,13 +27,15 @@ export type InfoTipoNotificacion = {
 export const CATALOGO_NOTIFICACIONES: Partial<Record<TipoNotificacion, InfoTipoNotificacion>> = {
   VENCIMIENTO_DOCUMENTO_CHOFER: {
     label: "Vencimiento de documento de chofer",
-    disparador: "A los días configurados abajo antes de que venza un documento de un chofer (licencia, libreta sanitaria, etc.)",
+    disparador:
+      "A los días configurados abajo antes de que venza un documento de un chofer (licencia, libreta sanitaria, etc.). Se revisa una vez por día, a las 23:00 (hora Argentina).",
     destinatarioFijo: "El chofer dueño del documento",
     usaDiasAviso: true,
   },
   VENCIMIENTO_DOCUMENTO_VEHICULO: {
     label: "Vencimiento de documento de vehículo",
-    disparador: "A los días configurados abajo antes de que venza un documento de un vehículo (VTV, seguro, habilitación SENASA, etc.)",
+    disparador:
+      "A los días configurados abajo antes de que venza un documento de un vehículo (VTV, seguro, habilitación SENASA, etc.). Se revisa una vez por día, a las 23:00 (hora Argentina).",
     destinatarioFijo: null,
     usaDiasAviso: true,
   },
@@ -78,7 +80,7 @@ export const CATALOGO_NOTIFICACIONES: Partial<Record<TipoNotificacion, InfoTipoN
   DEVOLUCION_SIN_ENVIAR: {
     label: "Resumen diario de guardia",
     disparador:
-      "Un PDF con vehículos sin checklist pre-salida, sin cierre de ruta, con el tanque sin llenar, y las devoluciones registradas. Llega todos los días a las 18:00 (hora Argentina) a los roles que elijas abajo. El PDF solo va por email; WhatsApp y la app reciben un resumen en texto.",
+      "Un PDF con vehículos sin checklist pre-salida, sin cierre de ruta, con el tanque sin llenar, y las devoluciones registradas. Llega todos los días a las 23:00 (hora Argentina) a los roles que elijas abajo. El PDF solo va por email; WhatsApp y la app reciben un resumen en texto.",
     destinatarioFijo: null,
     usaDiasAviso: false,
   },
