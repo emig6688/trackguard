@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,6 +58,14 @@ export function TrazabilidadPanel({
             <Button type="submit" variant="outline">
               Aplicar
             </Button>
+            {(desde || hasta) && (
+              <Link
+                href={`/reportes/estadisticas?tab=reportes${vehiculoSeleccionado ? `&vehiculoId=${vehiculoSeleccionado}` : ""}`}
+                className={buttonVariants({ variant: "ghost", size: "sm" })}
+              >
+                Limpiar
+              </Link>
+            )}
           </form>
 
           <div className="flex flex-wrap items-center gap-2 text-sm">

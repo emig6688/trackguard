@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const TODOS = "TODOS";
@@ -93,6 +94,11 @@ export function FiltrosCompra({
           ))}
         </SelectContent>
       </Select>
+      {searchParams.toString() && (
+        <Button type="button" variant="ghost" size="sm" onClick={() => router.push("/compras")}>
+          Limpiar filtros
+        </Button>
+      )}
     </div>
   );
 }

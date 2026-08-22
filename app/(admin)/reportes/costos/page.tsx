@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -161,6 +162,11 @@ export default async function CostosPage({
         <button type="submit" className={buttonVariants({ variant: "outline" })}>
           Filtrar
         </button>
+        {(desde || hasta) && (
+          <Link href="/reportes/costos" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+            Limpiar
+          </Link>
+        )}
       </form>
 
       <FiltroPeriodoAtajos basePath="/reportes/costos" params={{ desde, hasta }} />
