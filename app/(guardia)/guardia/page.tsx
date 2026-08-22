@@ -70,6 +70,11 @@ export default async function GuardiaPage({
         <p className="text-sm text-muted-foreground">
           Checklist pre-salida y cierre de ruta de hoy, por vehículo.
         </p>
+        <p className="text-xs text-muted-foreground">
+          Este control (junto con las devoluciones) se envía automáticamente todos los días a las
+          23:00 (hora Argentina), por el medio configurado en Mantenedor → Parámetros — no hace
+          falta enviarlo a mano.
+        </p>
       </div>
 
       <div className="flex flex-wrap gap-2">

@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -102,12 +103,22 @@ export default async function EstadisticasPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Estadísticas estratégicas</h1>
-        <p className="text-sm text-muted-foreground">
-          Indicadores para decisiones de flota (reemplazo, planificación de mantenimiento), no del
-          día a día operativo.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Estadísticas estratégicas</h1>
+          <p className="text-sm text-muted-foreground">
+            Indicadores para decisiones de flota (reemplazo, planificación de mantenimiento), no del
+            día a día operativo.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <a href="/api/export/estadisticas-pdf" className={buttonVariants({ variant: "outline" })}>
+            Exportar todo (PDF)
+          </a>
+          <a href="/api/export/estadisticas" className={buttonVariants({ variant: "outline" })}>
+            Exportar todo (Excel)
+          </a>
+        </div>
       </div>
 
       <Tabs defaultValue={tab === "reportes" || tab === "choferes" ? tab : "vehiculos"}>
@@ -344,6 +355,14 @@ export default async function EstadisticasPage({
                     <Button type="submit" variant="outline">
                       Aplicar
                     </Button>
+                    {(desde || hasta) && (
+                      <Link
+                        href={`/reportes/estadisticas?tab=reportes${choferSeleccionado ? `&choferId=${choferSeleccionado}` : ""}`}
+                        className={buttonVariants({ variant: "ghost", size: "sm" })}
+                      >
+                        Limpiar
+                      </Link>
+                    )}
                   </form>
                   <p className="text-xs text-muted-foreground">Sin período elegido, se toma el último año.</p>
 

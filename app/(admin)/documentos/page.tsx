@@ -92,10 +92,31 @@ export default async function DocumentosPage({
     return queryString ? `/documentos?${queryString}` : "/documentos";
   };
 
+  const queryExport = new URLSearchParams();
+  if (filtroEstado) queryExport.set("estado", filtroEstado);
+  if (filtroTipo) queryExport.set("tipo", filtroTipo);
+  const queryExportString = queryExport.toString();
+
   return (
     <div className="space-y-6">
       <BackToDashboard />
-      <h1 className="text-2xl font-semibold">Vencimientos de documentación</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold">Vencimientos de documentación</h1>
+        <div className="flex gap-2">
+          <a
+            href={`/api/export/vencimientos-pdf${queryExportString ? `?${queryExportString}` : ""}`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            Exportar PDF
+          </a>
+          <a
+            href={`/api/export/vencimientos${queryExportString ? `?${queryExportString}` : ""}`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            Exportar Excel
+          </a>
+        </div>
+      </div>
 
       <form className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">

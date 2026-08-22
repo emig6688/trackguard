@@ -20,6 +20,11 @@ export default async function DevolucionesPage() {
         <div>
           <h1 className="text-lg font-semibold">Devoluciones</h1>
           <p className="text-sm text-muted-foreground">Últimas devoluciones registradas.</p>
+          <p className="text-xs text-muted-foreground">
+            Estas devoluciones (junto con el control de portería) se envían automáticamente todos
+            los días a las 23:00 (hora Argentina), por el medio configurado en Mantenedor →
+            Parámetros — no hace falta enviarlas a mano.
+          </p>
         </div>
         <Link href="/guardia/devoluciones/nueva" className={buttonVariants()}>
           Nueva devolución
