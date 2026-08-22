@@ -75,7 +75,7 @@ export const CATALOGO_NOTIFICACIONES: Partial<Record<TipoNotificacion, InfoTipoN
   RESUMEN_VEHICULOS_OPERATIVOS: {
     label: "Resumen diario de vehículos operativos",
     disparador:
-      "Una vez al día, un resumen de cuántos vehículos están operativos. Elegir una hora abajo activa este aviso — con el plan actual de Vercel (crons diarios, no horarios) se manda una vez al día a una hora fija del sistema, no necesariamente la que elijas.",
+      "Una vez al día, un resumen de cuántos vehículos están operativos. Elegir una hora abajo activa este aviso, pero no elige a qué hora se manda: con el plan actual de Vercel (crons diarios, no horarios) el envío real es siempre a las 23:00 (hora Argentina), sin importar qué hora elijas.",
     destinatarioFijo: null,
     usaDiasAviso: false,
     usaHoraEnvio: true,
@@ -83,7 +83,7 @@ export const CATALOGO_NOTIFICACIONES: Partial<Record<TipoNotificacion, InfoTipoN
   DEVOLUCION_SIN_ENVIAR: {
     label: "Resumen diario de guardia",
     disparador:
-      "Una vez al día, un PDF con vehículos sin checklist pre-salida, sin cierre de ruta, con el tanque sin llenar, y las devoluciones registradas. Elegir una hora abajo activa este aviso — con el plan actual de Vercel (crons diarios, no horarios) se manda una vez al día a una hora fija del sistema, no necesariamente la que elijas. El PDF solo va por email; WhatsApp y la app reciben un resumen en texto.",
+      "Una vez al día, un PDF con vehículos sin checklist pre-salida, sin cierre de ruta, con el tanque sin llenar, y las devoluciones registradas. Elegir una hora abajo activa este aviso, pero no elige a qué hora se manda: con el plan actual de Vercel (crons diarios, no horarios) el envío real es siempre a las 18:00 (hora Argentina), sin importar qué hora elijas. El PDF solo va por email; WhatsApp y la app reciben un resumen en texto.",
     destinatarioFijo: null,
     usaDiasAviso: false,
     usaHoraEnvio: true,

@@ -3,7 +3,7 @@
     { "path": "/api/cron/planes-mantenimiento", "schedule": "0 12 * * *" },
     { "path": "/api/cron/vencimientos-documentacion", "schedule": "0 12 * * *" },
     { "path": "/api/cron/snapshot-disponibilidad", "schedule": "0 12 * * *" },
-    { "path": "/api/cron/resumen-operativos", "schedule": "0 20 * * *" },
+    { "path": "/api/cron/resumen-operativos", "schedule": "0 2 * * *" },
     { "path": "/api/cron/devoluciones-pendientes", "schedule": "0 21 * * *" }
   ]
 }
