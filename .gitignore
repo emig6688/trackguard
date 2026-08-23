@@ -48,5 +48,8 @@ next-env.d.ts
 # archivos subidos en desarrollo (storage local, ver lib/storage.ts)
 /storage/uploads
 
+# backups descargados con scripts/descargar-backup.ts (ver DEPLOY.md)
+/*.json.gz
+
 .vercel
 .env*

@@ -25,7 +25,7 @@ set "DIRECT_URL=<connection string real>" && npx prisma migrate deploy
 
 ## 3. Crons (`vercel.json`)
 
-El plan **Hobby** de Vercel solo permite crons con frecuencia diaria (no horaria). Los 5 crons de la app corren todos a la misma hora, `0 2 * * *` (02:00 UTC = 23:00 hora Argentina):
+El plan **Hobby** de Vercel solo permite crons con frecuencia diaria (no horaria). Los 6 crons de la app corren todos a la misma hora, `0 2 * * *` (02:00 UTC = 23:00 hora Argentina):
 
 | Cron | Horario (UTC) | Nota |
 |---|---|---|
@@ -34,15 +34,38 @@ El plan **Hobby** de Vercel solo permite crons con frecuencia diaria (no horaria
 | `snapshot-disponibilidad` | 02:00 | diario |
 | `resumen-operativos` | 02:00 | diario |
 | `devoluciones-pendientes` | 02:00 | diario |
+| `backup-diario` | 02:00 | diario — ver sección 4, Backups |
 
 Los tipos de notificación horaria recurrente (resumen de vehículos operativos, devoluciones sin enviar) ya no tienen un selector de hora por empresa — es un simple on/off en **Mantenedor → Notificaciones**, y el envío real siempre ocurre a las 23:00 ART de arriba. El campo `ReglaNotificacion.horaEnvio` que existía para esto se eliminó (migración `quitar_hora_envio_regla_notificacion`).
 
-**Por qué son 5 crons separados en vez de uno solo:** desde enero de 2026 Vercel levantó el límite de cantidad de cron jobs a 100 por proyecto en todos los planes, incluido Hobby — así que la cantidad ya no es una restricción. La única restricción real en Hobby es la frecuencia (una vez al día, ya resuelto arriba) y que Vercel puede disparar el cron en cualquier momento dentro de la hora indicada, no en el minuto exacto. Mantenerlos separados es la opción correcta: cada uno es una responsabilidad independiente, así que una falla o una corrida lenta en uno no afecta a los demás, y los logs/reintentos quedan aislados por job.
+**Por qué son crons separados en vez de uno solo:** desde enero de 2026 Vercel levantó el límite de cantidad de cron jobs a 100 por proyecto en todos los planes, incluido Hobby — así que la cantidad ya no es una restricción. La única restricción real en Hobby es la frecuencia (una vez al día, ya resuelto arriba) y que Vercel puede disparar el cron en cualquier momento dentro de la hora indicada, no en el minuto exacto. Mantenerlos separados es la opción correcta: cada uno es una responsabilidad independiente, así que una falla o una corrida lenta en uno no afecta a los demás, y los logs/reintentos quedan aislados por job.
 
-## 4. Verificación post-deploy
+## 4. Backups
+
+El proyecto de Supabase está en el plan **free**, que no ofrece Point-in-Time Recovery ni backups diarios retenidos — si se borra o corrompe algo, Supabase no tiene con qué volver atrás. Hasta que se pueda pagar el plan Pro (que sí los incluye), el cron `backup-diario` es el único resguardo real:
+
+- Todos los días a las 23:00 ART, vuelca **todas** las tablas de negocio (ver `lib/backup-modelos.ts`) a un JSON, lo comprime y lo sube como blob **privado** a Vercel Blob (`backups/AAAA-MM-DD.json.gz`). Guarda los últimos 14 días; los más viejos se borran solos en cada corrida.
+- No es un `pg_dump` real (no incluye triggers/índices/secuencias, solo los datos) — alcanza para reconstruir la información ante un desastre, no para clonar la base tal cual.
+
+**Para descargar un backup** (necesita `BLOB_READ_WRITE_TOKEN` en el `.env` desde donde se corra):
+
+```bash
+npm run backup:descargar            # el más reciente
+npm run backup:descargar -- 2026-08-20   # una fecha puntual
+```
+
+**Para restaurarlo** contra la base que apunte `DATABASE_URL` en ese momento (revisar el `.env` antes de correr esto — inserta datos de verdad):
+
+```bash
+npm run backup:restaurar -- ./2026-08-23.json.gz --confirmo
+```
+
+En cuanto se pueda pagar Supabase Pro, activar ahí el backup diario/PITR nativo y este cron puede apagarse (sacarlo de `vercel.json`) o dejarse igual como resguardo adicional — no hace daño tenerlo.
+
+## 5. Verificación post-deploy
 
 - Login con un usuario real y confirmar que la sesión persiste.
-- Probar cada uno de los 5 crons manualmente una vez con `curl -H "Authorization: Bearer $CRON_SECRET" https://tu-dominio/api/cron/<nombre>` para confirmar que corren sin el trigger de Vercel.
+- Probar cada uno de los crons manualmente una vez con `curl -H "Authorization: Bearer $CRON_SECRET" https://tu-dominio/api/cron/<nombre>` para confirmar que corren sin el trigger de Vercel — para `backup-diario` en particular, confirmar que el JSON de respuesta trae `ok: true` y conteos de filas mayores a 0.
 - Subir un archivo (foto de checklist o documento) para confirmar que `BLOB_READ_WRITE_TOKEN` funciona.
 - Si se configuró Resend, mandar una notificación de prueba y confirmar que llega (no solo que quedó en el log).
 - Activar el push (botón junto a la campanita) en un dispositivo Android o desktop y disparar cualquier aviso que use el canal "En la app" — confirmar que llega una notificación real del sistema operativo con la app cerrada. En iOS, primero hay que agregar la app a la pantalla de inicio (Safari → Compartir → "Agregar a pantalla de inicio"); el botón lo explica si detecta iOS sin instalar.

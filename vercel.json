@@ -4,6 +4,7 @@
     { "path": "/api/cron/vencimientos-documentacion", "schedule": "0 2 * * *" },
     { "path": "/api/cron/snapshot-disponibilidad", "schedule": "0 2 * * *" },
     { "path": "/api/cron/resumen-operativos", "schedule": "0 2 * * *" },
-    { "path": "/api/cron/devoluciones-pendientes", "schedule": "0 2 * * *" }
+    { "path": "/api/cron/devoluciones-pendientes", "schedule": "0 2 * * *" },
+    { "path": "/api/cron/backup-diario", "schedule": "0 2 * * *" }
   ]
 }

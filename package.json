@@ -11,7 +11,9 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "postinstall": "prisma generate",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "backup:descargar": "tsx scripts/descargar-backup.ts",
+    "backup:restaurar": "tsx scripts/restaurar-backup.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
