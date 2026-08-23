@@ -58,6 +58,17 @@ export function OTAcciones({
   const [aprobarState, aprobarAction] = useActionState(aprobarOT.bind(null, ot.id), undefined);
   const aprobarErrors = aprobarState?.fieldErrors ?? {};
 
+  const [cancelarState, cancelarAction] = useActionState(cancelarOT.bind(null, ot.id), undefined);
+  const [fechaState, fechaAction] = useActionState(actualizarFechaEstimada.bind(null, ot.id), undefined);
+  const [completarExtState, completarExtAction] = useActionState(
+    completarDesdeExterno.bind(null, ot.id),
+    undefined
+  );
+  const [volverInternoState, volverInternoAction] = useActionState(
+    volverAInternoDesdeExterno.bind(null, ot.id),
+    undefined
+  );
+
   // La aprobación pasa el estado de PENDIENTE_APROBACION a APROBADA, así que
   // el formulario de arriba desaparece solo (deja de cumplir la condición de
   // abajo) — acá solo falta el aviso de que quedó aprobada y asignada, para
@@ -147,15 +158,11 @@ export function OTAcciones({
           </div>
           <div className="flex gap-2">
             <Button type="submit">Aprobar</Button>
-            <Button
-              type="submit"
-              variant="destructive"
-              formNoValidate
-              formAction={cancelarOT.bind(null, ot.id, undefined)}
-            >
+            <Button type="submit" variant="destructive" formNoValidate formAction={cancelarAction}>
               Cancelar OT
             </Button>
           </div>
+          {cancelarState?.error && <p className="text-sm text-destructive">{cancelarState.error}</p>}
         </form>
       )}
 
@@ -163,12 +170,13 @@ export function OTAcciones({
         <div className="flex flex-wrap items-end gap-4">
           {(puedeGestionar || esMecanicoAsignado) && <IniciarOTForm otId={ot.id} />}
           {puedeGestionar && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-start gap-2">
               <DerivarForm otId={ot.id} talleres={talleres} />
-              <form action={cancelarOT.bind(null, ot.id, undefined)}>
+              <form action={cancelarAction} className="space-y-1">
                 <Button type="submit" variant="destructive">
                   Cancelar OT
                 </Button>
+                {cancelarState?.error && <p className="text-sm text-destructive">{cancelarState.error}</p>}
               </form>
             </div>
           )}
@@ -178,10 +186,7 @@ export function OTAcciones({
       {ot.estado === "EN_PROGRESO" && (
         <div className="space-y-4">
           {(puedeGestionar || esMecanicoAsignado) && (
-            <form
-              action={actualizarFechaEstimada.bind(null, ot.id)}
-              className="flex flex-wrap items-end gap-2 rounded-lg border p-3"
-            >
+            <form action={fechaAction} className="flex flex-wrap items-end gap-2 rounded-lg border p-3">
               <div className="space-y-2">
                 <Label htmlFor="fechaEstimadaFinalizacion2">Fecha estimada de finalización</Label>
                 <Input
@@ -195,15 +200,17 @@ export function OTAcciones({
               <Button type="submit" variant="outline">
                 Actualizar fecha estimada
               </Button>
+              {fechaState?.error && <p className="w-full text-sm text-destructive">{fechaState.error}</p>}
             </form>
           )}
           {puedeGestionar && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-start gap-2">
               <DerivarForm otId={ot.id} talleres={talleres} />
-              <form action={cancelarOT.bind(null, ot.id, undefined)}>
+              <form action={cancelarAction} className="space-y-1">
                 <Button type="submit" variant="destructive">
                   Cancelar OT
                 </Button>
+                {cancelarState?.error && <p className="text-sm text-destructive">{cancelarState.error}</p>}
               </form>
             </div>
           )}
@@ -211,19 +218,26 @@ export function OTAcciones({
       )}
 
       {ot.estado === "DERIVADA_EXTERNO" && puedeGestionar && (
-        <div className="flex flex-wrap gap-2">
-          <form action={completarDesdeExterno.bind(null, ot.id)}>
+        <div className="flex flex-wrap items-start gap-2">
+          <form action={completarExtAction} className="space-y-1">
             <Button type="submit">Marcar OT como completada</Button>
+            {completarExtState?.error && (
+              <p className="text-sm text-destructive">{completarExtState.error}</p>
+            )}
           </form>
-          <form action={volverAInternoDesdeExterno.bind(null, ot.id)}>
+          <form action={volverInternoAction} className="space-y-1">
             <Button type="submit" variant="outline">
               Volver a taller interno
             </Button>
+            {volverInternoState?.error && (
+              <p className="text-sm text-destructive">{volverInternoState.error}</p>
+            )}
           </form>
-          <form action={cancelarOT.bind(null, ot.id, undefined)}>
+          <form action={cancelarAction} className="space-y-1">
             <Button type="submit" variant="destructive">
               Cancelar OT
             </Button>
+            {cancelarState?.error && <p className="text-sm text-destructive">{cancelarState.error}</p>}
           </form>
         </div>
       )}
@@ -238,11 +252,9 @@ function DerivarForm({
   otId: string;
   talleres: { id: string; nombre: string }[];
 }) {
+  const [state, action] = useActionState(derivarAExterno.bind(null, otId), undefined);
   return (
-    <form
-      action={derivarAExterno.bind(null, otId)}
-      className="flex flex-wrap items-end gap-2 rounded-lg border p-3"
-    >
+    <form action={action} className="flex flex-wrap items-end gap-2 rounded-lg border p-3">
       <div className="space-y-2">
         <Label htmlFor="tallerExternoId">Derivar a taller</Label>
         <Select name="tallerExternoId">
@@ -271,6 +283,7 @@ function DerivarForm({
       <Button type="submit" variant="outline">
         Derivar
       </Button>
+      {state?.error && <p className="w-full text-sm text-destructive">{state.error}</p>}
     </form>
   );
 }

@@ -464,7 +464,10 @@ export default async function DashboardPage() {
                 </Link>
                 {puedeEditarFecha ? (
                   <form
-                    action={actualizarFechaEstimada.bind(null, ot.id)}
+                    action={async (formData: FormData) => {
+                      "use server";
+                      await actualizarFechaEstimada(ot.id, undefined, formData);
+                    }}
                     className="flex items-center gap-1.5"
                   >
                     <Input

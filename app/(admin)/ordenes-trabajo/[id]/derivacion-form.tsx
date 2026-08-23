@@ -1,5 +1,6 @@
 "use client";
 
+import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,11 +30,12 @@ export function DerivacionForm({
   otId: string;
   defaultEstado: string;
 }) {
+  const [state, action] = useActionState(
+    actualizarDerivacionExterna.bind(null, derivacionId, otId),
+    undefined
+  );
   return (
-    <form
-      action={actualizarDerivacionExterna.bind(null, derivacionId, otId)}
-      className="space-y-4 rounded-lg border p-4"
-    >
+    <form action={action} className="space-y-4 rounded-lg border p-4">
       <h3 className="font-medium">Seguimiento de la derivación</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -68,6 +70,7 @@ export function DerivacionForm({
         <Label htmlFor="resultado">Resultado / novedades</Label>
         <Textarea id="resultado" name="resultado" />
       </div>
+      {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
       <Button type="submit" size="sm">
         Guardar seguimiento
       </Button>

@@ -83,6 +83,15 @@ export async function GET(request: Request) {
       const umbral = diasAviso.find((d) => d === diasRestantes && !doc.diasAvisoNotificados.includes(d));
       if (umbral === undefined) continue;
 
+      // Se marca ANTES de mandar el aviso (no después): si el cron se corta
+      // o Vercel reintenta la misma corrida, el próximo pase ve el umbral ya
+      // tomado y no lo vuelve a mandar — es preferible perder un aviso raro
+      // por una falla a mitad de camino que duplicarlo en cada reintento.
+      await prisma.documento.update({
+        where: { id: doc.id },
+        data: { diasAvisoNotificados: { push: umbral } },
+      });
+
       const asunto = `Aviso de vencimiento: ${doc.tipoDocumento.nombre}`;
       const mensaje =
         `Aviso de vencimiento: ${doc.tipoDocumento.nombre} de ${entidadLabel} vence en ${diasRestantes} ` +
@@ -125,11 +134,6 @@ export async function GET(request: Request) {
           })),
         });
       }
-
-      await prisma.documento.update({
-        where: { id: doc.id },
-        data: { diasAvisoNotificados: { push: umbral } },
-      });
 
       notificados.push(doc.id);
     } catch (error) {

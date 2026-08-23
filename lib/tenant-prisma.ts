@@ -11,6 +11,7 @@ const MODELOS_CON_EMPRESA = new Set([
   "Vehiculo",
   "Documento",
   "PlanMantenimiento",
+  "PlanMantenimientoEstandarItem",
   "TallerExterno",
   "OrdenDeTrabajo",
   "OTRepuesto",

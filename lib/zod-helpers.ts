@@ -15,8 +15,13 @@ export function optionalInt(opts?: { min?: number; max?: number }) {
   return z.preprocess(vacioComoUndefined, schema.optional());
 }
 
+/**
+ * Usado siempre para montos de plata (estimado, total, costo unitario,
+ * presupuesto) — nunca tiene sentido un monto negativo, así que se valida
+ * acá una sola vez en vez de en cada action que lo usa.
+ */
 export function optionalNumber() {
-  return z.preprocess(vacioComoUndefined, z.coerce.number().optional());
+  return z.preprocess(vacioComoUndefined, z.coerce.number().nonnegative().optional());
 }
 
 export function normalizarDni(dni: string) {

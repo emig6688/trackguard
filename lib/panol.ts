@@ -62,17 +62,24 @@ export async function descontarStockYVerificarMinimo(
   articuloPanolId: string,
   cantidadUsada: number
 ) {
+  // El chequeo de stock y el descuento van en una sola UPDATE condicional
+  // (no un findUnique + update separados): así el motor de base de datos
+  // resuelve el "check-then-act" atómicamente con el lock de fila, y dos
+  // pedidos simultáneos por el último repuesto no pueden dejar el stock en
+  // negativo (uno de los dos ve count=0 y falla, en vez de que ambos lean el
+  // mismo stockActual "viejo" y los dos crean que alcanza).
   const articulo = await prisma.$transaction(async (tx) => {
+    const resultado = await tx.articuloPanol.updateMany({
+      where: { id: articuloPanolId, stockActual: { gte: cantidadUsada } },
+      data: { stockActual: { decrement: cantidadUsada } },
+    });
     const actual = await tx.articuloPanol.findUniqueOrThrow({ where: { id: articuloPanolId } });
-    if (actual.stockActual < cantidadUsada) {
+    if (resultado.count === 0) {
       throw new Error(
         `No hay stock suficiente de "${actual.nombre}": quedan ${actual.stockActual}, se pidieron ${cantidadUsada}.`
       );
     }
-    return tx.articuloPanol.update({
-      where: { id: articuloPanolId },
-      data: { stockActual: { decrement: cantidadUsada } },
-    });
+    return actual;
   });
 
   if (articulo.stockActual > articulo.stockMinimo) return;

@@ -25,17 +25,17 @@ set "DIRECT_URL=<connection string real>" && npx prisma migrate deploy
 
 ## 3. Crons (`vercel.json`)
 
-El plan **Hobby** de Vercel solo permite crons con frecuencia diaria (no horaria). Los 5 crons de la app ya están configurados así:
+El plan **Hobby** de Vercel solo permite crons con frecuencia diaria (no horaria). Los 5 crons de la app corren todos a la misma hora, `0 2 * * *` (02:00 UTC = 23:00 hora Argentina):
 
 | Cron | Horario (UTC) | Nota |
 |---|---|---|
-| `planes-mantenimiento` | 12:00 | diario |
-| `vencimientos-documentacion` | 12:00 | diario |
-| `snapshot-disponibilidad` | 12:00 | diario |
-| `resumen-operativos` | 20:00 | diario — antes corría cada hora, ver abajo |
-| `devoluciones-pendientes` | 21:00 | diario — antes corría cada hora, ver abajo |
+| `planes-mantenimiento` | 02:00 | diario |
+| `vencimientos-documentacion` | 02:00 | diario |
+| `snapshot-disponibilidad` | 02:00 | diario |
+| `resumen-operativos` | 02:00 | diario |
+| `devoluciones-pendientes` | 02:00 | diario |
 
-`resumen-operativos` y `devoluciones-pendientes` usan el campo `horaEnvio` configurable por empresa en **Mantenedor → Notificaciones** solo como interruptor de encendido/apagado — en el plan Hobby el envío real ocurre una vez al día a la hora fija de arriba, no a la hora que cada empresa elija ahí. Si el proyecto pasa a un plan que soporte crons horarios (Pro), se puede volver a cambiar `vercel.json` a `"0 * * * *"` y restaurar la comparación de `horaEnvio` contra la hora actual en `app/api/cron/resumen-operativos/route.ts` y `app/api/cron/devoluciones-pendientes/route.ts` (está documentado en un comentario en cada archivo).
+Los tipos de notificación horaria recurrente (resumen de vehículos operativos, devoluciones sin enviar) ya no tienen un selector de hora por empresa — es un simple on/off en **Mantenedor → Notificaciones**, y el envío real siempre ocurre a las 23:00 ART de arriba. El campo `ReglaNotificacion.horaEnvio` que existía para esto se eliminó (migración `quitar_hora_envio_regla_notificacion`).
 
 **Por qué son 5 crons separados en vez de uno solo:** desde enero de 2026 Vercel levantó el límite de cantidad de cron jobs a 100 por proyecto en todos los planes, incluido Hobby — así que la cantidad ya no es una restricción. La única restricción real en Hobby es la frecuencia (una vez al día, ya resuelto arriba) y que Vercel puede disparar el cron en cualquier momento dentro de la hora indicada, no en el minuto exacto. Mantenerlos separados es la opción correcta: cada uno es una responsabilidad independiente, así que una falla o una corrida lenta en uno no afecta a los demás, y los logs/reintentos quedan aislados por job.
 

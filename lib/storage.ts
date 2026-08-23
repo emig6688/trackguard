@@ -17,12 +17,36 @@ const UPLOAD_DIR = path.join(process.cwd(), "storage", "uploads");
 const usaBlob = () => Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 const rutaBlob = (archivoId: string) => `archivos/${archivoId}`;
 
+// Todos los formularios de la app suben fotos (evidencia de checklist,
+// facturas, tickets de combustible/gastos) o, en el caso de presupuestos de
+// compra, opcionalmente un PDF — nunca ningún otro tipo. Se valida acá,
+// en el único punto de entrada de subida, para no depender de que cada
+// formulario respete su propio `accept` (que es solo una sugerencia del
+// navegador, no una garantía).
+const MIME_PERMITIDOS = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+  "image/gif",
+  "application/pdf",
+]);
+const TAMANIO_MAXIMO_BYTES = 15 * 1024 * 1024;
+
 export async function guardarArchivo(
   prisma: ScopedPrismaClient,
   empresaId: string,
   file: File,
   subidoPorId?: string
 ) {
+  if (!MIME_PERMITIDOS.has(file.type)) {
+    throw new Error("Tipo de archivo no permitido. Subí una foto (JPG, PNG, HEIC) o un PDF.");
+  }
+  if (file.size > TAMANIO_MAXIMO_BYTES) {
+    throw new Error("El archivo es demasiado grande (máximo 15 MB).");
+  }
+
   const archivo = await prisma.archivo.create({
     data: {
       empresaId,

@@ -364,9 +364,18 @@ const actualizarFechaEstimadaSchema = z.object({
  * Antes de aprobarla no hay nada que fijar, y una vez completada ya quedó
  * fija para el cálculo de cumplimiento.
  */
-export async function actualizarFechaEstimada(otId: string, formData: FormData) {
+export type AccionOTState = { error?: string } | undefined;
+
+export async function actualizarFechaEstimada(
+  otId: string,
+  _prevState: AccionOTState,
+  formData: FormData
+): Promise<AccionOTState> {
   const { user, prisma } = await requireSession();
-  const parsed = actualizarFechaEstimadaSchema.parse(Object.fromEntries(formData));
+  const parsed = actualizarFechaEstimadaSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Fecha inválida." };
+  }
 
   const ot = await prisma.ordenDeTrabajo.findUniqueOrThrow({ where: { id: otId } });
   const puedeEditar =
@@ -374,12 +383,12 @@ export async function actualizarFechaEstimada(otId: string, formData: FormData) 
     (user.rol === "MECANICO_INTERNO" && puedeMecanicoAccionar(ot, user.id));
 
   if (!puedeEditar || !ESTADOS_OT_REQUIEREN_FECHA_ESTIMADA.includes(ot.estado)) {
-    throw new Error("No podés actualizar la fecha estimada de esta orden de trabajo.");
+    return { error: "No podés actualizar la fecha estimada de esta orden de trabajo." };
   }
 
   await prisma.ordenDeTrabajo.update({
     where: { id: otId },
-    data: { fechaEstimadaFinalizacion: parsed.fechaEstimadaFinalizacion },
+    data: { fechaEstimadaFinalizacion: parsed.data.fechaEstimadaFinalizacion },
   });
 
   revalidatePath(`/ordenes-trabajo/${otId}`);
@@ -584,19 +593,43 @@ export async function confirmarReparacion(otId: string, formData: FormData) {
   revalidatePath("/ordenes-trabajo");
 }
 
-export async function cancelarOT(otId: string, comentario?: string) {
+export async function cancelarOT(
+  otId: string,
+  _prevState: AccionOTState,
+  _formData: FormData
+): Promise<AccionOTState> {
   const { user, prisma } = await requireSession();
-  await transicionarOT(prisma, user, otId, "CANCELADA", {}, comentario);
+  try {
+    await transicionarOT(prisma, user, otId, "CANCELADA", {});
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No se pudo cancelar la orden de trabajo." };
+  }
 }
 
-export async function completarDesdeExterno(otId: string) {
+export async function completarDesdeExterno(
+  otId: string,
+  _prevState: AccionOTState,
+  _formData: FormData
+): Promise<AccionOTState> {
   const { user, prisma } = await requireSession();
-  await transicionarOT(prisma, user, otId, "COMPLETADA");
+  try {
+    await transicionarOT(prisma, user, otId, "COMPLETADA");
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No se pudo completar la orden de trabajo." };
+  }
 }
 
-export async function volverAInternoDesdeExterno(otId: string) {
+export async function volverAInternoDesdeExterno(
+  otId: string,
+  _prevState: AccionOTState,
+  _formData: FormData
+): Promise<AccionOTState> {
   const { user, prisma } = await requireSession();
-  await transicionarOT(prisma, user, otId, "EN_PROGRESO");
+  try {
+    await transicionarOT(prisma, user, otId, "EN_PROGRESO");
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No se pudo volver a taller interno." };
+  }
 }
 
 const derivarSchema = z.object({
@@ -608,42 +641,53 @@ const derivarSchema = z.object({
     .transform((v) => (v ? new Date(v) : undefined)),
 });
 
-export async function derivarAExterno(otId: string, formData: FormData) {
+export async function derivarAExterno(
+  otId: string,
+  _prevState: AccionOTState,
+  formData: FormData
+): Promise<AccionOTState> {
   const { user, prisma } = await requireRole(ROLES_ADMIN_MANTENIMIENTO);
-  const parsed = derivarSchema.parse(Object.fromEntries(formData));
+  const parsed = derivarSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+  }
 
-  await prisma.$transaction(async (tx) => {
-    const ot = await tx.ordenDeTrabajo.findUniqueOrThrow({ where: { id: otId } });
+  try {
+    await prisma.$transaction(async (tx) => {
+      const ot = await tx.ordenDeTrabajo.findUniqueOrThrow({ where: { id: otId } });
 
-    if (!puedeTransicionar(ot.estado, "DERIVADA_EXTERNO", user.rol)) {
-      throw new Error("No se puede derivar esta orden de trabajo en su estado actual.");
-    }
+      if (!puedeTransicionar(ot.estado, "DERIVADA_EXTERNO", user.rol)) {
+        throw new Error("No se puede derivar esta orden de trabajo en su estado actual.");
+      }
 
-    await tx.ordenDeTrabajo.update({ where: { id: otId }, data: { estado: "DERIVADA_EXTERNO" } });
-    await tx.oTHistorialEstado.create({
-      data: {
-        ordenDeTrabajoId: otId,
-        actorId: user.id,
-        estadoAnterior: ot.estado,
-        estadoNuevo: "DERIVADA_EXTERNO",
-      },
+      await tx.ordenDeTrabajo.update({ where: { id: otId }, data: { estado: "DERIVADA_EXTERNO" } });
+      await tx.oTHistorialEstado.create({
+        data: {
+          ordenDeTrabajoId: otId,
+          actorId: user.id,
+          estadoAnterior: ot.estado,
+          estadoNuevo: "DERIVADA_EXTERNO",
+        },
+      });
+      await tx.oTDerivacionExterna.upsert({
+        where: { ordenDeTrabajoId: otId },
+        create: {
+          ordenDeTrabajoId: otId,
+          tallerExternoId: parsed.data.tallerExternoId,
+          presupuestoMonto: parsed.data.presupuestoMonto,
+          fechaEstimadaEntrega: parsed.data.fechaEstimadaEntrega,
+        },
+        update: {
+          tallerExternoId: parsed.data.tallerExternoId,
+          presupuestoMonto: parsed.data.presupuestoMonto,
+          fechaEstimadaEntrega: parsed.data.fechaEstimadaEntrega,
+          estadoExterno: "ENVIADO",
+        },
+      });
     });
-    await tx.oTDerivacionExterna.upsert({
-      where: { ordenDeTrabajoId: otId },
-      create: {
-        ordenDeTrabajoId: otId,
-        tallerExternoId: parsed.tallerExternoId,
-        presupuestoMonto: parsed.presupuestoMonto,
-        fechaEstimadaEntrega: parsed.fechaEstimadaEntrega,
-      },
-      update: {
-        tallerExternoId: parsed.tallerExternoId,
-        presupuestoMonto: parsed.presupuestoMonto,
-        fechaEstimadaEntrega: parsed.fechaEstimadaEntrega,
-        estadoExterno: "ENVIADO",
-      },
-    });
-  });
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No se pudo derivar la orden de trabajo." };
+  }
 
   revalidatePath("/ordenes-trabajo");
   revalidatePath(`/ordenes-trabajo/${otId}`);
@@ -662,15 +706,34 @@ const actualizarDerivacionSchema = z.object({
 export async function actualizarDerivacionExterna(
   derivacionId: string,
   otId: string,
+  _prevState: AccionOTState,
   formData: FormData
-) {
+): Promise<AccionOTState> {
   const { prisma } = await requireRole(ROLES_ADMIN_MANTENIMIENTO);
-  const parsed = actualizarDerivacionSchema.parse(Object.fromEntries(formData));
+  const parsed = actualizarDerivacionSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+  }
 
-  await prisma.oTDerivacionExterna.update({
-    where: { id: derivacionId },
-    data: parsed,
-  });
+  // OTDerivacionExterna no tiene empresaId propio (cuelga de OrdenDeTrabajo),
+  // así que el cliente scoped no la filtra por tenant sola — hay que validar
+  // a mano que la OT es de esta empresa y que la derivación es realmente de
+  // esa OT, para que nadie pueda tocar la derivación de otra empresa u otra
+  // orden de trabajo adivinando el id.
+  try {
+    await prisma.ordenDeTrabajo.findUniqueOrThrow({ where: { id: otId } });
+    const derivacion = await prisma.oTDerivacionExterna.findUniqueOrThrow({ where: { id: derivacionId } });
+    if (derivacion.ordenDeTrabajoId !== otId) {
+      return { error: "Esta derivación no pertenece a la orden de trabajo indicada." };
+    }
+
+    await prisma.oTDerivacionExterna.update({
+      where: { id: derivacionId },
+      data: parsed.data,
+    });
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No se pudo guardar el seguimiento." };
+  }
 
   revalidatePath(`/ordenes-trabajo/${otId}`);
 }
@@ -699,7 +762,11 @@ export async function agregarRepuesto(
     throw new AutorizacionError("No podés modificar los repuestos de esta orden de trabajo.");
   }
 
-  const parsed = repuestoSchema.parse(Object.fromEntries(formData));
+  const parsedResult = repuestoSchema.safeParse(Object.fromEntries(formData));
+  if (!parsedResult.success) {
+    return { error: parsedResult.error.issues[0]?.message ?? "Datos inválidos." };
+  }
+  const parsed = parsedResult.data;
   const articuloPanolId = parsed.articuloPanolId || undefined;
   const otItemPreventivoId = parsed.otItemPreventivoId || undefined;
 
@@ -708,7 +775,11 @@ export async function agregarRepuesto(
   // tira error y no queda un OTRepuesto huérfano sin stock descontado.
   let mensaje: string | undefined;
   if (articuloPanolId) {
-    await descontarStockYVerificarMinimo(prisma, user.empresaId!, articuloPanolId, parsed.cantidad);
+    try {
+      await descontarStockYVerificarMinimo(prisma, user.empresaId!, articuloPanolId, parsed.cantidad);
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "No se pudo descontar el stock del pañol." };
+    }
     mensaje = `Se usó ${parsed.cantidad} de ${parsed.descripcion} del pañol.`;
   }
 

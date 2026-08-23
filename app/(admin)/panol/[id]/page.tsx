@@ -52,7 +52,13 @@ export default async function ArticuloDetallePage({
         </div>
         <ArticuloForm
           action={actualizarConId}
-          defaultValues={articulo}
+          defaultValues={{
+            nombre: articulo.nombre,
+            descripcion: articulo.descripcion,
+            unidadMedida: articulo.unidadMedida,
+            stockActual: articulo.stockActual,
+            stockMinimo: articulo.stockMinimo,
+          }}
           submitLabel="Guardar cambios"
         />
       </div>

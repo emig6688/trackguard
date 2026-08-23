@@ -31,13 +31,23 @@ export async function registrarCargaCombustible(
   const kmOdometro = Number(formData.get("kmOdometro"));
   const litrosCargados = Number(formData.get("litrosCargados"));
   const montoTotal = Number(formData.get("montoTotal"));
-  if (!Number.isFinite(kmOdometro) || !Number.isFinite(litrosCargados) || !Number.isFinite(montoTotal)) {
+  if (
+    !Number.isFinite(kmOdometro) ||
+    !Number.isFinite(litrosCargados) ||
+    !Number.isFinite(montoTotal) ||
+    kmOdometro < 0 ||
+    litrosCargados <= 0 ||
+    montoTotal <= 0
+  ) {
     return { error: "Completá km, litros y monto correctamente." };
   }
 
   const precioLitroRaw = formData.get("precioLitro");
   const precioLitro =
     typeof precioLitroRaw === "string" && precioLitroRaw !== "" ? Number(precioLitroRaw) : undefined;
+  if (precioLitro != null && (!Number.isFinite(precioLitro) || precioLitro <= 0)) {
+    return { error: "El precio por litro tiene que ser un número mayor a cero." };
+  }
   const estacionServicioRaw = formData.get("estacionServicio");
   const estacionServicio = typeof estacionServicioRaw === "string" ? estacionServicioRaw.trim() || undefined : undefined;
 

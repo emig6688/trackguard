@@ -13,6 +13,7 @@ import {
   usuariosDeEmpresaPorRol,
 } from "@/lib/permisos";
 import { optionalNumber } from "@/lib/zod-helpers";
+import { puedeMecanicoAccionar } from "@/lib/ot";
 import { generarNumeroCompra, notificarNuevaOrdenCompra } from "@/lib/panol";
 import { guardarArchivo } from "@/lib/storage";
 import {
@@ -106,6 +107,17 @@ export async function crearOrdenCompraManual(
   ]);
   const errorItems = await validarItemsFilas(prisma, itemsFilas);
   if (errorItems) return { error: errorItems };
+
+  if (parsed.data.ordenDeTrabajoId) {
+    // findUniqueOrThrow ya viene scoped por tenant (ver tenant-prisma.ts):
+    // una OT de otra empresa tira acá antes de poder asociarla a esta compra.
+    const ot = await prisma.ordenDeTrabajo.findUniqueOrThrow({
+      where: { id: parsed.data.ordenDeTrabajoId },
+    });
+    if (user.rol === "MECANICO_INTERNO" && !puedeMecanicoAccionar(ot, user.id)) {
+      return { error: "Solo podés pedir compras para una orden de trabajo que tengas asignada." };
+    }
+  }
 
   const empresa = await prisma.empresa.findUniqueOrThrow({ where: { id: user.empresaId! } });
   const umbral = empresa.montoAutorizacionCompra;
@@ -219,6 +231,15 @@ export async function actualizarOrdenCompra(
   const errorItems = await validarItemsFilas(prisma, itemsFilas);
   if (errorItems) return { error: errorItems };
 
+  if (parsed.data.ordenDeTrabajoId) {
+    const ot = await prisma.ordenDeTrabajo.findUniqueOrThrow({
+      where: { id: parsed.data.ordenDeTrabajoId },
+    });
+    if (user.rol === "MECANICO_INTERNO" && !puedeMecanicoAccionar(ot, user.id)) {
+      return { error: "Solo podés pedir compras para una orden de trabajo que tengas asignada." };
+    }
+  }
+
   const empresa = await prisma.empresa.findUniqueOrThrow({ where: { id: user.empresaId! } });
   const umbral = empresa.montoAutorizacionCompra;
   const umbralMecanico =
@@ -330,11 +351,15 @@ export async function marcarCompraRealizada(
   formData: FormData
 ): Promise<RealizarCompraState> {
   const { user, prisma } = await requireRole(ROLES_COMPRAS);
-  const parsed = realizarSchema.parse(Object.fromEntries(formData));
+  const parsedResult = realizarSchema.safeParse(Object.fromEntries(formData));
+  if (!parsedResult.success) {
+    return { error: parsedResult.error.issues[0]?.message ?? "Datos inválidos." };
+  }
+  const parsed = parsedResult.data;
 
   const compraActual = await prisma.ordenCompra.findUniqueOrThrow({
     where: { id: compraId },
-    include: { items: { orderBy: { id: "asc" } } },
+    include: { items: { orderBy: { id: "asc" } }, creadoPor: { select: { rol: true } } },
   });
   if (compraActual.estadoAutorizacion === "PENDIENTE" || compraActual.estadoAutorizacion === "RECHAZADA") {
     throw new AutorizacionError("Esta compra está sujeta a autorización de gerencia y todavía no fue aprobada.");
@@ -352,7 +377,8 @@ export async function marcarCompraRealizada(
   // tope (o no haberse cargado ninguno, si la función estaba desactivada en
   // ese momento) — si el monto real de la compra ahora lo supera, no se
   // puede confirmar la carga directo: queda pendiente de autorización de
-  // gerencia, igual que si se hubiera estimado así desde el principio.
+  // gerencia (o de mantenimiento, si la creó un mecánico interno), igual
+  // que si se hubiera estimado así desde el principio.
   if (compraActual.estadoAutorizacion === "NO_REQUERIDA" && parsed.montoTotal != null) {
     const empresa = await prisma.empresa.findUniqueOrThrow({ where: { id: user.empresaId! } });
     const umbral = empresa.montoAutorizacionCompra;
@@ -370,6 +396,30 @@ export async function marcarCompraRealizada(
       revalidatePath("/autorizaciones");
       return {
         error: `El monto ingresado ($${parsed.montoTotal}) supera el tope de autorización configurado — esta compra quedó pendiente de que gerencia la apruebe. Podés subir presupuestos mientras tanto; una vez aprobada, volvé a cargarla.`,
+      };
+    }
+  }
+  if (
+    compraActual.estadoAutorizacionMantenimiento === "NO_REQUERIDA" &&
+    compraActual.creadoPor?.rol === "MECANICO_INTERNO" &&
+    parsed.montoTotal != null
+  ) {
+    const empresa = await prisma.empresa.findUniqueOrThrow({ where: { id: user.empresaId! } });
+    const umbralMecanico = empresa.montoAutorizacionCompraMecanico;
+    if (umbralMecanico != null && parsed.montoTotal > Number(umbralMecanico)) {
+      await prisma.ordenCompra.update({
+        where: { id: compraId },
+        data: { estadoAutorizacionMantenimiento: "PENDIENTE", montoEstimado: parsed.montoTotal },
+      });
+      await notificarCompraMecanicoPendienteAutorizacion(prisma, user.empresaId!, {
+        id: compraId,
+        numero: compraActual.numero,
+        montoEstimado: String(parsed.montoTotal),
+      });
+      revalidatePath("/compras");
+      revalidatePath("/autorizaciones");
+      return {
+        error: `El monto ingresado ($${parsed.montoTotal}) supera el tope de autorización de mantenimiento configurado — esta compra quedó pendiente de que encargado de mantenimiento la apruebe. Volvé a cargarla una vez aprobada.`,
       };
     }
   }
@@ -501,7 +551,11 @@ export async function cargarFacturaCompra(
   formData: FormData
 ): Promise<CargarFacturaCompraState> {
   const { user, prisma } = await requireRole(ROLES_COMPRAS);
-  const parsed = cargarFacturaCompraSchema.parse(Object.fromEntries(formData));
+  const parsedResult = cargarFacturaCompraSchema.safeParse(Object.fromEntries(formData));
+  if (!parsedResult.success) {
+    return { error: parsedResult.error.issues[0]?.message ?? "Datos inválidos." };
+  }
+  const parsed = parsedResult.data;
 
   const file = formData.get("archivoFactura");
   if (!(file instanceof File) || file.size === 0) {
@@ -571,6 +625,14 @@ export async function subirPresupuestoCompra(
 
 export async function aprobarCompra(compraId: string, presupuestoId?: string) {
   const { user, prisma } = await requireRole(ROLES_AUTORIZAR_COMPRA);
+
+  // Confirma que la compra es de esta empresa (findUniqueOrThrow ya viene
+  // scoped por tenant) ANTES de leer el presupuesto — PresupuestoCompra no
+  // tiene empresaId propio (cuelga de OrdenCompra), así que sin este chequeo
+  // se podría pasar un presupuestoId de otra empresa.
+  if (presupuestoId) {
+    await prisma.ordenCompra.findUniqueOrThrow({ where: { id: compraId } });
+  }
 
   if (presupuestoId) {
     const presupuesto = await prisma.presupuestoCompra.findUniqueOrThrow({

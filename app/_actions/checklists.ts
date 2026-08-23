@@ -102,13 +102,19 @@ export async function registrarChecklist(
       });
     } else {
       const numero = await generarNumeroOT(prisma, empresaId);
+      const empresa = await prisma.empresa.findUniqueOrThrow({
+        where: { id: empresaId },
+        select: { autoAprobacionMecanicosActiva: true },
+      });
+      const estadoInicial = empresa.autoAprobacionMecanicosActiva ? "APROBADA" : "PENDIENTE_APROBACION";
+
       const otCreada = await prisma.ordenDeTrabajo.create({
         data: {
           empresaId,
           numero,
           vehiculoId,
           origen: "CHECKLIST",
-          estado: "PENDIENTE_APROBACION",
+          estado: estadoInicial,
           prioridad: "ALTA",
           areaReparacion,
           titulo,
@@ -116,7 +122,7 @@ export async function registrarChecklist(
           checklistRealizadoId: checklist.id,
           creadoPorId: chofer.id,
           historial: {
-            create: { actorId: chofer.id, estadoAnterior: null, estadoNuevo: "PENDIENTE_APROBACION" },
+            create: { actorId: chofer.id, estadoAnterior: null, estadoNuevo: estadoInicial },
           },
         },
       });
