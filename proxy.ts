@@ -1,14 +1,8 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import { homeForRol } from "@/lib/rutas-por-rol";
 
 const PUBLIC_PATHS = ["/login"];
-
-function homeForRol(rol: string) {
-  if (rol === "SUPERADMIN") return "/plataforma";
-  if (rol === "CHOFER") return "/mobile/inicio";
-  if (rol === "GUARDIA") return "/guardia";
-  return "/dashboard";
-}
 
 export default auth((req) => {
   const { nextUrl } = req;

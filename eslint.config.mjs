@@ -28,7 +28,15 @@ const eslintConfig = defineConfig([
       "app/api/**/*.{ts,tsx}",
       "components/**/*.{ts,tsx}",
     ],
-    ignores: ["app/api/cron/**", "app/(plataforma)/**"],
+    ignores: [
+      "app/api/cron/**",
+      "app/(plataforma)/**",
+      // Login todavía no sabe a qué empresa pertenece quien intenta entrar
+      // (mismo motivo que auth.ts en la raíz, que hace la misma búsqueda
+      // cross-tenant en su authorize()) — no hay un empresaId por el que
+      // scopear todavía.
+      "app/_actions/auth.ts",
+    ],
     rules: {
       "no-restricted-imports": [
         "error",

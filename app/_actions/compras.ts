@@ -14,6 +14,7 @@ import {
 } from "@/lib/permisos";
 import { optionalNumber } from "@/lib/zod-helpers";
 import { puedeMecanicoAccionar } from "@/lib/ot";
+import { calcularRequiereAutorizacion } from "@/lib/compras";
 import { generarNumeroCompra, notificarNuevaOrdenCompra } from "@/lib/panol";
 import { guardarArchivo } from "@/lib/storage";
 import {
@@ -50,10 +51,6 @@ const compraManualSchema = z.object({
   otItemPreventivoId: z.string().trim().optional(),
   observaciones: z.string().trim().optional(),
 });
-
-function calcularRequiereAutorizacion(montoEstimado: number | undefined, umbral: Prisma.Decimal | null) {
-  return umbral != null && montoEstimado != null && montoEstimado > Number(umbral);
-}
 
 /**
  * Valida las filas de repuestos de un formulario de OC (crear o editar):
