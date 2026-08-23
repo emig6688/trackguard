@@ -425,76 +425,110 @@ export default async function EstadisticasPage({
                   )}
 
                   {reporteTodos && (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="sticky left-0 z-10 bg-card">Métrica</TableHead>
-                          {reporteTodos.map((r) => (
-                            <TableHead key={r.choferNombre}>{r.choferNombre}</TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell className="sticky left-0 z-10 bg-card font-medium">Días operados</TableCell>
-                          {reporteTodos.map((r) => (
-                            <TableCell key={r.choferNombre} className="tabular-nums">
-                              {r.diasOperados}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="sticky left-0 z-10 bg-card font-medium">
-                            Checklist pre-salida cumplidos
-                          </TableCell>
-                          {reporteTodos.map((r) => (
-                            <TableCell key={r.choferNombre} className="tabular-nums">
-                              {r.checklistPresalidaCumplidos} / {r.diasOperados}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="sticky left-0 z-10 bg-card font-medium">
-                            Cierres de ruta cumplidos
-                          </TableCell>
-                          {reporteTodos.map((r) => (
-                            <TableCell key={r.choferNombre} className="tabular-nums">
-                              {r.cierresRutaCumplidos} / {r.diasOperados}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="sticky left-0 z-10 bg-card font-medium">
-                            Veces con el tanque sin llenar
-                          </TableCell>
-                          {reporteTodos.map((r) => (
-                            <TableCell key={r.choferNombre} className="tabular-nums">
-                              {r.tanqueNoLlenoCount}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="sticky left-0 z-10 bg-card font-medium">
-                            Roturas reportadas (OT correctivas)
-                          </TableCell>
-                          {reporteTodos.map((r) => (
-                            <TableCell key={r.choferNombre} className="tabular-nums">
-                              {r.roturasReportadas}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="sticky left-0 z-10 bg-card font-medium">
-                            Observaciones del guardia por incumplimiento
-                          </TableCell>
-                          {reporteTodos.map((r) => (
-                            <TableCell key={r.choferNombre} className="tabular-nums">
-                              {r.observacionesGuardia}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      </TableBody>
-                    </Table>
+                    <>
+                      {/* Mobile: una tarjeta por chofer (la comparación lado a lado no entra sin scroll). */}
+                      <div className="space-y-3 md:hidden">
+                        {reporteTodos.map((r) => (
+                          <div key={r.choferNombre} className="rounded-lg border p-3 text-sm">
+                            <p className="mb-2 font-medium">{r.choferNombre}</p>
+                            <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-xs">
+                              <span className="text-muted-foreground">Días operados</span>
+                              <span className="text-right tabular-nums">{r.diasOperados}</span>
+                              <span className="text-muted-foreground">Checklist pre-salida</span>
+                              <span className="text-right tabular-nums">
+                                {r.checklistPresalidaCumplidos} / {r.diasOperados}
+                              </span>
+                              <span className="text-muted-foreground">Cierres de ruta</span>
+                              <span className="text-right tabular-nums">
+                                {r.cierresRutaCumplidos} / {r.diasOperados}
+                              </span>
+                              <span className="text-muted-foreground">Tanque sin llenar</span>
+                              <span className="text-right tabular-nums">{r.tanqueNoLlenoCount}</span>
+                              <span className="text-muted-foreground">Roturas reportadas</span>
+                              <span className="text-right tabular-nums">{r.roturasReportadas}</span>
+                              <span className="text-muted-foreground">Obs. de guardia</span>
+                              <span className="text-right tabular-nums">{r.observacionesGuardia}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Desktop: comparación lado a lado, todos los choferes como columnas. */}
+                      <div className="hidden md:block">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="sticky left-0 z-10 bg-card">Métrica</TableHead>
+                              {reporteTodos.map((r) => (
+                                <TableHead key={r.choferNombre}>{r.choferNombre}</TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow>
+                              <TableCell className="sticky left-0 z-10 bg-card font-medium">
+                                Días operados
+                              </TableCell>
+                              {reporteTodos.map((r) => (
+                                <TableCell key={r.choferNombre} className="tabular-nums">
+                                  {r.diasOperados}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="sticky left-0 z-10 bg-card font-medium">
+                                Checklist pre-salida cumplidos
+                              </TableCell>
+                              {reporteTodos.map((r) => (
+                                <TableCell key={r.choferNombre} className="tabular-nums">
+                                  {r.checklistPresalidaCumplidos} / {r.diasOperados}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="sticky left-0 z-10 bg-card font-medium">
+                                Cierres de ruta cumplidos
+                              </TableCell>
+                              {reporteTodos.map((r) => (
+                                <TableCell key={r.choferNombre} className="tabular-nums">
+                                  {r.cierresRutaCumplidos} / {r.diasOperados}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="sticky left-0 z-10 bg-card font-medium">
+                                Veces con el tanque sin llenar
+                              </TableCell>
+                              {reporteTodos.map((r) => (
+                                <TableCell key={r.choferNombre} className="tabular-nums">
+                                  {r.tanqueNoLlenoCount}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="sticky left-0 z-10 bg-card font-medium">
+                                Roturas reportadas (OT correctivas)
+                              </TableCell>
+                              {reporteTodos.map((r) => (
+                                <TableCell key={r.choferNombre} className="tabular-nums">
+                                  {r.roturasReportadas}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="sticky left-0 z-10 bg-card font-medium">
+                                Observaciones del guardia por incumplimiento
+                              </TableCell>
+                              {reporteTodos.map((r) => (
+                                <TableCell key={r.choferNombre} className="tabular-nums">
+                                  {r.observacionesGuardia}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </>
                   )}
                 </>
               )}

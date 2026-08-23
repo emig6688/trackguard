@@ -23,22 +23,38 @@ export type FilaCompraPdf = {
   montoReal: string;
 };
 
+export type FilaComposicionPdf = {
+  numero: string;
+  estado: string;
+  fecha: string;
+  camion: string;
+  descripcion: string;
+  articulo: string;
+  cantidadSolicitada: string;
+  cantidadRecibida: string;
+};
+
 export function ReporteComprasDocument({
   filas,
+  filasComposicion,
   periodo,
 }: {
   filas: FilaCompraPdf[];
+  filasComposicion: FilaComposicionPdf[];
   periodo: { desde: Date; hasta: Date };
 }) {
   const hoy = new Date().toLocaleDateString("es-AR");
+  const subtitulo = (
+    <Text style={styles.subtitle}>
+      {periodo.desde.toLocaleDateString("es-AR")} – {periodo.hasta.toLocaleDateString("es-AR")} · Generado el{" "}
+      {hoy} · Incluye pendientes de comprar y ya realizadas
+    </Text>
+  );
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={styles.page}>
         <Text style={styles.h1}>Órdenes de compra — TruckGuard</Text>
-        <Text style={styles.subtitle}>
-          {periodo.desde.toLocaleDateString("es-AR")} – {periodo.hasta.toLocaleDateString("es-AR")} · Generado el{" "}
-          {hoy} · Incluye pendientes de comprar y ya realizadas
-        </Text>
+        {subtitulo}
         <View style={styles.table}>
           <View style={styles.trHead}>
             <Text style={styles.th}>Número</Text>
@@ -60,6 +76,35 @@ export function ReporteComprasDocument({
               <Text style={styles.td}>{f.proveedor}</Text>
               <Text style={styles.td}>{f.montoEstimado}</Text>
               <Text style={styles.td}>{f.montoReal}</Text>
+            </View>
+          ))}
+        </View>
+        <Text style={styles.footer}>TruckGuard · Reporte generado automáticamente</Text>
+      </Page>
+      <Page size="A4" orientation="landscape" style={styles.page}>
+        <Text style={styles.h1}>Composición de las órdenes de compra — TruckGuard</Text>
+        {subtitulo}
+        <View style={styles.table}>
+          <View style={styles.trHead}>
+            <Text style={styles.th}>Número de OC</Text>
+            <Text style={styles.th}>Estado</Text>
+            <Text style={styles.th}>Fecha solicitud</Text>
+            <Text style={styles.th}>Camión</Text>
+            <Text style={{ ...styles.th, flex: 2 }}>Ítem</Text>
+            <Text style={styles.th}>Artículo de pañol</Text>
+            <Text style={styles.th}>Cant. solicitada</Text>
+            <Text style={styles.th}>Cant. recibida</Text>
+          </View>
+          {filasComposicion.map((f, i) => (
+            <View key={i} style={styles.tr}>
+              <Text style={styles.td}>{f.numero}</Text>
+              <Text style={styles.td}>{f.estado}</Text>
+              <Text style={styles.td}>{f.fecha}</Text>
+              <Text style={styles.td}>{f.camion}</Text>
+              <Text style={{ ...styles.td, flex: 2 }}>{f.descripcion}</Text>
+              <Text style={styles.td}>{f.articulo}</Text>
+              <Text style={styles.td}>{f.cantidadSolicitada}</Text>
+              <Text style={styles.td}>{f.cantidadRecibida}</Text>
             </View>
           ))}
         </View>

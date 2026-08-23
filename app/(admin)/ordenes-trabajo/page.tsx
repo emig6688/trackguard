@@ -193,11 +193,11 @@ export default async function OrdenesTrabajoPage({
   return (
     <div className="space-y-6">
       <BackToDashboard />
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">
           {esMecanico ? "Mis órdenes de trabajo" : "Órdenes de trabajo"}
         </h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {!esMecanico && (
             <>
               <a href="/api/export/ordenes-trabajo-pdf" className={buttonVariants({ variant: "outline" })}>
@@ -255,90 +255,140 @@ export default async function OrdenesTrabajoPage({
         />
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="sticky left-0 z-10 max-w-[100px] bg-card md:max-w-none">
-              Número / vehículo
-            </TableHead>
-            <TableHead className="max-w-[130px] md:max-w-none">Título</TableHead>
-            <TableHead className="hidden md:table-cell">Prioridad</TableHead>
-            <TableHead className="hidden md:table-cell">Asignado / fecha</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead>Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {ordenes.map((ot) => {
-            const atrasada = otEstaAtrasada(ot, ahoraDate);
-            const fechaMostrada = fechaReferenciaAtraso(ot);
-            const puedeComenzar =
-              ot.estado === "APROBADA" &&
-              (puedeGestionar || (esMecanico && puedeMecanicoAccionar(ot, session.id)));
-            const puedeFinalizar =
-              ot.estado === "EN_PROGRESO" &&
-              (puedeGestionar || (esMecanico && puedeMecanicoAccionar(ot, session.id)));
-            return (
-              <TableRow key={ot.id} className={PRIORIDAD_ROW_BG[ot.prioridad]}>
-                <TableCell
-                  className={`sticky left-0 z-10 max-w-[100px] whitespace-normal bg-card md:max-w-none md:whitespace-nowrap ${PRIORIDAD_ACCENT_CLASS[ot.prioridad]}`}
+      {(() => {
+        const filas = ordenes.map((ot) => {
+          const atrasada = otEstaAtrasada(ot, ahoraDate);
+          const fechaMostrada = fechaReferenciaAtraso(ot);
+          const puedeComenzar =
+            ot.estado === "APROBADA" &&
+            (puedeGestionar || (esMecanico && puedeMecanicoAccionar(ot, session.id)));
+          const puedeFinalizar =
+            ot.estado === "EN_PROGRESO" &&
+            (puedeGestionar || (esMecanico && puedeMecanicoAccionar(ot, session.id)));
+          return { ot, atrasada, fechaMostrada, puedeComenzar, puedeFinalizar };
+        });
+
+        if (filas.length === 0) {
+          return <p className="text-center text-sm text-muted-foreground">No hay órdenes de trabajo para mostrar.</p>;
+        }
+
+        return (
+          <>
+            {/* Mobile: una tarjeta por OT, todo visible sin scroll horizontal (mismo idioma que /cronograma). */}
+            <div className="space-y-2 md:hidden">
+              {filas.map(({ ot, atrasada, fechaMostrada, puedeComenzar, puedeFinalizar }) => (
+                <div
+                  key={ot.id}
+                  className={`flex items-start justify-between gap-3 rounded-lg border p-3 text-sm ${PRIORIDAD_ROW_BG[ot.prioridad]}`}
                 >
-                  <Link href={`/ordenes-trabajo/${ot.id}`} className="font-medium hover:underline">
-                    {ot.numero}
-                  </Link>
-                  <p className="text-xs text-muted-foreground">{ot.vehiculo.patente}</p>
-                  <Badge variant={PRIORIDAD_VARIANT[ot.prioridad]} className="mt-1 md:hidden">
-                    {PRIORIDAD_LABEL[ot.prioridad]}
-                  </Badge>
-                </TableCell>
-                <TableCell className="max-w-[130px] whitespace-normal md:max-w-none md:whitespace-nowrap">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                    <span>{ot.titulo}</span>
-                    <OrigenOTBadge origen={ot.origen} />
-                    {ot.itemsPreventivos.length > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        {ot.itemsPreventivos.filter((i) => i.resultado !== "PENDIENTE").length}/
-                        {ot.itemsPreventivos.length} revisados
-                      </span>
+                  <div className={`min-w-0 space-y-1 ${PRIORIDAD_ACCENT_CLASS[ot.prioridad]}`}>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <Link href={`/ordenes-trabajo/${ot.id}`} className="font-medium hover:underline">
+                        {ot.numero}
+                      </Link>
+                      <span className="text-xs text-muted-foreground">{ot.vehiculo.patente}</span>
+                      <Badge variant={PRIORIDAD_VARIANT[ot.prioridad]}>{PRIORIDAD_LABEL[ot.prioridad]}</Badge>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span>{ot.titulo}</span>
+                      <OrigenOTBadge origen={ot.origen} />
+                      {ot.itemsPreventivos.length > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {ot.itemsPreventivos.filter((i) => i.resultado !== "PENDIENTE").length}/
+                          {ot.itemsPreventivos.length} revisados
+                        </span>
+                      )}
+                    </div>
+                    {ot.areaReparacion && (
+                      <p className="text-xs text-muted-foreground">{AREA_REPARACION_LABEL[ot.areaReparacion]}</p>
+                    )}
+                    {(ot.asignadoA || fechaMostrada) && (
+                      <p className={`text-xs ${atrasada ? "font-medium text-destructive" : "text-muted-foreground"}`}>
+                        {ot.asignadoA?.nombre ?? "Sin asignar"}
+                        {fechaMostrada && ` · ${fechaMostrada.toLocaleDateString("es-AR")}`}
+                        {atrasada ? " · Atrasada" : ""}
+                      </p>
                     )}
                   </div>
-                  {ot.areaReparacion && (
-                    <p className="text-xs text-muted-foreground">{AREA_REPARACION_LABEL[ot.areaReparacion]}</p>
-                  )}
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
-                  <Badge variant={PRIORIDAD_VARIANT[ot.prioridad]}>{PRIORIDAD_LABEL[ot.prioridad]}</Badge>
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
-                  <p>{ot.asignadoA?.nombre ?? "—"}</p>
-                  {fechaMostrada && (
-                    <p className={`text-xs ${atrasada ? "font-medium text-destructive" : "text-muted-foreground"}`}>
-                      {fechaMostrada.toLocaleDateString("es-AR")}
-                      {atrasada ? " · Atrasada" : ""}
-                    </p>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Badge variant={ESTADO_VARIANT[ot.estado]}>{ESTADO_LABEL[ot.estado]}</Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    {puedeComenzar && <IniciarOTDialog otId={ot.id} numero={ot.numero} />}
-                    {puedeFinalizar && <FinalizarOTDialog otId={ot.id} numero={ot.numero} />}
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    <Badge variant={ESTADO_VARIANT[ot.estado]}>{ESTADO_LABEL[ot.estado]}</Badge>
+                    {(puedeComenzar || puedeFinalizar) && (
+                      <div className="flex flex-col items-end gap-1">
+                        {puedeComenzar && <IniciarOTDialog otId={ot.id} numero={ot.numero} />}
+                        {puedeFinalizar && <FinalizarOTDialog otId={ot.id} numero={ot.numero} />}
+                      </div>
+                    )}
                   </div>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-          {ordenes.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={6} className="whitespace-normal text-center text-muted-foreground">
-                No hay órdenes de trabajo para mostrar.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop: tabla completa. */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Número / vehículo</TableHead>
+                    <TableHead>Título</TableHead>
+                    <TableHead>Prioridad</TableHead>
+                    <TableHead>Asignado / fecha</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filas.map(({ ot, atrasada, fechaMostrada, puedeComenzar, puedeFinalizar }) => (
+                    <TableRow key={ot.id} className={PRIORIDAD_ROW_BG[ot.prioridad]}>
+                      <TableCell className={PRIORIDAD_ACCENT_CLASS[ot.prioridad]}>
+                        <Link href={`/ordenes-trabajo/${ot.id}`} className="font-medium hover:underline">
+                          {ot.numero}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">{ot.vehiculo.patente}</p>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                          <span>{ot.titulo}</span>
+                          <OrigenOTBadge origen={ot.origen} />
+                          {ot.itemsPreventivos.length > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              {ot.itemsPreventivos.filter((i) => i.resultado !== "PENDIENTE").length}/
+                              {ot.itemsPreventivos.length} revisados
+                            </span>
+                          )}
+                        </div>
+                        {ot.areaReparacion && (
+                          <p className="text-xs text-muted-foreground">{AREA_REPARACION_LABEL[ot.areaReparacion]}</p>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={PRIORIDAD_VARIANT[ot.prioridad]}>{PRIORIDAD_LABEL[ot.prioridad]}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <p>{ot.asignadoA?.nombre ?? "—"}</p>
+                        {fechaMostrada && (
+                          <p className={`text-xs ${atrasada ? "font-medium text-destructive" : "text-muted-foreground"}`}>
+                            {fechaMostrada.toLocaleDateString("es-AR")}
+                            {atrasada ? " · Atrasada" : ""}
+                          </p>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={ESTADO_VARIANT[ot.estado]}>{ESTADO_LABEL[ot.estado]}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {puedeComenzar && <IniciarOTDialog otId={ot.id} numero={ot.numero} />}
+                          {puedeFinalizar && <FinalizarOTDialog otId={ot.id} numero={ot.numero} />}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 }

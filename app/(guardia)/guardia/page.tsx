@@ -89,19 +89,14 @@ export default async function GuardiaPage({
         </Link>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-left">
-            <tr>
-              <th className="sticky left-0 z-10 bg-muted/50 p-3 font-medium">Vehículo</th>
-              <th className="p-3 font-medium">Checklist pre-salida</th>
-              <th className="p-3 font-medium">Observación (salida)</th>
-              <th className="p-3 font-medium">Cierre de ruta</th>
-              <th className="p-3 font-medium">Observación (regreso)</th>
-              <th className="p-3 font-medium">No salió a reparto</th>
-            </tr>
-          </thead>
-          <tbody>
+      {vehiculosFiltrados.length === 0 ? (
+        <p className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+          {vehiculos.length === 0 ? "No hay vehículos activos." : "Ningún vehículo coincide con el filtro."}
+        </p>
+      ) : (
+        <>
+          {/* Mobile: una tarjeta por vehículo, todo visible sin scroll horizontal. */}
+          <div className="space-y-3 md:hidden">
             {vehiculosFiltrados.map((v) => {
               const checklist = checklistPorVehiculo.get(v.id);
               const evento = eventoPorVehiculo.get(v.id);
@@ -110,77 +105,139 @@ export default async function GuardiaPage({
               const noOperado = noOperadoPorVehiculo.get(v.id) ?? null;
 
               return (
-                <tr key={v.id} className="border-t align-top">
-                  <td className="sticky left-0 z-10 whitespace-nowrap border-r bg-card p-3">
+                <div key={v.id} className="space-y-3 rounded-lg border p-3 text-sm">
+                  <div>
                     <span className="font-medium">{v.patente}</span>
                     {checklist && (
-                      <span className="block text-xs text-muted-foreground">{checklist.chofer.nombre}</span>
+                      <span className="text-xs text-muted-foreground"> · {checklist.chofer.nombre}</span>
                     )}
-                  </td>
+                  </div>
 
-                  <td className="p-3">
-                    {checklist ? (
-                      <Badge variant="success">Hecho a las {hora(checklist.fechaHora)}</Badge>
-                    ) : noOperado ? (
-                      <Badge variant="outline">No operó</Badge>
-                    ) : (
-                      <Badge variant="warning">Pendiente</Badge>
-                    )}
-                  </td>
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">Checklist pre-salida</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {checklist ? (
+                        <Badge variant="success">Hecho a las {hora(checklist.fechaHora)}</Badge>
+                      ) : noOperado ? (
+                        <Badge variant="outline">No operó</Badge>
+                      ) : (
+                        <Badge variant="warning">Pendiente</Badge>
+                      )}
+                      <ObservacionCell vehiculoId={v.id} etapa="SALIDA" valorInicial={obsSalida} />
+                    </div>
+                  </div>
 
-                  <td className="p-3">
-                    <ObservacionCell vehiculoId={v.id} etapa="SALIDA" valorInicial={obsSalida} />
-                  </td>
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">Cierre de ruta</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {evento ? (
+                        <>
+                          <Badge variant="success">Hecho a las {hora(evento.fechaHora)}</Badge>
+                          {evento.tanqueLleno === true && <Badge variant="success">Tanque lleno</Badge>}
+                          {evento.tanqueLleno === false && <Badge variant="warning">Tanque no lleno</Badge>}
+                          {evento.tanqueLleno === null && <Badge variant="outline">Sin dato de tanque</Badge>}
+                        </>
+                      ) : noOperado ? (
+                        <Badge variant="outline">No operó</Badge>
+                      ) : (
+                        <Badge variant="warning">Pendiente</Badge>
+                      )}
+                      <ObservacionCell vehiculoId={v.id} etapa="REGRESO" valorInicial={obsRegreso} />
+                    </div>
+                  </div>
 
-                  <td className="p-3">
-                    {evento ? (
-                      <div className="space-y-1">
-                        <Badge variant="success">Hecho a las {hora(evento.fechaHora)}</Badge>
-                        {evento.tanqueLleno === true && (
-                          <Badge variant="success" className="block w-fit">
-                            Tanque lleno
-                          </Badge>
-                        )}
-                        {evento.tanqueLleno === false && (
-                          <Badge variant="warning" className="block w-fit">
-                            Tanque no lleno
-                          </Badge>
-                        )}
-                        {evento.tanqueLleno === null && (
-                          <Badge variant="outline" className="block w-fit">
-                            Sin dato de tanque
-                          </Badge>
-                        )}
-                      </div>
-                    ) : noOperado ? (
-                      <Badge variant="outline">No operó</Badge>
-                    ) : (
-                      <Badge variant="warning">Pendiente</Badge>
-                    )}
-                  </td>
-
-                  <td className="p-3">
-                    <ObservacionCell vehiculoId={v.id} etapa="REGRESO" valorInicial={obsRegreso} />
-                  </td>
-
-                  <td className="p-3">
-                    <DiaNoOperadoControl vehiculoId={v.id} marcado={noOperado} />
-                  </td>
-                </tr>
+                  <DiaNoOperadoControl vehiculoId={v.id} marcado={noOperado} />
+                </div>
               );
             })}
-            {vehiculosFiltrados.length === 0 && (
-              <tr>
-                <td colSpan={6} className="p-6 text-center text-muted-foreground">
-                  {vehiculos.length === 0
-                    ? "No hay vehículos activos."
-                    : "Ningún vehículo coincide con el filtro."}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+          </div>
+
+          {/* Desktop: tabla completa. */}
+          <div className="hidden overflow-x-auto rounded-lg border md:block">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-left">
+                <tr>
+                  <th className="sticky left-0 z-10 bg-muted/50 p-3 font-medium">Vehículo</th>
+                  <th className="p-3 font-medium">Checklist pre-salida</th>
+                  <th className="p-3 font-medium">Observación (salida)</th>
+                  <th className="p-3 font-medium">Cierre de ruta</th>
+                  <th className="p-3 font-medium">Observación (regreso)</th>
+                  <th className="p-3 font-medium">No salió a reparto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vehiculosFiltrados.map((v) => {
+                  const checklist = checklistPorVehiculo.get(v.id);
+                  const evento = eventoPorVehiculo.get(v.id);
+                  const obsSalida = obsPorVehiculoEtapa.get(`${v.id}_SALIDA`) ?? "";
+                  const obsRegreso = obsPorVehiculoEtapa.get(`${v.id}_REGRESO`) ?? "";
+                  const noOperado = noOperadoPorVehiculo.get(v.id) ?? null;
+
+                  return (
+                    <tr key={v.id} className="border-t align-top">
+                      <td className="sticky left-0 z-10 whitespace-nowrap border-r bg-card p-3">
+                        <span className="font-medium">{v.patente}</span>
+                        {checklist && (
+                          <span className="block text-xs text-muted-foreground">{checklist.chofer.nombre}</span>
+                        )}
+                      </td>
+
+                      <td className="p-3">
+                        {checklist ? (
+                          <Badge variant="success">Hecho a las {hora(checklist.fechaHora)}</Badge>
+                        ) : noOperado ? (
+                          <Badge variant="outline">No operó</Badge>
+                        ) : (
+                          <Badge variant="warning">Pendiente</Badge>
+                        )}
+                      </td>
+
+                      <td className="p-3">
+                        <ObservacionCell vehiculoId={v.id} etapa="SALIDA" valorInicial={obsSalida} />
+                      </td>
+
+                      <td className="p-3">
+                        {evento ? (
+                          <div className="space-y-1">
+                            <Badge variant="success">Hecho a las {hora(evento.fechaHora)}</Badge>
+                            {evento.tanqueLleno === true && (
+                              <Badge variant="success" className="block w-fit">
+                                Tanque lleno
+                              </Badge>
+                            )}
+                            {evento.tanqueLleno === false && (
+                              <Badge variant="warning" className="block w-fit">
+                                Tanque no lleno
+                              </Badge>
+                            )}
+                            {evento.tanqueLleno === null && (
+                              <Badge variant="outline" className="block w-fit">
+                                Sin dato de tanque
+                              </Badge>
+                            )}
+                          </div>
+                        ) : noOperado ? (
+                          <Badge variant="outline">No operó</Badge>
+                        ) : (
+                          <Badge variant="warning">Pendiente</Badge>
+                        )}
+                      </td>
+
+                      <td className="p-3">
+                        <ObservacionCell vehiculoId={v.id} etapa="REGRESO" valorInicial={obsRegreso} />
+                      </td>
+
+                      <td className="p-3">
+                        <DiaNoOperadoControl vehiculoId={v.id} marcado={noOperado} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }

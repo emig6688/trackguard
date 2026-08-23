@@ -3,7 +3,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { requireEmpresa } from "@/lib/permisos";
 import { construirCondicionOTCompra } from "@/lib/compras-filtro";
 import { rangoExportPorDefecto } from "@/lib/export-rango";
-import { ReporteComprasDocument, type FilaCompraPdf } from "@/lib/pdf/reporte-compras";
+import { ReporteComprasDocument, type FilaCompraPdf, type FilaComposicionPdf } from "@/lib/pdf/reporte-compras";
 import type { EstadoCompra } from "@/app/generated/prisma/client";
 
 export const maxDuration = 60;
@@ -55,6 +55,9 @@ export async function GET(request: Request) {
           eventoRuta: { select: { chofer: { select: { nombre: true } } } },
         },
       },
+      items: {
+        include: { articuloPanol: { select: { nombre: true } } },
+      },
     },
     orderBy: [{ estado: "asc" }, { fechaSolicitud: "desc" }],
   });
@@ -73,7 +76,22 @@ export async function GET(request: Request) {
     montoReal: c.montoTotal != null ? `$${Number(c.montoTotal).toLocaleString("es-AR")}` : "",
   }));
 
-  const buffer = await renderToBuffer(<ReporteComprasDocument filas={filas} periodo={{ desde, hasta }} />);
+  const filasComposicion: FilaComposicionPdf[] = compras.flatMap((c) =>
+    c.items.map((item) => ({
+      numero: c.numero,
+      estado: ESTADO_LABEL[c.estado],
+      fecha: c.fechaSolicitud.toLocaleDateString("es-AR"),
+      camion: c.ordenDeTrabajo?.vehiculo?.patente ?? SIN_CAMION,
+      descripcion: item.descripcion,
+      articulo: item.articuloPanol?.nombre ?? "",
+      cantidadSolicitada: item.cantidadSolicitada?.toString() ?? "",
+      cantidadRecibida: item.cantidadRecibida?.toString() ?? "",
+    }))
+  );
+
+  const buffer = await renderToBuffer(
+    <ReporteComprasDocument filas={filas} filasComposicion={filasComposicion} periodo={{ desde, hasta }} />
+  );
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
