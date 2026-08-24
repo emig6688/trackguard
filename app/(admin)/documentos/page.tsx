@@ -118,7 +118,7 @@ export default async function DocumentosPage({
         </div>
       </div>
 
-      <form className="flex flex-wrap items-end gap-3">
+      <form className="flex flex-wrap items-end gap-2">
         <div className="space-y-1">
           <Label htmlFor="tipo">Tipo de documento</Label>
           <Input
@@ -127,7 +127,7 @@ export default async function DocumentosPage({
             list="tipos-documento"
             defaultValue={filtroTipo}
             placeholder="Ej: ITV, SENASA, Licencia..."
-            className="w-full sm:w-64"
+            className="w-40 sm:w-64"
           />
           <datalist id="tipos-documento">
             {tiposDocumento.map((t) => (
@@ -136,20 +136,17 @@ export default async function DocumentosPage({
           </datalist>
         </div>
         {filtroEstado && <input type="hidden" name="estado" value={filtroEstado} />}
-        <Button type="submit" variant="outline">
+        <Button type="submit" variant="outline" size="sm">
           Filtrar
         </Button>
-        {filtroTipo && (
-          <Link
-            href={filtroEstado ? `/documentos?estado=${filtroEstado}` : "/documentos"}
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
-          >
-            Limpiar
+        {(filtroTipo || filtroEstado) && (
+          <Link href="/documentos" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+            Limpiar filtros
           </Link>
         )}
       </form>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {(["VENCIDO", "PROXIMO", "VIGENTE"] as const).map((estado) => (
           <Link key={estado} href={construirHrefEstado(estado)}>
             <Badge

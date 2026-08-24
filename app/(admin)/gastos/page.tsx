@@ -70,9 +70,9 @@ export default async function GastosPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Gastos de choferes</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <a
             href={`/api/export/gastos-pdf${queryString ? `?${queryString}` : ""}`}
             className={buttonVariants({ variant: "outline" })}
@@ -88,7 +88,7 @@ export default async function GastosPage({
         </div>
       </div>
 
-      <form className="flex flex-wrap items-end gap-3">
+      <form className="flex flex-wrap items-end gap-2">
         <div className="space-y-1">
           <Label htmlFor="chofer">Chofer</Label>
           <Input
@@ -97,7 +97,7 @@ export default async function GastosPage({
             list="choferes-con-gasto"
             defaultValue={chofer}
             placeholder="Buscar chofer..."
-            className="w-full sm:w-56"
+            className="w-36 sm:w-56"
           />
           <datalist id="choferes-con-gasto">
             {choferesConGasto.map((g) => (
@@ -113,7 +113,7 @@ export default async function GastosPage({
             list="vehiculos-con-gasto"
             defaultValue={vehiculo}
             placeholder="Buscar patente..."
-            className="w-full sm:w-56"
+            className="w-32 sm:w-56"
           />
           <datalist id="vehiculos-con-gasto">
             {vehiculosConGasto.map((g) => (
@@ -123,18 +123,18 @@ export default async function GastosPage({
         </div>
         <div className="space-y-1">
           <Label htmlFor="desde">Desde</Label>
-          <Input id="desde" name="desde" type="date" defaultValue={desde} className="w-full sm:w-40" />
+          <Input id="desde" name="desde" type="date" defaultValue={desde} className="w-32 sm:w-40" />
         </div>
         <div className="space-y-1">
           <Label htmlFor="hasta">Hasta</Label>
-          <Input id="hasta" name="hasta" type="date" defaultValue={hasta} className="w-full sm:w-40" />
+          <Input id="hasta" name="hasta" type="date" defaultValue={hasta} className="w-32 sm:w-40" />
         </div>
-        <Button type="submit" variant="outline">
+        <Button type="submit" variant="outline" size="sm">
           Filtrar
         </Button>
         {(chofer || vehiculo || desde || hasta) && (
           <Link href="/gastos" className={buttonVariants({ variant: "ghost", size: "sm" })}>
-            Limpiar
+            Limpiar filtros
           </Link>
         )}
       </form>

@@ -24,11 +24,11 @@ export default async function VehiculoDetallePage({ params }: { params: Promise<
     <div className="space-y-10">
       <div className="space-y-6">
         <BackButton fallbackHref="/vehiculos" />
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold">
             {vehiculo.patente} — {vehiculo.marca} {vehiculo.modelo}
           </h1>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <DisponibilidadToggle
               vehiculoId={vehiculo.id}
               disponible={vehiculo.disponible}

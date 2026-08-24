@@ -90,7 +90,7 @@ export default async function CostosPage({
           </a>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form className="flex flex-wrap items-end gap-3">
+          <form className="flex flex-wrap items-end gap-2">
             <div className="space-y-1">
               <label htmlFor="tipoMensual" className="text-sm font-medium">
                 Tipo de costo
@@ -99,7 +99,7 @@ export default async function CostosPage({
                 id="tipoMensual"
                 name="tipoMensual"
                 defaultValue={tipoMensualValido}
-                className="block rounded-md border border-input bg-transparent p-2 text-sm"
+                className="block max-w-[9rem] truncate rounded-md border border-input bg-transparent p-2 text-sm sm:max-w-none"
               >
                 {TIPOS_MENSUALES.map((t) => (
                   <option key={t.value} value={t.value}>
@@ -116,7 +116,7 @@ export default async function CostosPage({
                 id="vehiculoMensual"
                 name="vehiculoMensual"
                 defaultValue={vehiculoMensual ?? ""}
-                className="block rounded-md border border-input bg-transparent p-2 text-sm"
+                className="block max-w-[9rem] truncate rounded-md border border-input bg-transparent p-2 text-sm sm:max-w-none"
               >
                 <option value="">Todos los vehículos</option>
                 {vehiculos.map((v) => (
@@ -126,7 +126,7 @@ export default async function CostosPage({
                 ))}
               </select>
             </div>
-            <button type="submit" className={buttonVariants({ variant: "outline" })}>
+            <button type="submit" className={buttonVariants({ variant: "outline", size: "sm" })}>
               Aplicar
             </button>
           </form>
@@ -159,12 +159,12 @@ export default async function CostosPage({
             className="block rounded-md border border-input bg-transparent p-2 text-sm"
           />
         </div>
-        <button type="submit" className={buttonVariants({ variant: "outline" })}>
+        <button type="submit" className={buttonVariants({ variant: "outline", size: "sm" })}>
           Filtrar
         </button>
         {(desde || hasta) && (
           <Link href="/reportes/costos" className={buttonVariants({ variant: "ghost", size: "sm" })}>
-            Limpiar
+            Limpiar filtros
           </Link>
         )}
       </form>
@@ -172,7 +172,7 @@ export default async function CostosPage({
       <FiltroPeriodoAtajos basePath="/reportes/costos" params={{ desde, hasta }} />
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">Por vehículo</h2>
           <a
             href={`/api/export/costos?tipo=vehiculo${queryString ? `&${queryString}` : ""}`}
@@ -215,7 +215,7 @@ export default async function CostosPage({
       </section>
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">Por chofer</h2>
           <a
             href={`/api/export/costos?tipo=chofer${queryString ? `&${queryString}` : ""}`}

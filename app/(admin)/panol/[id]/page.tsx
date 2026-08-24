@@ -44,7 +44,7 @@ export default async function ArticuloDetallePage({
     <div className="space-y-10">
       <BackButton fallbackHref="/panol" />
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold">{articulo.nombre}</h1>
           {session.rol === "ADMIN" && (
             <EliminarButton tipo="articuloPanol" id={articulo.id} redirectPath="/panol" />
@@ -67,8 +67,8 @@ export default async function ArticuloDetallePage({
         <h2 className="text-lg font-semibold">Órdenes de compra de este artículo</h2>
         <div className="space-y-2">
           {articulo.itemsOrdenCompra.map((item) => (
-            <div key={item.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
-              <Link href={`/compras`} className="hover:underline">
+            <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm">
+              <Link href={`/compras`} className="min-w-0 hover:underline">
                 {item.ordenCompra.numero} — {item.descripcion}
               </Link>
               <Badge variant={ESTADO_VARIANT[item.ordenCompra.estado]}>

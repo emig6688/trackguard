@@ -186,8 +186,8 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
             </Badge>
           )}
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold">
               {ot.numero} — {ot.titulo}
             </h1>
@@ -202,7 +202,7 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
               <Badge variant="destructive">El chofer indicó que el problema persiste</Badge>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <a
               href={`/api/export/ot-pdf?id=${ot.id}`}
               className="text-sm text-muted-foreground hover:text-foreground hover:underline"

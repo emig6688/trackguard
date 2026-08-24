@@ -30,7 +30,7 @@ export function TrazabilidadPanel({
         <p className="text-sm text-muted-foreground">No hay vehículos activos.</p>
       ) : (
         <>
-          <form className="flex flex-wrap items-end gap-3">
+          <form className="flex flex-wrap items-end gap-2">
             <input type="hidden" name="tab" value="reportes" />
             <div className="space-y-1">
               <Label htmlFor="trz-vehiculoId">Vehículo</Label>
@@ -38,7 +38,7 @@ export function TrazabilidadPanel({
                 id="trz-vehiculoId"
                 name="vehiculoId"
                 defaultValue={vehiculoSeleccionado}
-                className="block rounded-md border border-input bg-transparent p-2 text-sm"
+                className="block max-w-[7rem] truncate rounded-md border border-input bg-transparent p-2 text-sm sm:max-w-none"
               >
                 {vehiculos.map((v) => (
                   <option key={v.id} value={v.id}>
@@ -49,13 +49,13 @@ export function TrazabilidadPanel({
             </div>
             <div className="space-y-1">
               <Label htmlFor="trz-desde">Desde</Label>
-              <Input id="trz-desde" name="desde" type="date" defaultValue={desde} className="w-full sm:w-40" />
+              <Input id="trz-desde" name="desde" type="date" defaultValue={desde} className="w-32 sm:w-40" />
             </div>
             <div className="space-y-1">
               <Label htmlFor="trz-hasta">Hasta</Label>
-              <Input id="trz-hasta" name="hasta" type="date" defaultValue={hasta} className="w-full sm:w-40" />
+              <Input id="trz-hasta" name="hasta" type="date" defaultValue={hasta} className="w-32 sm:w-40" />
             </div>
-            <Button type="submit" variant="outline">
+            <Button type="submit" variant="outline" size="sm">
               Aplicar
             </Button>
             {(desde || hasta) && (
@@ -63,7 +63,7 @@ export function TrazabilidadPanel({
                 href={`/reportes/estadisticas?tab=reportes${vehiculoSeleccionado ? `&vehiculoId=${vehiculoSeleccionado}` : ""}`}
                 className={buttonVariants({ variant: "ghost", size: "sm" })}
               >
-                Limpiar
+                Limpiar filtros
               </Link>
             )}
           </form>

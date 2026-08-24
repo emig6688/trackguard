@@ -23,9 +23,9 @@ export default async function UsuarioDetallePage({
   return (
     <div className="space-y-6">
       <BackButton fallbackHref="/usuarios" />
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{usuario.nombre}</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <BajaPanel
             activo={usuario.activo}
             observacionBaja={usuario.observacionBaja}

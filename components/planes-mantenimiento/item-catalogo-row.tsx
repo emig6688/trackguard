@@ -125,12 +125,12 @@ export function ItemCatalogoRow({ item }: { item: ItemCatalogo }) {
   }
 
   return (
-    <div className="flex items-center justify-between rounded-lg border p-3 text-sm">
-      <div>
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm">
+      <div className="min-w-0">
         <p className="font-medium">{item.nombre}</p>
         <p className="text-muted-foreground">{textoFrecuencia(item)}</p>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Badge variant="secondary">{LABEL_INTERVALO[item.tipoIntervalo]}</Badge>
         <Badge variant={item.activo ? "success" : "secondary"}>
           {item.activo ? "Activa" : "Inactiva"}

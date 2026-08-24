@@ -62,9 +62,9 @@ export default async function CombustiblePage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Consumo de combustible</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <a
             href={`/api/export/combustible-pdf${queryString ? `?${queryString}` : ""}`}
             className={buttonVariants({ variant: "outline" })}
@@ -80,21 +80,21 @@ export default async function CombustiblePage({
         </div>
       </div>
 
-      <form className="flex flex-wrap items-end gap-3">
+      <form className="flex flex-wrap items-end gap-2">
         <div className="space-y-1">
           <Label htmlFor="desde">Desde</Label>
-          <Input id="desde" name="desde" type="date" defaultValue={desde} className="w-full sm:w-40" />
+          <Input id="desde" name="desde" type="date" defaultValue={desde} className="w-32 sm:w-40" />
         </div>
         <div className="space-y-1">
           <Label htmlFor="hasta">Hasta</Label>
-          <Input id="hasta" name="hasta" type="date" defaultValue={hasta} className="w-full sm:w-40" />
+          <Input id="hasta" name="hasta" type="date" defaultValue={hasta} className="w-32 sm:w-40" />
         </div>
-        <Button type="submit" variant="outline">
+        <Button type="submit" variant="outline" size="sm">
           Filtrar
         </Button>
         {(desde || hasta) && (
           <Link href="/combustible" className={buttonVariants({ variant: "ghost", size: "sm" })}>
-            Limpiar
+            Limpiar filtros
           </Link>
         )}
       </form>

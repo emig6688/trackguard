@@ -42,8 +42,8 @@ export function FiltrosCompra({
   }, []);
 
   return (
-    <div className="flex flex-wrap gap-2">
-      <div className="w-52">
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="w-40 sm:w-52">
         <Input
           list="compras-sugerencias"
           placeholder="Buscar por Nº o repuesto..."
@@ -61,7 +61,7 @@ export function FiltrosCompra({
         value={searchParams.get("vehiculoId") ?? TODOS}
         onValueChange={(v) => actualizarParam("vehiculoId", v ?? TODOS)}
       >
-        <SelectTrigger className="w-44">
+        <SelectTrigger className="w-36 sm:w-44">
           <SelectValue placeholder="Filtrar por camión">
             {(value: string) => (value === TODOS ? "Todos los camiones" : vehiculos.find((v) => v.id === value)?.patente ?? value)}
           </SelectValue>
@@ -80,7 +80,7 @@ export function FiltrosCompra({
         value={searchParams.get("choferId") ?? TODOS}
         onValueChange={(v) => actualizarParam("choferId", v ?? TODOS)}
       >
-        <SelectTrigger className="w-44">
+        <SelectTrigger className="w-36 sm:w-44">
           <SelectValue placeholder="Filtrar por chofer">
             {(value: string) => (value === TODOS ? "Todos los choferes" : choferes.find((c) => c.id === value)?.nombre ?? value)}
           </SelectValue>

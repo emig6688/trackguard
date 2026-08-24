@@ -20,7 +20,7 @@ export default async function TallerDetallePage({
   return (
     <div className="space-y-6">
       <BackButton fallbackHref="/talleres-externos" />
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{taller.nombre}</h1>
         {session.rol === "ADMIN" && (
           <EliminarButton tipo="tallerExterno" id={taller.id} redirectPath="/talleres-externos" />

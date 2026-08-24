@@ -337,7 +337,7 @@ export default async function EstadisticasPage({
                 <p className="text-sm text-muted-foreground">No hay choferes activos.</p>
               ) : (
                 <>
-                  <form className="flex flex-wrap items-end gap-3">
+                  <form className="flex flex-wrap items-end gap-2">
                     <input type="hidden" name="tab" value="reportes" />
                     <div className="space-y-1">
                       <Label htmlFor="rep-choferId">Chofer</Label>
@@ -345,7 +345,7 @@ export default async function EstadisticasPage({
                         id="rep-choferId"
                         name="choferId"
                         defaultValue={choferSeleccionado}
-                        className="block rounded-md border border-input bg-transparent p-2 text-sm"
+                        className="block max-w-[9.5rem] truncate rounded-md border border-input bg-transparent p-2 text-sm sm:max-w-none"
                       >
                         <option value={TODOS_CHOFERES}>Todos los choferes</option>
                         {choferesActivos.map((c) => (
@@ -357,13 +357,13 @@ export default async function EstadisticasPage({
                     </div>
                     <div className="space-y-1">
                       <Label htmlFor="rep-desde">Desde</Label>
-                      <Input id="rep-desde" name="desde" type="date" defaultValue={desde} className="w-full sm:w-40" />
+                      <Input id="rep-desde" name="desde" type="date" defaultValue={desde} className="w-32 sm:w-40" />
                     </div>
                     <div className="space-y-1">
                       <Label htmlFor="rep-hasta">Hasta</Label>
-                      <Input id="rep-hasta" name="hasta" type="date" defaultValue={hasta} className="w-full sm:w-40" />
+                      <Input id="rep-hasta" name="hasta" type="date" defaultValue={hasta} className="w-32 sm:w-40" />
                     </div>
-                    <Button type="submit" variant="outline">
+                    <Button type="submit" variant="outline" size="sm">
                       Aplicar
                     </Button>
                     {(desde || hasta) && (
@@ -371,7 +371,7 @@ export default async function EstadisticasPage({
                         href={`/reportes/estadisticas?tab=reportes${choferSeleccionado ? `&choferId=${choferSeleccionado}` : ""}`}
                         className={buttonVariants({ variant: "ghost", size: "sm" })}
                       >
-                        Limpiar
+                        Limpiar filtros
                       </Link>
                     )}
                   </form>

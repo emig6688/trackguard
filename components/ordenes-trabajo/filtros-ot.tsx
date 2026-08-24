@@ -52,7 +52,7 @@ export function FiltrosOT({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="w-52">
+      <div className="w-36 sm:w-52">
         <Input
           list="ot-numeros"
           placeholder="Buscar Nº de OT..."
@@ -65,7 +65,7 @@ export function FiltrosOT({
           ))}
         </datalist>
       </div>
-      <div className="w-40">
+      <div className="w-32 sm:w-40">
         <Input
           list="ot-patentes"
           placeholder="Buscar patente..."
@@ -82,7 +82,7 @@ export function FiltrosOT({
         value={searchParams.get("chofer") ?? TODOS}
         onValueChange={(v) => actualizarParam("chofer", v ?? TODOS)}
       >
-        <SelectTrigger className="w-44">
+        <SelectTrigger className="w-36 sm:w-44">
           <SelectValue placeholder="Filtrar por chofer">
             {(value: string) =>
               value === TODOS ? "Todos los choferes" : (choferes.find((c) => c.id === value)?.nombre ?? value)

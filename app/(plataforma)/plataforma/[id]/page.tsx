@@ -22,14 +22,14 @@ export default async function EditarEmpresaPage({ params }: { params: Promise<{ 
     <div className="space-y-8">
       <BackButton fallbackHref="/plataforma" />
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">{empresa.nombre}</h1>
           <p className="text-sm text-muted-foreground">
             Alta el {empresa.createdAt.toLocaleDateString("es-AR")}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant={empresa.activo ? "success" : "secondary"}>
             {empresa.activo ? "Activa" : "Inactiva"}
           </Badge>
