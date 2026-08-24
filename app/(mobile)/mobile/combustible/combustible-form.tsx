@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,10 +15,23 @@ export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patent
   const [estacionServicio, setEstacionServicio] = useState("");
   const [leyendoTicket, setLeyendoTicket] = useState(false);
   const [errorTicket, setErrorTicket] = useState<string | null>(null);
+  const [nombreArchivo, setNombreArchivo] = useState<string | null>(null);
+  const archivoTicketRef = useRef<HTMLInputElement>(null);
+
+  function abrirCamara() {
+    archivoTicketRef.current?.setAttribute("capture", "environment");
+    archivoTicketRef.current?.click();
+  }
+
+  function abrirGaleria() {
+    archivoTicketRef.current?.removeAttribute("capture");
+    archivoTicketRef.current?.click();
+  }
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setNombreArchivo(file.name);
     setLeyendoTicket(true);
     setErrorTicket(null);
     try {
@@ -94,15 +107,31 @@ export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patent
         <Label htmlFor="archivoTicket">Foto del ticket</Label>
         {/* accept explícito (no "image/*"): en iPhones con formato HEIC, esto es lo
         que hace que Safari convierta la foto a JPEG antes de subirla — la API de
-        OpenAI no acepta HEIC, y con "image/*" Safari la deja pasar sin convertir. */}
-        <Input
+        OpenAI no acepta HEIC, y con "image/*" Safari la deja pasar sin convertir.
+        El input real queda oculto con sr-only (no "hidden"/display:none, para que
+        la validación "required" del navegador lo siga teniendo en cuenta) y dos
+        botones lo disparan con o sin "capture" para elegir cámara o galería. */}
+        <input
+          ref={archivoTicketRef}
           id="archivoTicket"
           name="archivoTicket"
           type="file"
           accept="image/jpeg,image/png,image/webp"
           required
           onChange={onFileChange}
+          className="sr-only"
         />
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" className="flex-1" onClick={abrirCamara}>
+            Sacar foto
+          </Button>
+          <Button type="button" variant="outline" className="flex-1" onClick={abrirGaleria}>
+            Elegir de galería
+          </Button>
+        </div>
+        {nombreArchivo && !leyendoTicket && !errorTicket && (
+          <p className="text-xs text-muted-foreground">Foto elegida: {nombreArchivo}</p>
+        )}
         {leyendoTicket && (
           <p className="text-xs text-muted-foreground">Leyendo el ticket con IA...</p>
         )}
