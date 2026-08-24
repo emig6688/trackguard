@@ -27,6 +27,7 @@ Respondé ÚNICAMENTE con un JSON: {"monto": number|null, "litros": number|null,
  */
 export async function leerTicketCombustible(file: File): Promise<LecturaTicketResultado> {
   const apiKey = process.env.OPENAI_API_KEY;
+  console.log(`[OCR ticket combustible] OPENAI_API_KEY presente=${Boolean(apiKey)} largo=${apiKey?.length ?? 0}`);
   if (!apiKey) {
     console.log("[OCR ticket combustible] (proveedor no configurado) el chofer completa el ticket a mano.");
     return { leido: false, motivo: "proveedor_no_configurado" };
