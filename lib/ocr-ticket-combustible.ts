@@ -32,7 +32,13 @@ export async function leerTicketCombustible(file: File): Promise<LecturaTicketRe
     return { leido: false, motivo: "proveedor_no_configurado" };
   }
 
-  if (!file.type.startsWith("image/")) {
+  // La API de OpenAI solo acepta png/jpeg/gif/webp — un HEIC (típico de iPhone,
+  // si el navegador no lo convirtió antes de subirlo) pasaría el chequeo de
+  // "empieza con image/" pero OpenAI lo rechazaría igual; lo cortamos acá con
+  // un motivo específico en vez de dejar que falle como error_proveedor.
+  const FORMATOS_SOPORTADOS = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+  if (!FORMATOS_SOPORTADOS.includes(file.type)) {
+    console.log(`[OCR ticket combustible] formato no soportado: ${file.type || "(sin type)"}.`);
     return { leido: false, motivo: "archivo_invalido" };
   }
 

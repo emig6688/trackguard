@@ -35,7 +35,7 @@ export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patent
           setErrorTicket("No pudimos reconocer ningún dato en la foto. Completá los campos a mano.");
         }
       } else if (resultado.motivo === "archivo_invalido") {
-        setErrorTicket("Ese archivo no es una imagen válida. Completá los campos a mano.");
+        setErrorTicket("Esa foto está en un formato que no podemos leer. Completá los campos a mano.");
       } else {
         setErrorTicket("No se pudo leer el ticket automáticamente. Completá los campos a mano.");
       }
@@ -92,11 +92,14 @@ export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patent
 
       <div className="space-y-2">
         <Label htmlFor="archivoTicket">Foto del ticket</Label>
+        {/* accept explícito (no "image/*"): en iPhones con formato HEIC, esto es lo
+        que hace que Safari convierta la foto a JPEG antes de subirla — la API de
+        OpenAI no acepta HEIC, y con "image/*" Safari la deja pasar sin convertir. */}
         <Input
           id="archivoTicket"
           name="archivoTicket"
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
           required
           onChange={onFileChange}
         />
