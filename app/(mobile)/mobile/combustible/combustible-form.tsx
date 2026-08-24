@@ -7,6 +7,32 @@ import { Label } from "@/components/ui/label";
 import { registrarCargaCombustible } from "@/app/_actions/combustible";
 import { leerTicketCombustibleAction } from "@/app/_actions/ocrTicketCombustible";
 
+// Las fotos de cámara de un celular actual (sobre todo Android de alta resolución)
+// suelen pesar varios MB — de sobra para que la IA lea un ticket, pero innecesario
+// para OpenAI y con riesgo de chocar contra el límite de tamaño de la Server
+// Action. Se reescala a un máximo razonable en el propio celular antes de mandarla
+// a leer; el archivo original (sin tocar) es el que se guarda al enviar el
+// formulario, esto solo afecta a la copia que se le manda a la IA.
+async function reducirImagenParaLectura(file: File): Promise<File> {
+  const MAX_LADO = 1600;
+  const bitmap = await createImageBitmap(file);
+  let { width, height } = bitmap;
+  if (width > MAX_LADO || height > MAX_LADO) {
+    const escala = MAX_LADO / Math.max(width, height);
+    width = Math.round(width * escala);
+    height = Math.round(height * escala);
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("sin contexto 2d");
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+  if (!blob) throw new Error("no se pudo comprimir la imagen");
+  return new File([blob], "ticket.jpg", { type: "image/jpeg" });
+}
+
 export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patente: string }[] }) {
   const [state, formAction, pending] = useActionState(registrarCargaCombustible, undefined);
   const [kmOdometro, setKmOdometro] = useState("");
@@ -35,8 +61,9 @@ export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patent
     setLeyendoTicket(true);
     setErrorTicket(null);
     try {
+      const archivoParaLeer = await reducirImagenParaLectura(file).catch(() => file);
       const datosArchivo = new FormData();
-      datosArchivo.set("archivoTicket", file);
+      datosArchivo.set("archivoTicket", archivoParaLeer);
       const resultado = await leerTicketCombustibleAction(datosArchivo);
       if (resultado.leido) {
         const { litros, monto, proveedor, kmOdometro } = resultado.datos;
