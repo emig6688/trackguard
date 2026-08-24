@@ -14,21 +14,33 @@ export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patent
   const [monto, setMonto] = useState("");
   const [estacionServicio, setEstacionServicio] = useState("");
   const [leyendoTicket, setLeyendoTicket] = useState(false);
+  const [errorTicket, setErrorTicket] = useState<string | null>(null);
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setLeyendoTicket(true);
+    setErrorTicket(null);
     try {
       const datosArchivo = new FormData();
       datosArchivo.set("archivoTicket", file);
       const resultado = await leerTicketCombustibleAction(datosArchivo);
       if (resultado.leido) {
-        if (resultado.datos.litros != null) setLitros(String(resultado.datos.litros));
-        if (resultado.datos.monto != null) setMonto(String(resultado.datos.monto));
-        if (resultado.datos.proveedor) setEstacionServicio(resultado.datos.proveedor);
-        if (resultado.datos.kmOdometro != null) setKmOdometro(String(resultado.datos.kmOdometro));
+        const { litros, monto, proveedor, kmOdometro } = resultado.datos;
+        if (litros != null) setLitros(String(litros));
+        if (monto != null) setMonto(String(monto));
+        if (proveedor) setEstacionServicio(proveedor);
+        if (kmOdometro != null) setKmOdometro(String(kmOdometro));
+        if (litros == null && monto == null && proveedor == null && kmOdometro == null) {
+          setErrorTicket("No pudimos reconocer ningún dato en la foto. Completá los campos a mano.");
+        }
+      } else if (resultado.motivo === "archivo_invalido") {
+        setErrorTicket("Ese archivo no es una imagen válida. Completá los campos a mano.");
+      } else {
+        setErrorTicket("No se pudo leer el ticket automáticamente. Completá los campos a mano.");
       }
+    } catch {
+      setErrorTicket("No se pudo leer el ticket automáticamente. Completá los campos a mano.");
     } finally {
       setLeyendoTicket(false);
     }
@@ -90,6 +102,9 @@ export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patent
         />
         {leyendoTicket && (
           <p className="text-xs text-muted-foreground">Leyendo el ticket con IA...</p>
+        )}
+        {!leyendoTicket && errorTicket && (
+          <p className="text-xs text-warning-foreground">{errorTicket}</p>
         )}
       </div>
 
