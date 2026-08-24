@@ -255,7 +255,7 @@ export default async function EstadisticasPage({
                 <TableBody>
                   {choferes.map((c) => (
                     <TableRow key={c.choferId}>
-                      <TableCell className="max-w-[100px] font-medium md:max-w-none">
+                      <TableCell className="max-w-[100px] font-medium whitespace-normal md:max-w-none md:whitespace-nowrap">
                         {c.choferNombre}
                         <p className="text-xs font-normal text-muted-foreground md:hidden">
                           {c.total} correctivas

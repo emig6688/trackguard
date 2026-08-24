@@ -97,7 +97,7 @@ export default async function GastosPage({
             list="choferes-con-gasto"
             defaultValue={chofer}
             placeholder="Buscar chofer..."
-            className="w-36 sm:w-56"
+            className="w-full sm:w-56"
           />
           <datalist id="choferes-con-gasto">
             {choferesConGasto.map((g) => (
@@ -113,7 +113,7 @@ export default async function GastosPage({
             list="vehiculos-con-gasto"
             defaultValue={vehiculo}
             placeholder="Buscar patente..."
-            className="w-32 sm:w-56"
+            className="w-full sm:w-56"
           />
           <datalist id="vehiculos-con-gasto">
             {vehiculosConGasto.map((g) => (
@@ -157,7 +157,7 @@ export default async function GastosPage({
           {gastos.map((g) => (
             <TableRow key={g.id}>
               <TableCell className="hidden md:table-cell">{g.chofer.nombre}</TableCell>
-              <TableCell className="max-w-[110px] md:max-w-none">
+              <TableCell className="max-w-[110px] whitespace-normal md:max-w-none md:whitespace-nowrap">
                 {g.vehiculo?.patente ?? "—"}
                 <p className="text-xs text-muted-foreground md:hidden">
                   {g.chofer.nombre} · {g.fecha.toLocaleDateString("es-AR")}

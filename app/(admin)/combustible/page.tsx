@@ -131,7 +131,7 @@ export default async function CombustiblePage({
 
             return (
               <TableRow key={c.id}>
-                <TableCell className="max-w-[130px] md:max-w-none">
+                <TableCell className="max-w-[130px] whitespace-normal md:max-w-none md:whitespace-nowrap">
                   {c.vehiculo.patente}
                   <p className="text-xs text-muted-foreground md:hidden">
                     {c.chofer.nombre} · {c.fechaHora.toLocaleDateString("es-AR")}

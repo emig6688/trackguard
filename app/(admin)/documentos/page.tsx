@@ -171,7 +171,7 @@ export default async function DocumentosPage({
         <TableBody>
           {filasFiltradas.map(({ doc, estado, entidadLabel, entidadHref }) => (
             <TableRow key={doc.id}>
-              <TableCell className="max-w-[150px] md:max-w-none">
+              <TableCell className="max-w-[150px] whitespace-normal md:max-w-none md:whitespace-nowrap">
                 <Link href={entidadHref} className="font-medium hover:underline">
                   {entidadLabel}
                 </Link>
