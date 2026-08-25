@@ -41,7 +41,7 @@ export default async function VehiculosPage() {
             <TableHead>Patente</TableHead>
             <TableHead className="hidden md:table-cell">Marca / Modelo</TableHead>
             <TableHead className="hidden md:table-cell">Tipo</TableHead>
-            <TableHead>Km actual</TableHead>
+            <TableHead className="hidden md:table-cell">Km actual</TableHead>
             <TableHead className="hidden md:table-cell">Equipo de frío</TableHead>
             <TableHead className="hidden md:table-cell">Estado</TableHead>
             <TableHead>Operativo</TableHead>
@@ -54,12 +54,15 @@ export default async function VehiculosPage() {
                 <Link href={`/vehiculos/${v.id}`} className="font-medium hover:underline">
                   {v.patente}
                 </Link>
+                <p className="text-xs text-muted-foreground md:hidden">
+                  {v.kmActual.toLocaleString("es-AR")} km
+                </p>
               </TableCell>
               <TableCell className="hidden md:table-cell">
                 {v.marca} {v.modelo}
               </TableCell>
               <TableCell className="hidden md:table-cell">{v.tipoCarroceria ?? v.tipo}</TableCell>
-              <TableCell>{v.kmActual.toLocaleString("es-AR")} km</TableCell>
+              <TableCell className="hidden md:table-cell">{v.kmActual.toLocaleString("es-AR")} km</TableCell>
               <TableCell className="hidden md:table-cell">{v.equipoFrioTipo ?? "—"}</TableCell>
               <TableCell className="hidden md:table-cell">
                 <Badge variant={v.activo ? "success" : "secondary"}>
