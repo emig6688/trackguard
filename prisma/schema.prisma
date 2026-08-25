@@ -443,6 +443,7 @@ model Vehiculo {
   disponibilidadSnapshots DisponibilidadSnapshot[]
   observacionesGuardia    ObservacionGuardia[]
   diasNoOperados          DiaNoOperado[]
+  ordenesCompra           OrdenCompra[]
 
   @@index([activo])
   @@index([empresaId])
@@ -812,6 +813,12 @@ model OrdenCompra {
   ordenDeTrabajo     OrdenDeTrabajo?   @relation("CompraAsignadaOT", fields: [ordenDeTrabajoId], references: [id])
   otItemPreventivoId String?
   otItemPreventivo   OTItemPreventivo? @relation(fields: [otItemPreventivoId], references: [id])
+  // Heredados de la OT cuando la compra nace de una (ordenDeTrabajoId
+  // presente); requeridos a mano cuando la compra es suelta — ver
+  // crearOrdenCompraManual en app/_actions/compras.ts.
+  prioridad          PrioridadOT?
+  vehiculoId         String?
+  vehiculo           Vehiculo?         @relation(fields: [vehiculoId], references: [id])
 
   // Autorización de gerencia cuando montoEstimado supera
   // Empresa.montoAutorizacionCompra (ver lib/notificaciones.ts).
@@ -845,6 +852,7 @@ model OrdenCompra {
   @@index([ordenDeTrabajoId])
   @@index([otItemPreventivoId])
   @@index([estadoAutorizacion])
+  @@index([vehiculoId])
 }
 
 // Un repuesto pedido dentro de una OC (una OC puede tener varios, ej. varias

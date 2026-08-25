@@ -41,12 +41,12 @@ export function PresupuestoForm({ compraId }: { compraId: string }) {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div className="space-y-1">
-          <Label htmlFor={`monto-${compraId}`}>Monto (opcional)</Label>
-          <Input id={`monto-${compraId}`} name="monto" type="number" step="0.01" />
+          <Label htmlFor={`monto-${compraId}`}>Monto</Label>
+          <Input id={`monto-${compraId}`} name="monto" type="number" step="0.01" required />
         </div>
         <div className="space-y-1">
-          <Label htmlFor={`proveedor-${compraId}`}>Proveedor (opcional)</Label>
-          <Input id={`proveedor-${compraId}`} name="proveedor" />
+          <Label htmlFor={`proveedor-${compraId}`}>Proveedor</Label>
+          <Input id={`proveedor-${compraId}`} name="proveedor" required />
         </div>
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}

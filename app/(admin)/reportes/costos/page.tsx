@@ -78,6 +78,11 @@ export default async function CostosPage({
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-semibold">Costos por vehículo y por chofer</h1>
+      <p className="text-sm text-muted-foreground">
+        Incluye: combustible, gastos (aprobados y pendientes de revisión — no los rechazados),
+        repuestos y facturas de órdenes de trabajo. Los repuestos y facturas se cuentan por la
+        fecha en que se cargaron, no por la fecha del servicio.
+      </p>
 
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">

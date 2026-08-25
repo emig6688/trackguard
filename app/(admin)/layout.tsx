@@ -53,6 +53,7 @@ function navItemsPorRol(rol: Rol): NavEntry[] {
         icon: "catalogoEstandar",
       },
       { href: "/notificaciones", label: "Parámetros", icon: "notificaciones" },
+      { href: "/importar", label: "Importar datos", icon: "importar" },
     ];
 
     items.push(

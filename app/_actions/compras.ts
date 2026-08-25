@@ -26,7 +26,7 @@ import {
   notificarCompraAutorizada,
 } from "@/lib/notificaciones";
 import type { ScopedPrismaClient } from "@/lib/tenant-prisma";
-import type { Prisma } from "@/app/generated/prisma/client";
+import type { Prisma, PrioridadOT } from "@/app/generated/prisma/client";
 
 function leerFilas(formData: FormData, idsCsv: FormDataEntryValue | null, campos: string[]) {
   const ids = ((idsCsv as string | null) ?? "")
@@ -50,7 +50,31 @@ const compraManualSchema = z.object({
   ordenDeTrabajoId: z.string().trim().optional(),
   otItemPreventivoId: z.string().trim().optional(),
   observaciones: z.string().trim().optional(),
+  // Solo se usan cuando la compra no está ligada a una OT — si lo está,
+  // hereda prioridad y vehículo de esa OT (ver resolverPrioridadYVehiculo).
+  prioridad: z.enum(["BAJA", "MEDIA", "ALTA", "URGENTE"]).optional(),
+  vehiculoId: z.string().trim().optional(),
 });
+
+/**
+ * Toda OC necesita prioridad y vehículo. Si viene de una OT, los hereda de
+ * ahí (no se eligen a mano — deben coincidir con la OT que la originó). Si
+ * es una compra suelta, el formulario tiene que haberlos pedido.
+ */
+async function resolverPrioridadYVehiculo(
+  prisma: ScopedPrismaClient,
+  ot: { prioridad: PrioridadOT; vehiculoId: string } | null,
+  prioridadForm: PrioridadOT | undefined,
+  vehiculoIdForm: string | undefined
+): Promise<{ prioridad: PrioridadOT; vehiculoId: string } | { error: string }> {
+  if (ot) return { prioridad: ot.prioridad, vehiculoId: ot.vehiculoId };
+
+  if (!prioridadForm) return { error: "Elegí una prioridad para la compra." };
+  if (!vehiculoIdForm) return { error: "Elegí para qué vehículo es la compra." };
+  const vehiculo = await prisma.vehiculo.findUnique({ where: { id: vehiculoIdForm } });
+  if (!vehiculo) return { error: "Vehículo inválido." };
+  return { prioridad: prioridadForm, vehiculoId: vehiculoIdForm };
+}
 
 /**
  * Valida las filas de repuestos de un formulario de OC (crear o editar):
@@ -105,16 +129,21 @@ export async function crearOrdenCompraManual(
   const errorItems = await validarItemsFilas(prisma, itemsFilas);
   if (errorItems) return { error: errorItems };
 
+  let ot: { prioridad: PrioridadOT; vehiculoId: string } | null = null;
   if (parsed.data.ordenDeTrabajoId) {
     // findUniqueOrThrow ya viene scoped por tenant (ver tenant-prisma.ts):
     // una OT de otra empresa tira acá antes de poder asociarla a esta compra.
-    const ot = await prisma.ordenDeTrabajo.findUniqueOrThrow({
+    const otEncontrada = await prisma.ordenDeTrabajo.findUniqueOrThrow({
       where: { id: parsed.data.ordenDeTrabajoId },
     });
-    if (user.rol === "MECANICO_INTERNO" && !puedeMecanicoAccionar(ot, user.id)) {
+    if (user.rol === "MECANICO_INTERNO" && !puedeMecanicoAccionar(otEncontrada, user.id)) {
       return { error: "Solo podés pedir compras para una orden de trabajo que tengas asignada." };
     }
+    ot = otEncontrada;
   }
+
+  const prioridadYVehiculo = await resolverPrioridadYVehiculo(prisma, ot, parsed.data.prioridad, parsed.data.vehiculoId);
+  if ("error" in prioridadYVehiculo) return { error: prioridadYVehiculo.error };
 
   const empresa = await prisma.empresa.findUniqueOrThrow({ where: { id: user.empresaId! } });
   const umbral = empresa.montoAutorizacionCompra;
@@ -154,6 +183,8 @@ export async function crearOrdenCompraManual(
       estadoAutorizacionMantenimiento: requiereAutorizacionMantenimiento ? "PENDIENTE" : "NO_REQUERIDA",
       ordenDeTrabajoId: parsed.data.ordenDeTrabajoId || undefined,
       otItemPreventivoId: parsed.data.otItemPreventivoId || undefined,
+      prioridad: prioridadYVehiculo.prioridad,
+      vehiculoId: prioridadYVehiculo.vehiculoId,
       creadoPorId: user.id,
       items: { create: itemsData },
     },
@@ -228,14 +259,19 @@ export async function actualizarOrdenCompra(
   const errorItems = await validarItemsFilas(prisma, itemsFilas);
   if (errorItems) return { error: errorItems };
 
+  let ot: { prioridad: PrioridadOT; vehiculoId: string } | null = null;
   if (parsed.data.ordenDeTrabajoId) {
-    const ot = await prisma.ordenDeTrabajo.findUniqueOrThrow({
+    const otEncontrada = await prisma.ordenDeTrabajo.findUniqueOrThrow({
       where: { id: parsed.data.ordenDeTrabajoId },
     });
-    if (user.rol === "MECANICO_INTERNO" && !puedeMecanicoAccionar(ot, user.id)) {
+    if (user.rol === "MECANICO_INTERNO" && !puedeMecanicoAccionar(otEncontrada, user.id)) {
       return { error: "Solo podés pedir compras para una orden de trabajo que tengas asignada." };
     }
+    ot = otEncontrada;
   }
+
+  const prioridadYVehiculo = await resolverPrioridadYVehiculo(prisma, ot, parsed.data.prioridad, parsed.data.vehiculoId);
+  if ("error" in prioridadYVehiculo) return { error: prioridadYVehiculo.error };
 
   const empresa = await prisma.empresa.findUniqueOrThrow({ where: { id: user.empresaId! } });
   const umbral = empresa.montoAutorizacionCompra;
@@ -295,6 +331,8 @@ export async function actualizarOrdenCompra(
       montoEstimado: parsed.data.montoEstimado,
       observaciones: parsed.data.observaciones || undefined,
       ordenDeTrabajoId: parsed.data.ordenDeTrabajoId || null,
+      prioridad: prioridadYVehiculo.prioridad,
+      vehiculoId: prioridadYVehiculo.vehiculoId,
       estadoAutorizacion: nuevoEstadoAutorizacion,
       ...(limpiarAutorizacionPrevia
         ? { autorizadoPorId: null, autorizadoEn: null, presupuestoAprobadoId: null }
@@ -599,7 +637,13 @@ export async function subirPresupuestoCompra(
     return { error: "Subí una foto o un archivo del presupuesto." };
   }
   const montoParsed = optionalNumber().safeParse(formData.get("monto"));
-  const proveedor = ((formData.get("proveedor") as string | null) ?? "").trim() || undefined;
+  if (!montoParsed.success || montoParsed.data == null) {
+    return { error: "Ingresá el monto del presupuesto." };
+  }
+  const proveedor = ((formData.get("proveedor") as string | null) ?? "").trim();
+  if (!proveedor) {
+    return { error: "Ingresá el proveedor del presupuesto." };
+  }
 
   const compra = await prisma.ordenCompra.findUniqueOrThrow({ where: { id: compraId } });
   const archivo = await guardarArchivo(prisma, user.empresaId!, file, user.id);
@@ -608,7 +652,7 @@ export async function subirPresupuestoCompra(
     data: {
       ordenCompraId: compraId,
       archivoId: archivo.id,
-      monto: montoParsed.success ? montoParsed.data : undefined,
+      monto: montoParsed.data,
       proveedor,
       subidoPorId: user.id,
     },

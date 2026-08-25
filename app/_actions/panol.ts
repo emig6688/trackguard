@@ -1,17 +1,9 @@
 "use server";
 
-import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole, ROLES_ADMIN_MANTENIMIENTO } from "@/lib/permisos";
-
-const articuloSchema = z.object({
-  nombre: z.string().trim().min(1, "Nombre requerido"),
-  descripcion: z.string().trim().optional(),
-  unidadMedida: z.string().trim().optional(),
-  stockActual: z.coerce.number().int().min(0).default(0),
-  stockMinimo: z.coerce.number().int().min(0).default(0),
-});
+import { articuloSchema } from "@/lib/schemas-entidades";
 
 export type ArticuloFormState =
   | { error?: string; fieldErrors?: Record<string, string[]> }

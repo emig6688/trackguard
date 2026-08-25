@@ -102,6 +102,41 @@ export async function vehiculoActivoParaCierre(
 }
 
 /**
+ * El vehículo del checklist pre-salida más reciente de hoy para este
+ * chofer, sin importar si ya cerró ruta con él o no — a diferencia de
+ * vehiculoActivoParaCierre (pensado solo para cerrar ruta), este se usa
+ * para fijar la patente al cargar combustible o un gasto: un chofer puede
+ * necesitar cargar combustible antes de cerrar la ruta, o incluso después
+ * de haberla cerrado.
+ */
+export async function vehiculoDelChecklistDeHoy(
+  prisma: ScopedPrismaClient,
+  choferId: string
+): Promise<{ id: string; patente: string } | null> {
+  const checklist = await prisma.checklistRealizado.findFirst({
+    where: { choferId, momento: "PRESALIDA", fechaHora: { gte: inicioDeHoy() } },
+    orderBy: { fechaHora: "desc" },
+    select: { vehiculo: { select: { id: true, patente: true } } },
+  });
+  return checklist?.vehiculo ?? null;
+}
+
+/**
+ * true si la empresa tiene activada la regla de checklist obligatorio,
+ * independientemente de si el chofer ya lo hizo hoy o no — a diferencia de
+ * checklistObligatorioPendiente (que responde "¿hay que bloquearlo ahora
+ * mismo?"), esto responde "¿esta empresa usa esta regla?", para decidir si
+ * corresponde fijar la patente del vehículo o dejar un selector libre.
+ */
+export async function checklistObligatorioActivo(
+  prisma: ScopedPrismaClient,
+  empresaId: string
+): Promise<boolean> {
+  const regla = await obtenerReglaNotificacion(prisma, empresaId, "CHECKLIST_NO_REALIZADO");
+  return regla.activo;
+}
+
+/**
  * Suma a Vehiculo.horasEquipoFrio la duración entre el checklist pre-salida
  * de hoy y el cierre de ruta (con o sin novedades) que se acaba de
  * completar, para el mismo chofer+vehículo. Si falta el pre-salida de hoy,

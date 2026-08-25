@@ -50,7 +50,8 @@ export async function calcularCostosPorVehiculo(
     prisma.gasto.groupBy({
       by: ["vehiculoId"],
       _sum: { monto: true },
-      where: { eliminadoEn: null, ...(fecha ? { fecha } : {}) },
+      // Un gasto rechazado no es un costo real de la empresa — no cuenta.
+      where: { eliminadoEn: null, estado: { not: "RECHAZADO" }, ...(fecha ? { fecha } : {}) },
     }),
     prisma.ordenDeTrabajo.findMany({
       where: { eliminadoEn: null },
@@ -150,7 +151,7 @@ export async function calcularCostosMensuales(
 
   if (opciones.tipo === "GASTOS" || opciones.tipo === "TOTAL") {
     const gastos = await prisma.gasto.findMany({
-      where: { eliminadoEn: null, fecha: { gte: desde }, ...filtroVehiculo },
+      where: { eliminadoEn: null, estado: { not: "RECHAZADO" }, fecha: { gte: desde }, ...filtroVehiculo },
       select: { fecha: true, monto: true },
     });
     for (const g of gastos) sumar(g.fecha, Number(g.monto));
@@ -201,7 +202,7 @@ export async function calcularCostosPorChofer(
     prisma.gasto.groupBy({
       by: ["choferId"],
       _sum: { monto: true },
-      where: { eliminadoEn: null, ...(fecha ? { fecha } : {}) },
+      where: { eliminadoEn: null, estado: { not: "RECHAZADO" }, ...(fecha ? { fecha } : {}) },
     }),
   ]);
 

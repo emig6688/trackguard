@@ -27,20 +27,31 @@ type Fila = { id: string; articuloId: string; descripcion: string; cantidad: str
 const SIN_OT = "__sin_ot__";
 const SIN_ARTICULO = "__sin_articulo__";
 
+const PRIORIDAD_LABEL: Record<string, string> = {
+  BAJA: "Baja",
+  MEDIA: "Media",
+  ALTA: "Alta",
+  URGENTE: "Urgente",
+};
+
 export function CompraManualForm({
   articulos,
   ordenes,
+  vehiculos,
   montoAutorizacionCompra,
   compraExistente,
 }: {
   articulos: { id: string; nombre: string }[];
   ordenes?: { id: string; numero: string; titulo: string }[];
+  vehiculos: { id: string; patente: string }[];
   montoAutorizacionCompra: string | null;
   compraExistente?: {
     id: string;
     montoEstimado: string | null;
     observaciones: string | null;
     ordenDeTrabajoId: string | null;
+    prioridad: string | null;
+    vehiculoId: string | null;
     items: {
       id: string;
       descripcion: string;
@@ -75,6 +86,9 @@ export function CompraManualForm({
   );
   const nextId = useRef(1);
   const [ordenDeTrabajoId, setOrdenDeTrabajoId] = useState(compraExistente?.ordenDeTrabajoId ?? "");
+  const [prioridad, setPrioridad] = useState(compraExistente?.prioridad ?? "");
+  const [vehiculoId, setVehiculoId] = useState(compraExistente?.vehiculoId ?? "");
+  const sinOt = !ordenDeTrabajoId;
 
   function actualizarFila(id: string, cambios: Partial<Fila>) {
     setItems((prev) => prev.map((f) => (f.id === id ? { ...f, ...cambios } : f)));
@@ -119,6 +133,50 @@ export function CompraManualForm({
               ))}
             </SelectContent>
           </Select>
+        </div>
+      )}
+
+      {/* Solo se piden a mano cuando la compra no está ligada a una OT — si
+      lo está, hereda ambos de esa OT (ver resolverPrioridadYVehiculo en
+      app/_actions/compras.ts) y no tiene sentido elegirlos de nuevo acá. */}
+      {sinOt && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor={domId("vehiculoSelect")}>Vehículo</Label>
+            <input type="hidden" name="vehiculoId" value={vehiculoId} />
+            <Select value={vehiculoId} onValueChange={(v) => setVehiculoId(v ?? "")}>
+              <SelectTrigger id={domId("vehiculoSelect")} className="w-full">
+                <SelectValue placeholder="Elegí un vehículo">
+                  {(value: string) => vehiculos.find((v) => v.id === value)?.patente ?? "Elegí un vehículo"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {vehiculos.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    {v.patente}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={domId("prioridadSelect")}>Prioridad</Label>
+            <input type="hidden" name="prioridad" value={prioridad} />
+            <Select value={prioridad} onValueChange={(v) => setPrioridad(v ?? "")}>
+              <SelectTrigger id={domId("prioridadSelect")} className="w-full">
+                <SelectValue placeholder="Elegí una prioridad">
+                  {(value: string) => PRIORIDAD_LABEL[value] ?? "Elegí una prioridad"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(PRIORIDAD_LABEL).map(([valor, label]) => (
+                  <SelectItem key={valor} value={valor}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       )}
 

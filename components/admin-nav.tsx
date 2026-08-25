@@ -26,6 +26,7 @@ import {
   LineChart,
   ShieldCheck,
   Shield,
+  Upload,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -52,6 +53,7 @@ export const ICONOS = {
   estadisticas: LineChart,
   autorizaciones: ShieldCheck,
   guardia: Shield,
+  importar: Upload,
 } satisfies Record<string, LucideIcon>;
 
 export type IconKey = keyof typeof ICONOS;

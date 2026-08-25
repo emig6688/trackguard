@@ -21,6 +21,8 @@ export type FilaCompraPdf = {
   proveedor: string;
   montoEstimado: string;
   montoReal: string;
+  prioridad: string;
+  autorizacion: string;
 };
 
 export type FilaComposicionPdf = {
@@ -65,6 +67,8 @@ export function ReporteComprasDocument({
             <Text style={styles.th}>Proveedor</Text>
             <Text style={styles.th}>Monto estimado</Text>
             <Text style={styles.th}>Monto real</Text>
+            <Text style={styles.th}>Prioridad</Text>
+            <Text style={styles.th}>Autorización</Text>
           </View>
           {filas.map((f, i) => (
             <View key={i} style={styles.tr}>
@@ -76,6 +80,8 @@ export function ReporteComprasDocument({
               <Text style={styles.td}>{f.proveedor}</Text>
               <Text style={styles.td}>{f.montoEstimado}</Text>
               <Text style={styles.td}>{f.montoReal}</Text>
+              <Text style={styles.td}>{f.prioridad}</Text>
+              <Text style={styles.td}>{f.autorizacion}</Text>
             </View>
           ))}
         </View>

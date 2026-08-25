@@ -2,7 +2,7 @@
 
 import { requireRole, ROLES_MOBILE_CHOFER } from "@/lib/permisos";
 import { guardarArchivo } from "@/lib/storage";
-import { verificarChecklistDelDia } from "@/lib/checklist";
+import { verificarChecklistDelDia, checklistObligatorioActivo, vehiculoDelChecklistDeHoy } from "@/lib/checklist";
 
 export type CombustibleState =
   | {
@@ -27,6 +27,18 @@ export async function registrarCargaCombustible(
 
   const chequeo = await verificarChecklistDelDia(prisma, empresaId, chofer, vehiculoId);
   if (chequeo.bloqueado) return { error: chequeo.motivo };
+
+  // Con checklist obligatorio activo, la patente viene fija en el
+  // formulario (ver combustible/page.tsx) — este chequeo es el resguardo
+  // del servidor por si el campo oculto llegó manipulado.
+  if (await checklistObligatorioActivo(prisma, empresaId)) {
+    const vehiculoActivo = await vehiculoDelChecklistDeHoy(prisma, chofer.id);
+    if (!vehiculoActivo || vehiculoActivo.id !== vehiculoId) {
+      return {
+        error: `Tenés que cargar combustible con ${vehiculoActivo?.patente ?? "el vehículo"} de tu checklist de hoy.`,
+      };
+    }
+  }
 
   const kmOdometro = Number(formData.get("kmOdometro"));
   const litrosCargados = Number(formData.get("litrosCargados"));

@@ -4,21 +4,8 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole, ROLES_ADMIN_MANTENIMIENTO } from "@/lib/permisos";
-import { optionalInt } from "@/lib/zod-helpers";
 import { aplicarPlanEstandarAVehiculo } from "@/lib/plan-mantenimiento-estandar";
-
-const vehiculoSchema = z.object({
-  patente: z.string().trim().min(3, "Patente requerida").max(20),
-  marca: z.string().trim().min(1, "Marca requerida"),
-  modelo: z.string().trim().min(1, "Modelo requerido"),
-  anio: optionalInt({ min: 1980, max: 2100 }),
-  tipo: z.enum(["CAMION", "ACOPLADO", "UTILITARIO", "OTRO"]),
-  numeroInterno: z.string().trim().optional(),
-  kmActual: z.coerce.number().int().min(0).default(0),
-  horasEquipoFrio: optionalInt({ min: 0 }),
-  tipoCarroceria: z.string().trim().optional(),
-  equipoFrioTipo: z.string().trim().optional(),
-});
+import { vehiculoSchema } from "@/lib/schemas-entidades";
 
 export type VehiculoFormState =
   | { error?: string; fieldErrors?: Record<string, string[]> }

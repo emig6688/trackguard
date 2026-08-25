@@ -43,6 +43,20 @@ const ESTADO_AUTORIZACION_VARIANT: Record<string, "success" | "warning" | "destr
   RECHAZADA: "destructive",
 };
 
+const PRIORIDAD_LABEL: Record<string, string> = {
+  BAJA: "Baja",
+  MEDIA: "Media",
+  ALTA: "Alta",
+  URGENTE: "Urgente",
+};
+
+const PRIORIDAD_VARIANT: Record<string, "secondary" | "warning" | "destructive"> = {
+  BAJA: "secondary",
+  MEDIA: "secondary",
+  ALTA: "warning",
+  URGENTE: "destructive",
+};
+
 export default async function ComprasPage({
   searchParams,
 }: {
@@ -85,6 +99,7 @@ export default async function ComprasPage({
         creadoPor: true,
         facturaArchivo: true,
         ordenDeTrabajo: true,
+        vehiculo: { select: { id: true, patente: true } },
         presupuestos: { include: { archivo: true, subidoPor: true }, orderBy: { createdAt: "asc" } },
       },
       orderBy: [{ estado: "asc" }, { fechaSolicitud: "desc" }],
@@ -135,6 +150,7 @@ export default async function ComprasPage({
               <CompraManualForm
                 articulos={articulos}
                 ordenes={ordenesDeTrabajo}
+                vehiculos={vehiculos}
                 montoAutorizacionCompra={empresa.montoAutorizacionCompra?.toString() ?? null}
               />
             </DialogContent>
@@ -201,6 +217,10 @@ export default async function ComprasPage({
                   <Badge variant={ESTADO_AUTORIZACION_VARIANT[c.estadoAutorizacionMantenimiento]}>
                     Mantenimiento: {ESTADO_AUTORIZACION_LABEL[c.estadoAutorizacionMantenimiento]}
                   </Badge>
+                )}
+                {c.vehiculo && <Badge variant="outline">{c.vehiculo.patente}</Badge>}
+                {c.prioridad && (
+                  <Badge variant={PRIORIDAD_VARIANT[c.prioridad]}>{PRIORIDAD_LABEL[c.prioridad]}</Badge>
                 )}
               </div>
               <div className="space-y-1">
@@ -304,12 +324,15 @@ export default async function ComprasPage({
                     <CompraManualForm
                       articulos={articulos}
                       ordenes={ordenesDeTrabajo}
+                      vehiculos={vehiculos}
                       montoAutorizacionCompra={empresa.montoAutorizacionCompra?.toString() ?? null}
                       compraExistente={{
                         id: c.id,
                         montoEstimado: c.montoEstimado?.toString() ?? null,
                         observaciones: c.observaciones,
                         ordenDeTrabajoId: c.ordenDeTrabajoId,
+                        prioridad: c.prioridad,
+                        vehiculoId: c.vehiculoId,
                         items: c.items.map((item) => ({
                           id: item.id,
                           descripcion: item.descripcion,

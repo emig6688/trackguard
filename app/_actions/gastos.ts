@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { requireRole, ROLES_MOBILE_CHOFER } from "@/lib/permisos";
 import { guardarArchivo } from "@/lib/storage";
-import { verificarChecklistDelDia } from "@/lib/checklist";
+import { verificarChecklistDelDia, checklistObligatorioActivo, vehiculoDelChecklistDeHoy } from "@/lib/checklist";
 
 const TIPOS_GASTO = ["PEAJE", "VIATICO", "REPARACION_MENOR", "OTRO"] as const;
 
@@ -32,6 +32,18 @@ export async function registrarGasto(_prevState: GastoState, formData: FormData)
 
   const chequeo = await verificarChecklistDelDia(prisma, empresaId, chofer, vehiculoId);
   if (chequeo.bloqueado) return { error: chequeo.motivo };
+
+  // Con checklist obligatorio activo, la patente viene fija en el
+  // formulario (ver gastos/page.tsx) — este chequeo es el resguardo del
+  // servidor por si el campo oculto llegó manipulado.
+  if (await checklistObligatorioActivo(prisma, empresaId)) {
+    const vehiculoActivo = await vehiculoDelChecklistDeHoy(prisma, chofer.id);
+    if (!vehiculoActivo || vehiculoActivo.id !== vehiculoId) {
+      return {
+        error: `Tenés que cargar el gasto con ${vehiculoActivo?.patente ?? "el vehículo"} de tu checklist de hoy.`,
+      };
+    }
+  }
 
   const descripcionTrim = typeof descripcion === "string" ? descripcion.trim() : "";
   if (tipo === "OTRO" && !descripcionTrim) {

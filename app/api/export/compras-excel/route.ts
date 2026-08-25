@@ -3,7 +3,7 @@ import ExcelJS from "exceljs";
 import { requireEmpresa } from "@/lib/permisos";
 import { construirCondicionOTCompra } from "@/lib/compras-filtro";
 import { rangoExportPorDefecto } from "@/lib/export-rango";
-import type { EstadoCompra } from "@/app/generated/prisma/client";
+import type { EstadoCompra, EstadoAutorizacionCompra, PrioridadOT } from "@/app/generated/prisma/client";
 
 // Armar el workbook con varias hojas puede acercarse al límite por defecto.
 export const maxDuration = 60;
@@ -18,6 +18,29 @@ const ESTADO_LABEL: Record<EstadoCompra, string> = {
   DOCUMENTADA: "Documentada",
   CANCELADA: "Cancelada",
 };
+
+const PRIORIDAD_LABEL: Record<PrioridadOT, string> = {
+  BAJA: "Baja",
+  MEDIA: "Media",
+  ALTA: "Alta",
+  URGENTE: "Urgente",
+};
+
+/**
+ * Resume las dos compuertas de autorización (gerencia + mantenimiento) en
+ * una sola columna: rechazada si cualquiera de las dos lo está, pendiente
+ * si cualquiera sigue pendiente, autorizada si al menos una lo requirió y
+ * ya se resolvió, o "no requiere" si ninguna de las dos aplicó nunca.
+ */
+function resumenAutorizacion(
+  gerencia: EstadoAutorizacionCompra,
+  mantenimiento: EstadoAutorizacionCompra
+): string {
+  if (gerencia === "RECHAZADA" || mantenimiento === "RECHAZADA") return "Rechazada";
+  if (gerencia === "PENDIENTE" || mantenimiento === "PENDIENTE") return "Pendiente de autorización";
+  if (gerencia === "NO_REQUERIDA" && mantenimiento === "NO_REQUERIDA") return "No requiere autorización";
+  return "Autorizada";
+}
 
 /**
  * Reporte de compras a partir de los mismos filtros que /compras (estado,
@@ -65,6 +88,7 @@ export async function GET(request: Request) {
           eventoRuta: { select: { chofer: { select: { nombre: true } } } },
         },
       },
+      vehiculo: { select: { patente: true } },
       items: {
         include: { articuloPanol: { select: { nombre: true } } },
       },
@@ -82,6 +106,8 @@ export async function GET(request: Request) {
     proveedor: string;
     montoEstimado: number | null;
     montoReal: number | null;
+    prioridad: string;
+    autorizacion: string;
   };
 
   const filas: Fila[] = compras.map((c) => ({
@@ -89,7 +115,7 @@ export async function GET(request: Request) {
     estado: c.estado,
     fechaSolicitud: c.fechaSolicitud,
     fechaCompra: c.fechaCompra,
-    camion: c.ordenDeTrabajo?.vehiculo?.patente ?? SIN_CAMION,
+    camion: c.ordenDeTrabajo?.vehiculo?.patente ?? c.vehiculo?.patente ?? SIN_CAMION,
     chofer:
       c.ordenDeTrabajo?.checklistRealizado?.chofer.nombre ??
       c.ordenDeTrabajo?.eventoRuta?.chofer.nombre ??
@@ -97,6 +123,8 @@ export async function GET(request: Request) {
     proveedor: c.proveedor ?? SIN_PROVEEDOR,
     montoEstimado: c.montoEstimado != null ? Number(c.montoEstimado) : null,
     montoReal: c.montoTotal != null ? Number(c.montoTotal) : null,
+    prioridad: c.prioridad ? PRIORIDAD_LABEL[c.prioridad] : "",
+    autorizacion: resumenAutorizacion(c.estadoAutorizacion, c.estadoAutorizacionMantenimiento),
   }));
 
   // Los totales "valorizados" (por camión/chofer/proveedor) solo suman
@@ -132,6 +160,8 @@ export async function GET(request: Request) {
     { header: "Proveedor", key: "proveedor", width: 24 },
     { header: "Monto estimado", key: "montoEstimado", width: 16 },
     { header: "Monto real", key: "montoReal", width: 16 },
+    { header: "Prioridad", key: "prioridad", width: 12 },
+    { header: "Estado de autorización", key: "autorizacion", width: 24 },
   ];
   detalle.getRow(1).font = { bold: true };
   for (const f of filas) {
@@ -145,6 +175,8 @@ export async function GET(request: Request) {
       proveedor: f.proveedor,
       montoEstimado: f.montoEstimado,
       montoReal: f.montoReal,
+      prioridad: f.prioridad,
+      autorizacion: f.autorizacion,
     });
   }
   detalle.getColumn("montoEstimado").numFmt = '"$"#,##0.00';
@@ -168,7 +200,7 @@ export async function GET(request: Request) {
         numero: c.numero,
         estado: ESTADO_LABEL[c.estado],
         fecha: c.fechaSolicitud.toLocaleDateString("es-AR"),
-        camion: c.ordenDeTrabajo?.vehiculo?.patente ?? SIN_CAMION,
+        camion: c.ordenDeTrabajo?.vehiculo?.patente ?? c.vehiculo?.patente ?? SIN_CAMION,
         descripcion: item.descripcion,
         articulo: item.articuloPanol?.nombre ?? "",
         cantidadSolicitada: item.cantidadSolicitada ?? "",

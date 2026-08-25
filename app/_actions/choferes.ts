@@ -5,26 +5,7 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole, ROLES_ADMIN_MANTENIMIENTO } from "@/lib/permisos";
-import { normalizarDni } from "@/lib/zod-helpers";
-
-const crearChoferSchema = z.object({
-  nombre: z.string().trim().min(1, "Nombre requerido"),
-  email: z.string().trim().email("Email inválido"),
-  dni: z
-    .string()
-    .trim()
-    .optional()
-    .transform((v) => (v ? normalizarDni(v) : undefined)),
-  password: z.string().min(6, "Mínimo 6 caracteres"),
-  telefono: z.string().trim().optional(),
-  numeroLicencia: z.string().trim().optional(),
-  categoriaLicencia: z.string().trim().optional(),
-  legajo: z.string().trim().optional(),
-  fechaIngreso: z
-    .string()
-    .optional()
-    .transform((v) => (v ? new Date(v) : undefined)),
-});
+import { crearChoferSchema } from "@/lib/schemas-entidades";
 
 const actualizarChoferSchema = crearChoferSchema.omit({ password: true }).extend({
   password: z.string().min(6, "Mínimo 6 caracteres").optional().or(z.literal("")),

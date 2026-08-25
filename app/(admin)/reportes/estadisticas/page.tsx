@@ -139,6 +139,11 @@ export default async function EstadisticasPage({
                 cantidad de OT correctivas (últimos 12 meses), 20% antigüedad. A mayor score, más
                 conviene evaluar el reemplazo.
               </p>
+              <p className="text-sm text-muted-foreground">
+                &quot;Costo total (12m)&quot; incluye: combustible, gastos (aprobados y pendientes
+                de revisión — no los rechazados), repuestos y facturas de órdenes de trabajo de
+                los últimos 12 meses.
+              </p>
               <Table>
                 <TableHeader>
                   <TableRow>

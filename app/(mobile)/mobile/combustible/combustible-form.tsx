@@ -33,7 +33,13 @@ async function reducirImagenParaLectura(file: File): Promise<File> {
   return new File([blob], "ticket.jpg", { type: "image/jpeg" });
 }
 
-export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patente: string }[] }) {
+export function CombustibleForm({
+  vehiculos,
+  vehiculoActivo,
+}: {
+  vehiculos: { id: string; patente: string }[];
+  vehiculoActivo: { id: string; patente: string } | null;
+}) {
   const [state, formAction, pending] = useActionState(registrarCargaCombustible, undefined);
   const [kmOdometro, setKmOdometro] = useState("");
   const [litros, setLitros] = useState("");
@@ -115,19 +121,29 @@ export function CombustibleForm({ vehiculos }: { vehiculos: { id: string; patent
 
       <div className="space-y-2">
         <Label htmlFor="vehiculoId">Vehículo</Label>
-        <select
-          id="vehiculoId"
-          name="vehiculoId"
-          required
-          className="w-full rounded-md border border-input bg-transparent p-2 text-sm"
-        >
-          <option value="">Elegí un vehículo</option>
-          {vehiculos.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.patente}
-            </option>
-          ))}
-        </select>
+        {vehiculoActivo ? (
+          <>
+            <input type="hidden" name="vehiculoId" value={vehiculoActivo.id} />
+            <p className="rounded-md border bg-muted/40 p-2 text-sm font-medium">
+              {vehiculoActivo.patente}{" "}
+              <span className="font-normal text-muted-foreground">(el que usaste en tu checklist de hoy)</span>
+            </p>
+          </>
+        ) : (
+          <select
+            id="vehiculoId"
+            name="vehiculoId"
+            required
+            className="w-full rounded-md border border-input bg-transparent p-2 text-sm"
+          >
+            <option value="">Elegí un vehículo</option>
+            {vehiculos.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.patente}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div className="space-y-2">

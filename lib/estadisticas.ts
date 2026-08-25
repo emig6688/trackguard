@@ -27,7 +27,7 @@ export async function calcularCandidatosReemplazo(
   const ahora = new Date();
   const desde = new Date(ahora.getFullYear() - 1, ahora.getMonth(), ahora.getDate());
 
-  const [vehiculos, ots] = await Promise.all([
+  const [vehiculos, ots, combustible, gastos] = await Promise.all([
     prisma.vehiculo.findMany({
       where: { activo: true, eliminadoEn: null },
       select: { id: true, patente: true, anio: true, kmActual: true },
@@ -42,11 +42,33 @@ export async function calcularCandidatosReemplazo(
         facturas: { where: { eliminadoEn: null }, select: { monto: true } },
       },
     }),
+    // Costo total: repuestos y facturas de OT (abajo) más combustible y
+    // gastos — mismas cuatro fuentes que /reportes/costos, para que
+    // "Costo total (12m)" de acá no le muestre al usuario un número menor
+    // al que ve en Costos para el mismo vehículo y período.
+    prisma.cargaCombustible.groupBy({
+      by: ["vehiculoId"],
+      _sum: { montoTotal: true },
+      where: { eliminadoEn: null, fechaHora: { gte: desde } },
+    }),
+    prisma.gasto.groupBy({
+      by: ["vehiculoId"],
+      _sum: { monto: true },
+      // Un gasto rechazado no es un costo real de la empresa — no cuenta.
+      where: { eliminadoEn: null, estado: { not: "RECHAZADO" }, fecha: { gte: desde } },
+    }),
   ]);
 
   const costoPorVehiculo = new Map<string, number>();
   const correctivasPorVehiculo = new Map<string, number>();
   const areasPorVehiculo = new Map<string, Map<string, number>>();
+
+  for (const c of combustible) {
+    costoPorVehiculo.set(c.vehiculoId, (costoPorVehiculo.get(c.vehiculoId) ?? 0) + Number(c._sum.montoTotal ?? 0));
+  }
+  for (const g of gastos) {
+    costoPorVehiculo.set(g.vehiculoId, (costoPorVehiculo.get(g.vehiculoId) ?? 0) + Number(g._sum.monto ?? 0));
+  }
 
   for (const ot of ots) {
     let costoOt = 0;
