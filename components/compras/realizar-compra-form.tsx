@@ -144,7 +144,7 @@ export function RealizarCompraForm({
   }
 
   return (
-    <div className="flex shrink-0 gap-2">
+    <div className="flex flex-wrap shrink-0 gap-2">
       {puedeRealizar && (
         <Button type="button" size="sm" onClick={() => setMostrarForm(true)}>
           Recibir Compra

@@ -271,7 +271,7 @@ export default async function ComprasPage({
                 <div className="space-y-1.5 rounded-md bg-muted/40 p-2">
                   <p className="text-xs font-medium text-muted-foreground">Presupuestos</p>
                   {c.presupuestos.map((p) => (
-                    <div key={p.id} className="flex items-center gap-2 text-xs">
+                    <div key={p.id} className="flex flex-wrap items-center gap-2 text-xs">
                       <a href={p.archivo.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
                         {p.proveedor ?? "Presupuesto"}
                       </a>
@@ -285,7 +285,7 @@ export default async function ComprasPage({
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <a
                 href={`/api/export/oc-pdf?id=${c.id}`}
                 className="text-xs text-muted-foreground hover:text-foreground hover:underline"
