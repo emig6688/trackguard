@@ -36,6 +36,11 @@ const eslintConfig = defineConfig([
       // cross-tenant en su authorize()) — no hay un empresaId por el que
       // scopear todavía.
       "app/_actions/auth.ts",
+      // Los tests arman su propia Empresa/Usuario de prueba y a veces
+      // necesitan el cliente crudo para fixtures/asserts cross-tenant (ver
+      // lib/test-fixtures.ts) — no corren con datos reales de ninguna
+      // empresa, así que la disciplina de scoping no aplica acá.
+      "**/*.test.ts",
     ],
     rules: {
       "no-restricted-imports": [

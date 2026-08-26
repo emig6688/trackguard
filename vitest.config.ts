@@ -6,6 +6,12 @@ export default defineConfig({
     environment: "node",
     include: ["**/*.test.ts"],
     exclude: ["node_modules", "e2e/**"],
+    setupFiles: ["./vitest.setup.ts"],
+    // Los tests de app/_actions/*.ts hacen operaciones reales contra
+    // Postgres (crean/borran su propia Empresa de prueba) — correrlos en
+    // paralelo entre archivos es seguro porque cada uno usa su propia
+    // empresa aislada.
+    fileParallelism: true,
   },
   resolve: {
     alias: {
