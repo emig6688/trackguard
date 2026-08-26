@@ -33,8 +33,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files — .env.example es la plantilla sin secretos, sí se versiona
+# (DEPLOY.md la usa como referencia; sin esto un clone nuevo no la tiene)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -50,6 +52,3 @@ next-env.d.ts
 
 # backups descargados con scripts/descargar-backup.ts (ver DEPLOY.md)
 /*.json.gz
-
-.vercel
-.env*

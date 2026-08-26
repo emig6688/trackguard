@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 // Todo lo que sirve la app (imágenes/archivos vía /api/archivos/[id], fuentes
 // de next/font/google autohospedadas, el service worker de push en /sw.js)
@@ -13,7 +14,10 @@ const CSP = [
   "img-src 'self' blob: data:",
   "font-src 'self'",
   "worker-src 'self'",
-  "connect-src 'self'",
+  // Sentry (si NEXT_PUBLIC_SENTRY_DSN está configurado) manda los eventos
+  // del lado del browser a su dominio de ingesta — sin DSN, el SDK no hace
+  // ningún request y esto queda sin uso, pero no rompe nada dejarlo.
+  "connect-src 'self' https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -53,4 +57,13 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  // Sin SENTRY_AUTH_TOKEN el plugin solo se salta la subida de source maps
+  // (con un aviso) — el build sigue andando igual, y Sentry sigue
+  // recibiendo errores vía DSN, solo que sin código fuente legible.
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+});

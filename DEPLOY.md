@@ -12,6 +12,7 @@ Copiar `.env.example` como referencia y cargar en Vercel (Project Settings → E
 - `RESEND_API_KEY` / `RESEND_FROM_EMAIL` — opcionales, pero sin ellos el canal de email de las notificaciones solo deja constancia en el log (no manda nada real). `RESEND_FROM_EMAIL` tiene que ser un remitente de un dominio **verificado en el dashboard de Resend** (SPF/DKIM) — no puede ser una casilla de Office 365 ajena a Resend. Sin dominio verificado, Resend entrega solo a la cuenta dueña de la API key.
 - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` — para las notificaciones push reales (llegan al celular con la app cerrada). Generar el par una sola vez con `node -e "console.log(require('web-push').generateVAPIDKeys())"` y `VAPID_SUBJECT` es un `mailto:` de contacto. Sin estas 3, el botón "Activar notificaciones push" no hace nada (`lib/push.ts` queda en no-op).
 - `OPENAI_API_KEY` — opcional. Sin esto, la carga de combustible no lee el ticket con IA (monto/litros/proveedor) — el chofer los completa a mano, como siempre (`lib/ocr-ticket-combustible.ts`).
+- `NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` — observabilidad de errores (ver sección 6 más abajo). Opcionales: sin `NEXT_PUBLIC_SENTRY_DSN`, Sentry no manda nada (mismo criterio que el resto de las integraciones de esta lista).
 
 ## 2. Base de datos
 
@@ -69,6 +70,7 @@ En cuanto se pueda pagar Supabase Pro, activar ahí el backup diario/PITR nativo
 - Subir un archivo (foto de checklist o documento) para confirmar que `BLOB_READ_WRITE_TOKEN` funciona.
 - Si se configuró Resend, mandar una notificación de prueba y confirmar que llega (no solo que quedó en el log).
 - Activar el push (botón junto a la campanita) en un dispositivo Android o desktop y disparar cualquier aviso que use el canal "En la app" — confirmar que llega una notificación real del sistema operativo con la app cerrada. En iOS, primero hay que agregar la app a la pantalla de inicio (Safari → Compartir → "Agregar a pantalla de inicio"); el botón lo explica si detecta iOS sin instalar.
+- Si se configuró Sentry, forzar un error de prueba (ver sección 7) y confirmar que aparece en el dashboard de Sentry en menos de un minuto.
 
 ## 6. `npm audit` — riesgo aceptado a propósito
 
@@ -79,3 +81,30 @@ Al día de la auditoría de comercialización (2026-08-25), `npm audit` reporta 
 dependencia directa. Se decidió conscientemente NO aplicar el downgrade (más riesgo de romper
 algo que el de dejar la vulnerabilidad transitiva) — revisar `npm audit` cada tanto por si
 aparece un fix real sin bajar de versión.
+
+## 7. Sentry (observabilidad de errores)
+
+El SDK (`@sentry/nextjs`) ya está instalado y cableado (`instrumentation.ts`,
+`instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`,
+`app/error.tsx`, `app/(mobile)/mobile/error.tsx`, `app/global-error.tsx`, y
+`next.config.ts` envuelto en `withSentryConfig`) — pero queda inerte hasta configurar
+`NEXT_PUBLIC_SENTRY_DSN`. Pasos para activarlo:
+
+1. Crear una cuenta en [sentry.io](https://sentry.io) (tiene plan gratis) y un proyecto nuevo,
+   plataforma **Next.js**.
+2. Copiar el **DSN** del proyecto (Settings → Client Keys (DSN), o lo muestra el wizard de alta)
+   y cargarlo en Vercel como `NEXT_PUBLIC_SENTRY_DSN`. Con solo esto ya se reciben los errores.
+3. Opcional, para que los stack traces en Sentry muestren el código fuente real en vez de
+   JS minificado: crear un **Auth Token** (Settings de la organización → Auth Tokens, scope
+   `project:releases`) y cargar en Vercel `SENTRY_ORG` (slug de la organización), `SENTRY_PROJECT`
+   (slug del proyecto) y `SENTRY_AUTH_TOKEN`. Sin esto, `next build` simplemente salta la subida
+   de source maps (con un aviso en el log de build) — no rompe nada.
+4. La CSP (`next.config.ts`) ya permite `connect-src` hacia los dominios de ingesta de Sentry
+   (`*.ingest.sentry.io`, `*.ingest.us.sentry.io`, `*.ingest.de.sentry.io`) — si tu proyecto queda
+   en otra región, agregar ese dominio a la lista.
+5. Para probar: cualquier excepción no atrapada en un Server Component, Route Handler o render
+   del cliente ya se manda sola (vía `onRequestError`/`app/error.tsx`/`app/global-error.tsx`). Las
+   Server Actions (`app/_actions/*.ts`) **no** están instrumentadas individualmente — un error ahí
+   solo llega a Sentry si de rebote rompe el render de la página que la llamó. Si más adelante se
+   quiere capturar cada action por separado, hay que envolver cada una con
+   `Sentry.withServerActionInstrumentation(...)` (cambio más grande, no incluido acá).
