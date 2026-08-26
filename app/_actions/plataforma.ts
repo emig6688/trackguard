@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireSuperadmin } from "@/lib/permisos";
 import { ITEMS_CHECKLIST_ESTANDAR } from "@/lib/checklist";
+import { CATALOGO_MANTENIMIENTO_ESTANDAR } from "@/lib/catalogo-mantenimiento";
 
 const crearEmpresaSchema = z.object({
   nombreEmpresa: z.string().trim().min(1, "Nombre de la empresa requerido"),
@@ -63,6 +64,21 @@ export async function crearEmpresa(
       version: 1,
       items: { create: ITEMS_CHECKLIST_ESTANDAR.map((texto, i) => ({ orden: i + 1, texto })) },
     },
+  });
+
+  // Sin esto, cada vehículo que la empresa nueva carga queda sin ningún plan
+  // preventivo asociado hasta que alguien lo complete a mano en
+  // /mantenimiento-estandar — pasaba desapercibido (LA SUPERIOR quedó así).
+  await prisma.planMantenimientoEstandarItem.createMany({
+    data: CATALOGO_MANTENIMIENTO_ESTANDAR.map((item) => ({
+      empresaId: nuevaEmpresa.id,
+      categoria: item.categoria,
+      nombre: item.nombre,
+      tipoIntervalo: item.tipoIntervalo,
+      intervaloKm: item.intervaloKm,
+      intervaloDias: item.intervaloDias,
+      intervaloHoras: item.intervaloHoras,
+    })),
   });
 
   revalidatePath("/plataforma");

@@ -3,6 +3,7 @@ import { BackToDashboard } from "@/components/back-to-dashboard";
 import { ItemCatalogoForm } from "@/components/planes-mantenimiento/item-catalogo-form";
 import { ItemCatalogoRow } from "@/components/planes-mantenimiento/item-catalogo-row";
 import { AplicarFlotaDialog } from "@/components/planes-mantenimiento/aplicar-flota-dialog";
+import { CargarCatalogoEstandarButton } from "@/components/planes-mantenimiento/cargar-catalogo-estandar-button";
 
 export default async function MantenimientoEstandarPage() {
   const { prisma } = await requireEmpresa();
@@ -36,7 +37,10 @@ export default async function MantenimientoEstandarPage() {
             masiva.
           </p>
         </div>
-        <AplicarFlotaDialog vehiculos={vehiculos} />
+        <div className="flex flex-wrap items-start gap-2">
+          <CargarCatalogoEstandarButton />
+          <AplicarFlotaDialog vehiculos={vehiculos} />
+        </div>
       </div>
 
       <div className="space-y-6">
