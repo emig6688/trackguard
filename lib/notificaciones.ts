@@ -6,11 +6,27 @@ import { enviarEmail } from "@/lib/email";
 import { enviarPush } from "@/lib/push";
 import type { CanalNotificacion, Rol, TipoNotificacion } from "@/app/generated/prisma/client";
 
+/**
+ * Agrupa los parámetros de /notificaciones por área, para completarlos en
+ * orden lógico (todo lo de compras junto, todo lo de OT junto, etc.) en vez
+ * de un orden arbitrario. `orden` es el orden de aparición del área en la
+ * página, no de cada ítem dentro de ella (eso lo da el orden de inserción en
+ * CATALOGO_NOTIFICACIONES).
+ */
+export const AREAS_PARAMETROS = {
+  COMPRAS: { label: "Compras", orden: 1 },
+  OT: { label: "Órdenes de trabajo", orden: 2 },
+  CHECKLIST_VEHICULOS: { label: "Checklist y vehículos", orden: 3 },
+  GUARDIA: { label: "Guardia", orden: 4 },
+} as const;
+export type AreaParametro = keyof typeof AREAS_PARAMETROS;
+
 export type InfoTipoNotificacion = {
   label: string;
   disparador: string;
   destinatarioFijo: string | null;
   usaDiasAviso: boolean;
+  area: AreaParametro;
 };
 
 /**
@@ -22,73 +38,25 @@ export type InfoTipoNotificacion = {
  * No todos los valores de TipoNotificacion tienen entrada acá — un tipo sin
  * entrada simplemente no aparece en /notificaciones ni se puede configurar
  * (así se "saca" una notificación sin tener que borrar el valor del enum de
- * la base, que requeriría una migración para recrear el tipo).
+ * la base, que requeriría una migración para recrear el tipo). El orden acá
+ * abajo es el orden dentro de cada área en la página (agrupado por `area`,
+ * no por el orden en que están escritos).
  */
 export const CATALOGO_NOTIFICACIONES: Partial<Record<TipoNotificacion, InfoTipoNotificacion>> = {
-  VENCIMIENTO_DOCUMENTO_CHOFER: {
-    label: "Vencimiento de documento de chofer",
-    disparador:
-      "A los días configurados abajo antes de que venza un documento de un chofer (licencia, libreta sanitaria, etc.). Se revisa una vez por día, a las 23:00 (hora Argentina).",
-    destinatarioFijo: "El chofer dueño del documento",
-    usaDiasAviso: true,
-  },
-  VENCIMIENTO_DOCUMENTO_VEHICULO: {
-    label: "Vencimiento de documento de vehículo",
-    disparador:
-      "A los días configurados abajo antes de que venza un documento de un vehículo (VTV, seguro, habilitación SENASA, etc.). Se revisa una vez por día, a las 23:00 (hora Argentina).",
-    destinatarioFijo: null,
-    usaDiasAviso: true,
-  },
+  // --- Compras ---
   NUEVA_ORDEN_COMPRA: {
     label: "Nueva orden de compra",
     disparador: "Al crearse una orden de compra, manual o automática por stock mínimo",
     destinatarioFijo: null,
     usaDiasAviso: false,
-  },
-  OT_COMPLETADA_CONFIRMACION: {
-    label: "OT completada, pendiente de confirmación",
-    disparador: "Cuando el mecánico completa una OT que se originó en una novedad de un chofer",
-    destinatarioFijo: "El chofer que reportó la novedad",
-    usaDiasAviso: false,
-  },
-  COMPRA_REALIZADA: {
-    label: "Orden de compra realizada",
-    disparador: "Cuando se marca una orden de compra como realizada (comprada)",
-    destinatarioFijo: "Quien creó la orden de compra",
-    usaDiasAviso: false,
-  },
-  OT_GENERADA_CHOFER: {
-    label: "OT generada por el chofer",
-    disparador: "Cuando un chofer genera una OT (evento de ruta con desperfecto o falla de checklist pre-salida)",
-    destinatarioFijo: "El encargado de mantenimiento",
-    usaDiasAviso: false,
-  },
-  CHECKLIST_NO_REALIZADO: {
-    label: "Checklist obligatorio",
-    disparador:
-      "Si activás esto, el chofer no puede cargar combustible, reportar eventos de ruta ni cargar gastos hasta completar el checklist pre-salida del día. Cuando lo bloquea, se avisa a los roles que elijas.",
-    destinatarioFijo: null,
-    usaDiasAviso: false,
-  },
-  RESUMEN_VEHICULOS_OPERATIVOS: {
-    label: "Resumen diario de vehículos operativos",
-    disparador:
-      "Un resumen de cuántos vehículos están operativos. Llega todos los días a las 23:00 (hora Argentina) a los roles que elijas abajo.",
-    destinatarioFijo: null,
-    usaDiasAviso: false,
-  },
-  DEVOLUCION_SIN_ENVIAR: {
-    label: "Resumen diario de guardia",
-    disparador:
-      "Un PDF con vehículos sin checklist pre-salida, sin cierre de ruta, con el tanque sin llenar, y las devoluciones registradas. Llega todos los días a las 23:00 (hora Argentina) a los roles que elijas abajo. El PDF solo va por email; WhatsApp y la app reciben un resumen en texto.",
-    destinatarioFijo: null,
-    usaDiasAviso: false,
+    area: "COMPRAS",
   },
   COMPRA_PENDIENTE_AUTORIZACION: {
     label: "Compra pendiente de autorización",
     disparador: "Cuando se carga una orden de compra que supera el monto configurado en la tarjeta de autorización de compras.",
     destinatarioFijo: "El gerente",
     usaDiasAviso: false,
+    area: "COMPRAS",
   },
   COMPRA_MECANICO_PENDIENTE_AUTORIZACION: {
     label: "Compra de mecánico pendiente de autorización",
@@ -96,18 +64,88 @@ export const CATALOGO_NOTIFICACIONES: Partial<Record<TipoNotificacion, InfoTipoN
       "Cuando un mecánico interno genera una orden de compra que supera el monto configurado en la tarjeta de autorización de compras de mecánicos — compuerta aparte de la autorización de gerencia.",
     destinatarioFijo: "El encargado de mantenimiento",
     usaDiasAviso: false,
+    area: "COMPRAS",
   },
   PRESUPUESTO_SUBIDO: {
     label: "Presupuesto subido a una compra",
     disparador: "Cuando el encargado de compras sube un presupuesto a una orden pendiente de autorización.",
     destinatarioFijo: "El gerente",
     usaDiasAviso: false,
+    area: "COMPRAS",
   },
   COMPRA_AUTORIZADA: {
     label: "Compra autorizada por gerencia",
     disparador: "Cuando el gerente aprueba (elige un presupuesto o autoriza directo) una orden de compra pendiente.",
     destinatarioFijo: "El administrador y el encargado de compras",
     usaDiasAviso: false,
+    area: "COMPRAS",
+  },
+  COMPRA_REALIZADA: {
+    label: "Orden de compra realizada",
+    disparador: "Cuando se marca una orden de compra como realizada (comprada)",
+    destinatarioFijo: "Quien creó la orden de compra",
+    usaDiasAviso: false,
+    area: "COMPRAS",
+  },
+
+  // --- Órdenes de trabajo ---
+  OT_GENERADA_CHOFER: {
+    label: "OT generada por el chofer",
+    disparador: "Cuando un chofer genera una OT (evento de ruta con desperfecto o falla de checklist pre-salida)",
+    destinatarioFijo: "El encargado de mantenimiento",
+    usaDiasAviso: false,
+    area: "OT",
+  },
+  OT_COMPLETADA_CONFIRMACION: {
+    label: "OT completada, pendiente de confirmación",
+    disparador: "Cuando el mecánico completa una OT que se originó en una novedad de un chofer",
+    destinatarioFijo: "El chofer que reportó la novedad",
+    usaDiasAviso: false,
+    area: "OT",
+  },
+
+  // --- Checklist y vehículos ---
+  CHECKLIST_NO_REALIZADO: {
+    label: "Checklist obligatorio",
+    disparador:
+      "Si activás esto, el chofer no puede cargar combustible, reportar eventos de ruta ni cargar gastos hasta completar el checklist pre-salida del día. Cuando lo bloquea, se avisa a los roles que elijas.",
+    destinatarioFijo: null,
+    usaDiasAviso: false,
+    area: "CHECKLIST_VEHICULOS",
+  },
+  VENCIMIENTO_DOCUMENTO_VEHICULO: {
+    label: "Vencimiento de documento de vehículo",
+    disparador:
+      "A los días configurados abajo antes de que venza un documento de un vehículo (VTV, seguro, habilitación SENASA, etc.). Se revisa una vez por día, a las 23:00 (hora Argentina).",
+    destinatarioFijo: null,
+    usaDiasAviso: true,
+    area: "CHECKLIST_VEHICULOS",
+  },
+  VENCIMIENTO_DOCUMENTO_CHOFER: {
+    label: "Vencimiento de documento de chofer",
+    disparador:
+      "A los días configurados abajo antes de que venza un documento de un chofer (licencia, libreta sanitaria, etc.). Se revisa una vez por día, a las 23:00 (hora Argentina).",
+    destinatarioFijo: "El chofer dueño del documento",
+    usaDiasAviso: true,
+    area: "CHECKLIST_VEHICULOS",
+  },
+  RESUMEN_VEHICULOS_OPERATIVOS: {
+    label: "Resumen diario de vehículos operativos",
+    disparador:
+      "Un resumen de cuántos vehículos están operativos. Llega todos los días a las 23:00 (hora Argentina) a los roles que elijas abajo.",
+    destinatarioFijo: null,
+    usaDiasAviso: false,
+    area: "CHECKLIST_VEHICULOS",
+  },
+
+  // --- Guardia ---
+  DEVOLUCION_SIN_ENVIAR: {
+    label: "Resumen diario de guardia",
+    disparador:
+      "Un PDF con vehículos sin checklist pre-salida, sin cierre de ruta, con el tanque sin llenar, y las devoluciones registradas. Llega todos los días a las 23:00 (hora Argentina) a los roles que elijas abajo. El PDF solo va por email; WhatsApp y la app reciben un resumen en texto.",
+    destinatarioFijo: null,
+    usaDiasAviso: false,
+    area: "GUARDIA",
   },
 };
 
