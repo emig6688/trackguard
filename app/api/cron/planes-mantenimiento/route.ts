@@ -155,5 +155,27 @@ export async function GET(request: Request) {
     }
   }
 
+  // Registro de la corrida: en el plan Hobby de Vercel los logs de cron solo
+  // se retienen 12hs, así que esto es lo único que queda para confirmar más
+  // adelante si el cron sigue corriendo solo día a día (ver /cronograma).
+  await prisma.cronEjecucion.upsert({
+    where: { nombre: "planes-mantenimiento" },
+    create: {
+      nombre: "planes-mantenimiento",
+      ejecutadoEn: new Date(),
+      creadas: otsCreadas.length,
+      actualizadas: otsActualizadas.length,
+      erroresCount: errores.length,
+      errorDetalle: errores.length > 0 ? errores.join(", ") : null,
+    },
+    update: {
+      ejecutadoEn: new Date(),
+      creadas: otsCreadas.length,
+      actualizadas: otsActualizadas.length,
+      erroresCount: errores.length,
+      errorDetalle: errores.length > 0 ? errores.join(", ") : null,
+    },
+  });
+
   return NextResponse.json({ otsCreadas, otsActualizadas, errores });
 }

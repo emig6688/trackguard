@@ -20,6 +20,8 @@ export type ItemPreventivo = {
   id: string;
   titulo: string;
   categoria: string | null;
+  agregadoDespues: boolean;
+  fechaCreacion: string;
   resultado: Resultado;
   observacion: string | null;
   archivo: { url: string } | null;
@@ -80,6 +82,9 @@ function ItemPreventivoRow({
             <span className="text-muted-foreground">{numero}.</span> {item.titulo}
           </p>
           {item.categoria && <p className="text-xs text-muted-foreground">{item.categoria}</p>}
+          {item.agregadoDespues && (
+            <p className="text-xs text-muted-foreground">Agregado el {item.fechaCreacion} (posterior a la creación de la OT)</p>
+          )}
         </div>
         <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${RESULTADO_PILL_CLASS[resultado]}`}>
           {RESULTADO_LABEL[resultado]}

@@ -245,6 +245,7 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
           </p>
         )}
         <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+          <span>Creada: {ot.createdAt.toLocaleDateString("es-AR")}</span>
           <span className="flex items-center gap-1.5">
             Prioridad:{" "}
             <Badge variant={PRIORIDAD_VARIANT[ot.prioridad]}>{PRIORIDAD_LABEL[ot.prioridad]}</Badge>
@@ -300,6 +301,11 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
             id: item.id,
             titulo: item.titulo,
             categoria: item.categoria,
+            // Si el cron sumó este ítem a una OT preventiva vieja que seguía
+            // abierta (en vez de crear una OT nueva), que quede visible acá
+            // que no estaba desde el principio.
+            agregadoDespues: item.createdAt.getTime() - ot.createdAt.getTime() > 24 * 60 * 60 * 1000,
+            fechaCreacion: item.createdAt.toLocaleDateString("es-AR"),
             resultado: item.resultado,
             observacion: item.observacion,
             archivo: item.archivo ? { url: item.archivo.url } : null,

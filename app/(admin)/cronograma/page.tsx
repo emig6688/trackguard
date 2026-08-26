@@ -5,9 +5,11 @@ import { GenerarOTButton } from "@/components/cronograma/generar-ot-button";
 import { OrigenOTBadge } from "@/components/ordenes-trabajo/origen-ot-badge";
 import {
   obtenerCronograma,
+  estadoUltimaCorridaCron,
   type EventoCronograma,
   type VistaCronograma,
 } from "@/lib/cronograma";
+import { formatearFechaHora } from "@/lib/fecha";
 import type { EstadoOT } from "@/app/generated/prisma/client";
 
 const VISTAS: { valor: VistaCronograma; label: string }[] = [
@@ -95,6 +97,11 @@ export default async function CronogramaPage({
   const { conFecha, sinFecha } = await obtenerCronograma(prisma, vista, rol, userId);
   const grupos = agruparPorDia(conFecha);
 
+  const ultimaCorrida = await prisma.cronEjecucion.findUnique({
+    where: { nombre: "planes-mantenimiento" },
+  });
+  const { corridaConProblema, atrasada: corridaAtrasada } = estadoUltimaCorridaCron(ultimaCorrida);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -107,6 +114,21 @@ export default async function CronogramaPage({
           ))}
         </div>
       </div>
+
+      <p className={`text-xs ${corridaConProblema ? "text-destructive" : "text-muted-foreground"}`}>
+        Generación automática de OTs preventivas:{" "}
+        {ultimaCorrida ? (
+          <>
+            última corrida {formatearFechaHora(ultimaCorrida.ejecutadoEn)} — {ultimaCorrida.creadas} OT
+            {ultimaCorrida.creadas === 1 ? "" : "s"} creada{ultimaCorrida.creadas === 1 ? "" : "s"},{" "}
+            {ultimaCorrida.actualizadas} actualizada{ultimaCorrida.actualizadas === 1 ? "" : "s"}
+            {ultimaCorrida.erroresCount > 0 && ` · ${ultimaCorrida.erroresCount} con error`}
+            {corridaAtrasada && " · no corrió en el horario esperado, revisar"}
+          </>
+        ) : (
+          "todavía no corrió nunca — revisar la configuración del cron"
+        )}
+      </p>
 
       <div className="space-y-6">
         {grupos.map(({ fecha, eventos }) => (

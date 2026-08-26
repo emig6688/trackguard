@@ -7,6 +7,29 @@ export type VistaCronograma = "DIA" | "SEMANA" | "MES";
 
 const DIAS_POR_VISTA: Record<VistaCronograma, number> = { DIA: 0, SEMANA: 6, MES: 29 };
 
+// El cron corre una vez por día — más de 30hs sin una corrida nueva ya es
+// señal de que algo se cortó (no es solo "todavía no le tocó").
+const HORAS_SIN_CORRER_ES_ALERTA = 30;
+
+/**
+ * Server Components no pueden llamar Date.now()/new Date() directo en el
+ * cuerpo del componente (regla de pureza de React) — se calcula acá, en una
+ * función de lib, igual que rangoCronograma de arriba.
+ */
+export function estadoUltimaCorridaCron(
+  ultimaCorrida: { ejecutadoEn: Date; erroresCount: number } | null,
+  ahora = new Date()
+) {
+  const horasDesdeUltimaCorrida = ultimaCorrida
+    ? (ahora.getTime() - ultimaCorrida.ejecutadoEn.getTime()) / (1000 * 60 * 60)
+    : null;
+  const corridaConProblema =
+    !ultimaCorrida || horasDesdeUltimaCorrida! > HORAS_SIN_CORRER_ES_ALERTA || ultimaCorrida.erroresCount > 0;
+  const atrasada = horasDesdeUltimaCorrida != null && horasDesdeUltimaCorrida > HORAS_SIN_CORRER_ES_ALERTA;
+
+  return { horasDesdeUltimaCorrida, corridaConProblema, atrasada };
+}
+
 export function rangoCronograma(vista: VistaCronograma, hoy = new Date()) {
   const desde = new Date(hoy);
   desde.setHours(0, 0, 0, 0);

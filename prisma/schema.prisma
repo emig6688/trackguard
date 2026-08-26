@@ -403,6 +403,20 @@ model IntentoLogin {
   @@index([identificador, ip, createdAt])
 }
 
+/// Última corrida de un cron de sistema (corre cross-tenant, por eso no tiene
+/// empresaId — ver app/api/cron/*/route.ts). Un registro por nombre de cron,
+/// sobreescrito en cada corrida — alcanza para responder "¿sigue corriendo
+/// esto solo?" sin depender de cuánto retiene Vercel sus logs (en el plan
+/// Hobby son solo 12hs).
+model CronEjecucion {
+  nombre       String   @id
+  ejecutadoEn  DateTime
+  creadas      Int      @default(0)
+  actualizadas Int      @default(0)
+  erroresCount Int      @default(0)
+  errorDetalle String?
+}
+
 // ---------------------------------------------------------------------------
 // Vehiculos
 // ---------------------------------------------------------------------------
