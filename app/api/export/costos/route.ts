@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
-import { requireSession } from "@/lib/permisos";
+import { requireEmpresa } from "@/lib/permisos";
 import { calcularCostosPorChofer, calcularCostosPorVehiculo } from "@/lib/costos";
 import { rangoExportPorDefecto } from "@/lib/export-rango";
 
 export async function GET(request: Request) {
-  const { user, prisma } = await requireSession();
+  const { user, prisma } = await requireEmpresa();
 
   const { searchParams } = new URL(request.url);
   const tipo = searchParams.get("tipo");

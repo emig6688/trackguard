@@ -69,3 +69,13 @@ En cuanto se pueda pagar Supabase Pro, activar ahí el backup diario/PITR nativo
 - Subir un archivo (foto de checklist o documento) para confirmar que `BLOB_READ_WRITE_TOKEN` funciona.
 - Si se configuró Resend, mandar una notificación de prueba y confirmar que llega (no solo que quedó en el log).
 - Activar el push (botón junto a la campanita) en un dispositivo Android o desktop y disparar cualquier aviso que use el canal "En la app" — confirmar que llega una notificación real del sistema operativo con la app cerrada. En iOS, primero hay que agregar la app a la pantalla de inicio (Safari → Compartir → "Agregar a pantalla de inicio"); el botón lo explica si detecta iOS sin instalar.
+
+## 6. `npm audit` — riesgo aceptado a propósito
+
+Al día de la auditoría de comercialización (2026-08-25), `npm audit` reporta 5 vulnerabilidades
+(2 moderate, 3 high) en dependencias transitivas: `deepmerge-ts` (vía `@prisma/config` →
+`prisma`) y `uuid` (vía `exceljs`). Ninguna tiene un fix sin bajar de versión — `npm audit fix
+--force` bajaría `prisma` de 7.x a 6.x y `exceljs` de 4.x a 3.x, ambos downgrades reales de una
+dependencia directa. Se decidió conscientemente NO aplicar el downgrade (más riesgo de romper
+algo que el de dejar la vulnerabilidad transitiva) — revisar `npm audit` cada tanto por si
+aparece un fix real sin bajar de versión.

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
-import { requireSession } from "@/lib/permisos";
+import { requireEmpresa } from "@/lib/permisos";
 import { rangoExportPorDefecto } from "@/lib/export-rango";
 import { calcularEstadoVencimiento, ESTADO_VENCIMIENTO_LABEL } from "@/lib/vencimientos";
 import type { EstadoOT, TipoIntervaloPlan } from "@/app/generated/prisma/client";
@@ -22,7 +22,7 @@ const INTERVALO_CORTO: Record<TipoIntervaloPlan, string> = {
 };
 
 export async function GET(request: Request) {
-  const { prisma } = await requireSession();
+  const { prisma } = await requireEmpresa();
 
   const { searchParams } = new URL(request.url);
   const vehiculoId = searchParams.get("vehiculoId");

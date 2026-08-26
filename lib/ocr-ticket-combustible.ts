@@ -27,9 +27,7 @@ Respondé ÚNICAMENTE con un JSON: {"monto": number|null, "litros": number|null,
  */
 export async function leerTicketCombustible(file: File): Promise<LecturaTicketResultado> {
   const apiKey = process.env.OPENAI_API_KEY;
-  console.log(`[OCR ticket combustible] OPENAI_API_KEY presente=${Boolean(apiKey)} largo=${apiKey?.length ?? 0}`);
   if (!apiKey) {
-    console.log("[OCR ticket combustible] (proveedor no configurado) el chofer completa el ticket a mano.");
     return { leido: false, motivo: "proveedor_no_configurado" };
   }
 
@@ -39,7 +37,6 @@ export async function leerTicketCombustible(file: File): Promise<LecturaTicketRe
   // un motivo específico en vez de dejar que falle como error_proveedor.
   const FORMATOS_SOPORTADOS = ["image/png", "image/jpeg", "image/gif", "image/webp"];
   if (!FORMATOS_SOPORTADOS.includes(file.type)) {
-    console.log(`[OCR ticket combustible] formato no soportado: ${file.type || "(sin type)"}.`);
     return { leido: false, motivo: "archivo_invalido" };
   }
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { requireSession } from "@/lib/permisos";
+import { requireEmpresa } from "@/lib/permisos";
 import { calcularCostosMensuales, calcularCostosPorVehiculo, type TipoCostoMensual } from "@/lib/costos";
 import { rangoExportPorDefecto } from "@/lib/export-rango";
 import { ReporteCostosDocument } from "@/lib/pdf/reporte-costos";
@@ -11,7 +11,7 @@ const TIPOS_VALIDOS: TipoCostoMensual[] = ["TOTAL", "COMBUSTIBLE", "GASTOS"];
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
-  const { prisma } = await requireSession();
+  const { prisma } = await requireEmpresa();
 
   const { searchParams } = new URL(request.url);
   const tipoRaw = searchParams.get("tipo");

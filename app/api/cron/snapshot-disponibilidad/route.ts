@@ -15,6 +15,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
+  // Housekeeping del rate-limit de login (auth.ts): la ventana real usada
+  // para bloquear es de 15 minutos, así que nada más viejo que unos días
+  // hace falta para el chequeo — sin este borrado, IntentoLogin crece para
+  // siempre. Va en su propio try/catch para no afectar el snapshot si falla.
+  try {
+    const limiteIntentoLogin = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    await prisma.intentoLogin.deleteMany({ where: { createdAt: { lt: limiteIntentoLogin } } });
+  } catch (error) {
+    console.error("[cron/snapshot-disponibilidad] limpieza de IntentoLogin", error);
+  }
+
   const [vehiculos, otsEnTaller] = await Promise.all([
     prisma.vehiculo.findMany({
       where: { activo: true, eliminadoEn: null },

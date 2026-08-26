@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { requireSession } from "@/lib/permisos";
+import { requireEmpresa } from "@/lib/permisos";
 import { horasEquipoFrioEnPeriodo } from "@/lib/checklist";
 import { calcularEstadoVencimiento } from "@/lib/vencimientos";
 import { rangoExportPorDefecto } from "@/lib/export-rango";
@@ -10,7 +10,7 @@ import { ReporteTrazabilidadDocument } from "@/lib/pdf/reporte-trazabilidad";
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
-  const { prisma } = await requireSession();
+  const { prisma } = await requireEmpresa();
 
   const { searchParams } = new URL(request.url);
   const vehiculoId = searchParams.get("vehiculoId");

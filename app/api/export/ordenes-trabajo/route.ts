@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
-import { requireSession } from "@/lib/permisos";
+import { requireEmpresa } from "@/lib/permisos";
 
 export async function GET() {
-  const { prisma } = await requireSession();
+  const { prisma } = await requireEmpresa();
 
   const ordenes = await prisma.ordenDeTrabajo.findMany({
     where: { eliminadoEn: null },

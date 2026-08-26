@@ -50,9 +50,25 @@ async function leerFilas(file: File): Promise<FilaExcel[]> {
   return filas;
 }
 
-function archivoDeFormData(formData: FormData): File | null {
+// Mismo criterio que lib/storage.ts (único punto de entrada de subida valida
+// tipo/tamaño): el `accept=".xlsx"` del input es solo una sugerencia del
+// navegador, no una garantía — acá se valida de verdad antes de intentar
+// parsearlo con ExcelJS.
+const TAMANIO_MAXIMO_IMPORT_BYTES = 5 * 1024 * 1024;
+
+// Devuelve el File válido, o un string con el motivo de rechazo.
+function archivoDeFormData(formData: FormData): File | string {
   const file = formData.get("archivo");
-  return file instanceof File && file.size > 0 ? file : null;
+  if (!(file instanceof File) || file.size === 0) {
+    return "Subí un archivo Excel.";
+  }
+  if (!file.name.toLowerCase().endsWith(".xlsx")) {
+    return "El archivo tiene que ser un Excel (.xlsx) — descargá la plantilla y completala.";
+  }
+  if (file.size > TAMANIO_MAXIMO_IMPORT_BYTES) {
+    return "El archivo es demasiado grande (máximo 5 MB).";
+  }
+  return file;
 }
 
 export async function importarPanolExcel(
@@ -60,8 +76,9 @@ export async function importarPanolExcel(
   formData: FormData
 ): Promise<ImportarResultado> {
   const { user, prisma } = await requireRole(ROLES_ADMIN_MANTENIMIENTO);
-  const file = archivoDeFormData(formData);
-  if (!file) return { error: "Subí un archivo Excel." };
+  const resultadoArchivo = archivoDeFormData(formData);
+  if (typeof resultadoArchivo === "string") return { error: resultadoArchivo };
+  const file = resultadoArchivo;
 
   const filas = await leerFilas(file);
   const errores: { fila: number; motivo: string }[] = [];
@@ -92,8 +109,9 @@ export async function importarVehiculosExcel(
   formData: FormData
 ): Promise<ImportarResultado> {
   const { user, prisma } = await requireRole(ROLES_ADMIN_MANTENIMIENTO);
-  const file = archivoDeFormData(formData);
-  if (!file) return { error: "Subí un archivo Excel." };
+  const resultadoArchivo = archivoDeFormData(formData);
+  if (typeof resultadoArchivo === "string") return { error: resultadoArchivo };
+  const file = resultadoArchivo;
 
   const filas = await leerFilas(file);
   const errores: { fila: number; motivo: string }[] = [];
@@ -136,8 +154,9 @@ export async function importarChoferesExcel(
   formData: FormData
 ): Promise<ImportarResultado> {
   const { user, prisma } = await requireRole(ROLES_ADMIN_MANTENIMIENTO);
-  const file = archivoDeFormData(formData);
-  if (!file) return { error: "Subí un archivo Excel." };
+  const resultadoArchivo = archivoDeFormData(formData);
+  if (typeof resultadoArchivo === "string") return { error: resultadoArchivo };
+  const file = resultadoArchivo;
 
   const filas = await leerFilas(file);
   const errores: { fila: number; motivo: string }[] = [];

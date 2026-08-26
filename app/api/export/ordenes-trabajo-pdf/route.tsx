@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { requireSession } from "@/lib/permisos";
+import { requireEmpresa } from "@/lib/permisos";
 import { ReporteOrdenesTrabajoDocument, type FilaOT } from "@/lib/pdf/reporte-ordenes-trabajo";
 
 export const maxDuration = 60;
 
 export async function GET() {
-  const { prisma } = await requireSession();
+  const { prisma } = await requireEmpresa();
 
   const ordenes = await prisma.ordenDeTrabajo.findMany({
     where: { eliminadoEn: null },

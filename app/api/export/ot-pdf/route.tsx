@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { requireSession } from "@/lib/permisos";
+import { requireEmpresa } from "@/lib/permisos";
 import { ReporteOTDocument } from "@/lib/pdf/reporte-ot";
 
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
-  const { prisma } = await requireSession();
+  const { prisma } = await requireEmpresa();
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");

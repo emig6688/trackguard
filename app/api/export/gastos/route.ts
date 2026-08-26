@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
-import { requireSession } from "@/lib/permisos";
+import { requireEmpresa } from "@/lib/permisos";
 import { rangoExportPorDefecto } from "@/lib/export-rango";
 
 export async function GET(request: Request) {
-  const { prisma } = await requireSession();
+  const { prisma } = await requireEmpresa();
 
   const { searchParams } = new URL(request.url);
   const chofer = searchParams.get("chofer") ?? undefined;
