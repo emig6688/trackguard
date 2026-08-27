@@ -19,6 +19,8 @@ import {
   fechaReferenciaAtraso,
   puedeMecanicoAccionar,
 } from "@/lib/ot";
+import { construirResumenMatutino } from "@/lib/resumen-matutino";
+import { BotonResumenVoz } from "@/components/dashboard/boton-resumen-voz";
 import { actualizarFechaEstimada } from "@/app/_actions/ordenesTrabajo";
 import { AREA_REPARACION_LABEL } from "@/lib/clasificador-averias";
 import { vehiculosEnTallerExterno, disponibilidadEfectiva } from "@/lib/disponibilidad";
@@ -263,13 +265,30 @@ export default async function DashboardPage() {
   const comprasSinPresupuesto = comprasPendientesAutorizacion.filter((c) => c.presupuestos.length === 0);
   const comprasConPresupuestoPendiente = comprasPendientesAutorizacion.filter((c) => c.presupuestos.length > 0);
 
+  const resumenMatutino = construirResumenMatutino({
+    nombreUsuario: session.nombre?.split(" ")[0] ?? null,
+    vehiculosOperativos: totalOperativos,
+    vehiculosTotal: vehiculosActivos.length,
+    otAbiertas,
+    otAtrasadas: totalAtrasadas,
+    otSinFechaEstimada: totalSinFechaEstimada,
+    vencimientosProximos: criticos.length,
+    vencimientosVencidos: hayVencidos,
+    comprasSinDocumentar: totalComprasSinDocumentar,
+    presupuestosPendientesAprobar: comprasConPresupuestoPendiente.length,
+    pctPreventivo,
+  });
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Hola, {session.nombre?.split(" ")[0]} — así está la flota hoy.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
+            Hola, {session.nombre?.split(" ")[0]} — así está la flota hoy.
+          </p>
+        </div>
+        <BotonResumenVoz texto={resumenMatutino} />
       </div>
 
       <Card>
