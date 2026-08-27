@@ -24,10 +24,16 @@ export function atajosPeriodo(): AtajoPeriodo[] {
     new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() - meses, hoy.getUTCDate()));
   const restarAnios = (anios: number) =>
     new Date(Date.UTC(hoy.getUTCFullYear() - anios, hoy.getUTCMonth(), hoy.getUTCDate()));
+  // Mes calendario completo (1 al último día), no una ventana de 30 días
+  // hacia atrás — si hoy es 26/8, va del 1/8 al 31/8, aunque el mes todavía
+  // no haya terminado (para comparar contra un mes cerrado, se elige a mano).
+  const primerDiaDelMes = () => new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), 1));
+  const ultimoDiaDelMes = () => new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() + 1, 0));
 
   return [
     { label: "Última semana", desde: formatearISO(restarDias(7)), hasta: hastaStr },
     { label: "Último mes", desde: formatearISO(restarMeses(1)), hasta: hastaStr },
+    { label: "Último mes completo", desde: formatearISO(primerDiaDelMes()), hasta: formatearISO(ultimoDiaDelMes()) },
     { label: "Último año", desde: formatearISO(restarAnios(1)), hasta: hastaStr },
   ];
 }

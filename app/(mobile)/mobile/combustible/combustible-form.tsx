@@ -196,6 +196,11 @@ export function CombustibleForm({
         />
       </div>
 
+      <p className="rounded-md border border-warning-foreground/30 bg-warning/10 p-2 text-xs text-warning-foreground">
+        Cargá el tanque lleno. Si la carga es parcial, el consumo calculado para este tramo va a
+        quedar mal.
+      </p>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="litrosCargados">Litros</Label>

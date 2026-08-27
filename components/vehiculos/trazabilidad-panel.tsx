@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FiltroPeriodoAtajos } from "@/components/filtro-periodo-atajos";
 
 export function TrazabilidadPanel({
   vehiculos,
@@ -67,6 +68,11 @@ export function TrazabilidadPanel({
               </Link>
             )}
           </form>
+
+          <FiltroPeriodoAtajos
+            basePath="/reportes/estadisticas"
+            params={{ tab: "reportes", vehiculoId: vehiculoSeleccionado, desde, hasta }}
+          />
 
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <a
