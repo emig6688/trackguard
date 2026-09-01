@@ -200,176 +200,187 @@ export default async function ComprasPage({
 
       <div className="space-y-2">
         {compras.map((c) => (
-          <div key={c.id} className="flex flex-wrap items-start justify-between gap-3 rounded-lg border p-3 text-sm">
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium">{c.numero}</span>
-                <Badge variant="secondary" className="text-xs">
-                  {ORIGEN_LABEL[c.origen]}
-                </Badge>
-                <Badge variant={ESTADO_VARIANT[c.estado]}>{ESTADO_LABEL[c.estado]}</Badge>
-                {c.estadoAutorizacion !== "NO_REQUERIDA" && (
-                  <Badge variant={ESTADO_AUTORIZACION_VARIANT[c.estadoAutorizacion]}>
-                    {ESTADO_AUTORIZACION_LABEL[c.estadoAutorizacion]}
+          <div key={c.id} className="flex flex-col gap-3 rounded-lg border p-3 text-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{c.numero}</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {ORIGEN_LABEL[c.origen]}
                   </Badge>
-                )}
-                {c.estadoAutorizacionMantenimiento !== "NO_REQUERIDA" && (
-                  <Badge variant={ESTADO_AUTORIZACION_VARIANT[c.estadoAutorizacionMantenimiento]}>
-                    Mantenimiento: {ESTADO_AUTORIZACION_LABEL[c.estadoAutorizacionMantenimiento]}
-                  </Badge>
-                )}
-                {c.vehiculo && <Badge variant="outline">{c.vehiculo.patente}</Badge>}
-                {c.prioridad && (
-                  <Badge variant={PRIORIDAD_VARIANT[c.prioridad]}>{PRIORIDAD_LABEL[c.prioridad]}</Badge>
-                )}
-              </div>
-              <div className="space-y-1">
-                {c.items.map((item) => (
-                  <div key={item.id} className="flex items-center gap-2">
-                    {item.archivo && (
-                      <a href={item.archivo.url} target="_blank" rel="noopener noreferrer">
-                        {/* eslint-disable-next-line @next/next/no-img-element -- sirve desde una API autenticada, no un asset estático de /public */}
-                        <img
-                          src={item.archivo.url}
-                          alt={`Referencia de ${item.descripcion}`}
-                          className="h-8 w-8 rounded border object-cover"
-                        />
-                      </a>
-                    )}
-                    <span>
-                      {item.descripcion}
-                      {item.cantidadSolicitada && (
-                        <span className="text-muted-foreground"> x{item.cantidadSolicitada}</span>
-                      )}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Pedida el {c.fechaSolicitud.toLocaleDateString("es-AR")}
-                {c.creadoPor ? ` por ${c.creadoPor.nombre}` : " automáticamente"}
-                {c.montoEstimado ? ` · Estimada en $${c.montoEstimado.toString()}` : ""}
-                {(c.estado === "REALIZADA" || c.estado === "DOCUMENTADA") && c.fechaCompra
-                  ? ` · Comprada el ${c.fechaCompra.toLocaleDateString("es-AR")}${c.montoTotal ? ` · $${c.montoTotal.toString()}` : ""}`
-                  : ""}
-              </p>
-              {c.observaciones && (
-                <p className="text-xs text-muted-foreground italic">&ldquo;{c.observaciones}&rdquo;</p>
-              )}
-              {c.facturaArchivo && (
-                <a
-                  href={c.facturaArchivo.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block hover:opacity-90"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- sirve desde una API autenticada, no un asset estático de /public */}
-                  <img
-                    src={c.facturaArchivo.url}
-                    alt="Factura de la compra"
-                    className="h-16 w-auto rounded-md border object-cover"
-                  />
-                </a>
-              )}
-              {puedeGestionarCompras ? (
-                <AsignarOtCompra
-                  compraId={c.id}
-                  ordenDeTrabajoId={c.ordenDeTrabajoId}
-                  ordenes={ordenesDeTrabajo}
-                />
-              ) : (
-                c.ordenDeTrabajo && (
-                  <Link
-                    href={`/ordenes-trabajo/${c.ordenDeTrabajo.id}`}
-                    className="block text-xs text-muted-foreground hover:underline"
-                  >
-                    Asignada a {c.ordenDeTrabajo.numero}
-                  </Link>
-                )
-              )}
-              {c.estadoAutorizacion !== "NO_REQUERIDA" && (
-                <div className="space-y-1.5 rounded-md bg-muted/40 p-2">
-                  <p className="text-xs font-medium text-muted-foreground">Presupuestos</p>
-                  {c.presupuestos.map((p) => (
-                    <div key={p.id} className="flex flex-wrap items-center gap-2 text-xs">
-                      <a href={p.archivo.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                        {p.proveedor ?? "Presupuesto"}
-                      </a>
-                      {p.monto && <span className="text-muted-foreground">${p.monto.toString()}</span>}
-                      {c.presupuestoAprobadoId === p.id && <Badge variant="success">Aprobado</Badge>}
-                    </div>
-                  ))}
-                  {puedeGestionarCompras && c.estadoAutorizacion === "PENDIENTE" && (
-                    <PresupuestoForm compraId={c.id} />
+                  <Badge variant={ESTADO_VARIANT[c.estado]}>{ESTADO_LABEL[c.estado]}</Badge>
+                  {c.estadoAutorizacion !== "NO_REQUERIDA" && (
+                    <Badge variant={ESTADO_AUTORIZACION_VARIANT[c.estadoAutorizacion]}>
+                      {ESTADO_AUTORIZACION_LABEL[c.estadoAutorizacion]}
+                    </Badge>
+                  )}
+                  {c.estadoAutorizacionMantenimiento !== "NO_REQUERIDA" && (
+                    <Badge variant={ESTADO_AUTORIZACION_VARIANT[c.estadoAutorizacionMantenimiento]}>
+                      Mantenimiento: {ESTADO_AUTORIZACION_LABEL[c.estadoAutorizacionMantenimiento]}
+                    </Badge>
+                  )}
+                  {c.vehiculo && <Badge variant="outline">{c.vehiculo.patente}</Badge>}
+                  {c.prioridad && (
+                    <Badge variant={PRIORIDAD_VARIANT[c.prioridad]}>{PRIORIDAD_LABEL[c.prioridad]}</Badge>
                   )}
                 </div>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <a
-                href={`/api/export/oc-pdf?id=${c.id}`}
-                className="text-xs text-muted-foreground hover:text-foreground hover:underline"
-              >
-                Imprimir
-              </a>
-              {puedeCrearCompras && c.estado === "PENDIENTE" && (
-                <Dialog>
-                  <DialogTrigger render={<Button type="button" variant="outline" size="xs" />}>
-                    Editar
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
-                      <DialogTitle>Editar {c.numero}</DialogTitle>
-                    </DialogHeader>
-                    <CompraManualForm
-                      articulos={articulos}
-                      ordenes={ordenesDeTrabajo}
-                      vehiculos={vehiculos}
-                      montoAutorizacionCompra={empresa.montoAutorizacionCompra?.toString() ?? null}
-                      compraExistente={{
-                        id: c.id,
-                        montoEstimado: c.montoEstimado?.toString() ?? null,
-                        observaciones: c.observaciones,
-                        ordenDeTrabajoId: c.ordenDeTrabajoId,
-                        prioridad: c.prioridad,
-                        vehiculoId: c.vehiculoId,
-                        items: c.items.map((item) => ({
-                          id: item.id,
-                          descripcion: item.descripcion,
-                          cantidadSolicitada: item.cantidadSolicitada,
-                          articuloPanolId: item.articuloPanolId,
-                          archivoUrl: item.archivo?.url ?? null,
-                        })),
-                      }}
+                <div className="space-y-1">
+                  {c.items.map((item) => (
+                    <div key={item.id} className="flex items-center gap-2">
+                      {item.archivo && (
+                        <a href={item.archivo.url} target="_blank" rel="noopener noreferrer">
+                          {/* eslint-disable-next-line @next/next/no-img-element -- sirve desde una API autenticada, no un asset estático de /public */}
+                          <img
+                            src={item.archivo.url}
+                            alt={`Referencia de ${item.descripcion}`}
+                            className="h-8 w-8 rounded border object-cover"
+                          />
+                        </a>
+                      )}
+                      <span>
+                        {item.descripcion}
+                        {item.cantidadSolicitada && (
+                          <span className="text-muted-foreground"> x{item.cantidadSolicitada}</span>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Pedida el {c.fechaSolicitud.toLocaleDateString("es-AR")}
+                  {c.creadoPor ? ` por ${c.creadoPor.nombre}` : " automáticamente"}
+                  {c.montoEstimado ? ` · Estimada en $${c.montoEstimado.toString()}` : ""}
+                  {(c.estado === "REALIZADA" || c.estado === "DOCUMENTADA") && c.fechaCompra
+                    ? ` · Comprada el ${c.fechaCompra.toLocaleDateString("es-AR")}${c.montoTotal ? ` · $${c.montoTotal.toString()}` : ""}`
+                    : ""}
+                </p>
+                {c.observaciones && (
+                  <p className="text-xs text-muted-foreground italic">&ldquo;{c.observaciones}&rdquo;</p>
+                )}
+                {c.facturaArchivo && (
+                  <a
+                    href={c.facturaArchivo.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block hover:opacity-90"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- sirve desde una API autenticada, no un asset estático de /public */}
+                    <img
+                      src={c.facturaArchivo.url}
+                      alt="Factura de la compra"
+                      className="h-16 w-auto rounded-md border object-cover"
                     />
-                  </DialogContent>
-                </Dialog>
-              )}
-              {puedeGestionarCompras && c.estado === "PENDIENTE" && (
-                <RealizarCompraForm
-                  compraId={c.id}
-                  items={c.items}
-                  puedeRealizar={
-                    c.estadoAutorizacion !== "PENDIENTE" &&
-                    c.estadoAutorizacion !== "RECHAZADA" &&
-                    c.estadoAutorizacionMantenimiento !== "PENDIENTE" &&
-                    c.estadoAutorizacionMantenimiento !== "RECHAZADA"
-                  }
-                />
-              )}
-              {puedeGestionarCompras && c.estado === "PENDIENTE" && c.estadoAutorizacion === "PENDIENTE" && (
-                <p className="text-xs text-muted-foreground">Esperando autorización de gerencia.</p>
-              )}
-              {puedeGestionarCompras && c.estado === "PENDIENTE" && c.estadoAutorizacionMantenimiento === "PENDIENTE" && (
-                <p className="text-xs text-muted-foreground">Esperando autorización de mantenimiento.</p>
-              )}
-              {puedeGestionarCompras && c.estado === "REALIZADA" && (
-                <CargarFacturaCompraForm compraId={c.id} />
-              )}
-              {session.rol === "ADMIN" && (
-                <EliminarButton tipo="ordenCompra" id={c.id} redirectPath="/compras" />
-              )}
+                  </a>
+                )}
+                {puedeGestionarCompras ? (
+                  <AsignarOtCompra
+                    compraId={c.id}
+                    ordenDeTrabajoId={c.ordenDeTrabajoId}
+                    ordenes={ordenesDeTrabajo}
+                  />
+                ) : (
+                  c.ordenDeTrabajo && (
+                    <Link
+                      href={`/ordenes-trabajo/${c.ordenDeTrabajo.id}`}
+                      className="block text-xs text-muted-foreground hover:underline"
+                    >
+                      Asignada a {c.ordenDeTrabajo.numero}
+                    </Link>
+                  )
+                )}
+                {c.estadoAutorizacion !== "NO_REQUERIDA" && (
+                  <div className="space-y-1.5 rounded-md bg-muted/40 p-2">
+                    <p className="text-xs font-medium text-muted-foreground">Presupuestos</p>
+                    {c.presupuestos.map((p) => (
+                      <div key={p.id} className="flex flex-wrap items-center gap-2 text-xs">
+                        <a href={p.archivo.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                          {p.proveedor ?? "Presupuesto"}
+                        </a>
+                        {p.monto && <span className="text-muted-foreground">${p.monto.toString()}</span>}
+                        {c.presupuestoAprobadoId === p.id && <Badge variant="success">Aprobado</Badge>}
+                      </div>
+                    ))}
+                    {puedeGestionarCompras && c.estadoAutorizacion === "PENDIENTE" && (
+                      <PresupuestoForm compraId={c.id} />
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href={`/api/export/oc-pdf?id=${c.id}`}
+                  className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                >
+                  Imprimir
+                </a>
+                {puedeCrearCompras && c.estado === "PENDIENTE" && (
+                  <Dialog>
+                    <DialogTrigger render={<Button type="button" variant="outline" size="xs" />}>
+                      Editar
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-lg">
+                      <DialogHeader>
+                        <DialogTitle>Editar {c.numero}</DialogTitle>
+                      </DialogHeader>
+                      <CompraManualForm
+                        articulos={articulos}
+                        ordenes={ordenesDeTrabajo}
+                        vehiculos={vehiculos}
+                        montoAutorizacionCompra={empresa.montoAutorizacionCompra?.toString() ?? null}
+                        compraExistente={{
+                          id: c.id,
+                          montoEstimado: c.montoEstimado?.toString() ?? null,
+                          observaciones: c.observaciones,
+                          ordenDeTrabajoId: c.ordenDeTrabajoId,
+                          prioridad: c.prioridad,
+                          vehiculoId: c.vehiculoId,
+                          items: c.items.map((item) => ({
+                            id: item.id,
+                            descripcion: item.descripcion,
+                            cantidadSolicitada: item.cantidadSolicitada,
+                            articuloPanolId: item.articuloPanolId,
+                            archivoUrl: item.archivo?.url ?? null,
+                          })),
+                        }}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                )}
+                {puedeGestionarCompras && c.estado === "PENDIENTE" && c.estadoAutorizacion === "PENDIENTE" && (
+                  <p className="text-xs text-muted-foreground">Esperando autorización de gerencia.</p>
+                )}
+                {puedeGestionarCompras && c.estado === "PENDIENTE" && c.estadoAutorizacionMantenimiento === "PENDIENTE" && (
+                  <p className="text-xs text-muted-foreground">Esperando autorización de mantenimiento.</p>
+                )}
+                {session.rol === "ADMIN" && (
+                  <EliminarButton tipo="ordenCompra" id={c.id} redirectPath="/compras" />
+                )}
+              </div>
             </div>
+            {/* RealizarCompraForm y CargarFacturaCompraForm se expanden a un
+            <form className="w-full"> alto (varios campos) al hacer click en
+            su botón. Anidados en el flex de arriba junto a la columna de
+            detalle, ese w-full resolvía contra un contenedor dimensionado
+            por su propio contenido y el layout terminaba dándole casi todo
+            el ancho de la fila, aplastando la columna de detalle a un hilo
+            de texto que se superponía visualmente con el formulario. Como
+            hijos directos de esta fila flex-col, su w-full resuelve contra
+            el ancho ya definido de la tarjeta y quedan en su propia línea. */}
+            {puedeGestionarCompras && c.estado === "PENDIENTE" && (
+              <RealizarCompraForm
+                compraId={c.id}
+                items={c.items}
+                puedeRealizar={
+                  c.estadoAutorizacion !== "PENDIENTE" &&
+                  c.estadoAutorizacion !== "RECHAZADA" &&
+                  c.estadoAutorizacionMantenimiento !== "PENDIENTE" &&
+                  c.estadoAutorizacionMantenimiento !== "RECHAZADA"
+                }
+              />
+            )}
+            {puedeGestionarCompras && c.estado === "REALIZADA" && (
+              <CargarFacturaCompraForm compraId={c.id} />
+            )}
           </div>
         ))}
         {compras.length === 0 && (
