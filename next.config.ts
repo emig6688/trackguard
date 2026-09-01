@@ -27,8 +27,18 @@ const CSP = [
 
 const nextConfig: NextConfig = {
   experimental: {
+    // Hay DOS límites de tamaño de body independientes en esta versión de
+    // Next (proxy.ts, antes "middleware", es una capa aparte con su propio
+    // límite) y las dos tienen que ser al menos tan grandes como los 15 MB
+    // que guardarArchivo() (lib/storage.ts) promete aceptar — si no, un
+    // archivo grande corta a nivel de plataforma con una pantalla de error
+    // genérica en vez del mensaje prolijo de esa validación. Confirmado
+    // reproduciendo el error real: con solo bodySizeLimit en 20mb (y
+    // proxyClientMaxBodySize en su default de 10MB) el request seguía
+    // cortando en el proxy antes de llegar a la Server Action.
+    proxyClientMaxBodySize: "20mb",
     serverActions: {
-      bodySizeLimit: "10mb",
+      bodySizeLimit: "20mb",
     },
   },
   async headers() {
