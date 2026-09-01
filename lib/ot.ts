@@ -1,4 +1,4 @@
-import type { AreaReparacionOT, EstadoOT, Prisma } from "@/app/generated/prisma/client";
+import type { AreaReparacionOT, EstadoOT, Prisma, Rol } from "@/app/generated/prisma/client";
 import type { ScopedPrismaClient } from "@/lib/tenant-prisma";
 import { palabrasClaveCoincidentes } from "@/lib/clasificador-averias";
 
@@ -91,6 +91,28 @@ export function puedeMecanicoAccionar(
   return (
     ot.asignadoAId === userId ||
     (ot.asignadoAId === null && (ot.estado === "APROBADA" || ot.estado === "EN_PROGRESO"))
+  );
+}
+
+/**
+ * Una vez COMPLETADA, la OT queda congelada para auditoría: nadie agrega o
+ * saca repuestos, ni retoca ítems preventivos o el seguimiento de una
+ * derivación externa — salvo ADMIN o GERENTE, que pueden corregir un error
+ * cargado después del cierre. CANCELADA queda congelada para todos sin
+ * excepción (no hay "corrección" posible sobre un trabajo que no se hizo).
+ * Fuera de esos dos estados terminales, rige el criterio de siempre: gestión
+ * (ADMIN/ENCARGADO_MANTENIMIENTO) o el mecánico que tiene la OT asignada.
+ */
+export function puedeModificarOT(
+  ot: { asignadoAId: string | null; estado: EstadoOT },
+  user: { rol: Rol; id: string }
+): boolean {
+  if (ot.estado === "CANCELADA") return false;
+  if (ot.estado === "COMPLETADA") return user.rol === "ADMIN" || user.rol === "GERENTE";
+  return (
+    user.rol === "ADMIN" ||
+    user.rol === "ENCARGADO_MANTENIMIENTO" ||
+    (user.rol === "MECANICO_INTERNO" && puedeMecanicoAccionar(ot, user.id))
   );
 }
 

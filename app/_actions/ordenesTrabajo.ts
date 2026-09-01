@@ -13,7 +13,7 @@ import {
   usuariosDeEmpresaPorRol,
 } from "@/lib/permisos";
 import { puedeTransicionar } from "@/lib/ot-state-machine";
-import { puedeMecanicoAccionar, ESTADOS_OT_REQUIEREN_FECHA_ESTIMADA } from "@/lib/ot";
+import { puedeMecanicoAccionar, puedeModificarOT, ESTADOS_OT_REQUIEREN_FECHA_ESTIMADA } from "@/lib/ot";
 import { optionalInt, optionalNumber } from "@/lib/zod-helpers";
 import { guardarArchivo } from "@/lib/storage";
 import { descontarStockYVerificarMinimo } from "@/lib/panol";
@@ -793,7 +793,11 @@ export async function actualizarDerivacionExterna(
   _prevState: AccionOTState,
   formData: FormData
 ): Promise<AccionOTState> {
-  const { prisma } = await requireRole(ROLES_ADMIN_MANTENIMIENTO);
+  // GERENTE se suma acá (fuera de ROLES_ADMIN_MANTENIMIENTO) porque, a
+  // diferencia del resto de esta acción, sí puede editar el seguimiento de
+  // una OT ya COMPLETADA — ver el chequeo de abajo. Cualquier otro rol
+  // (mecánico, chofer, etc.) sigue sin acceso en ningún estado.
+  const { user, prisma } = await requireRole([...ROLES_ADMIN_MANTENIMIENTO, "GERENTE"]);
   const parsed = actualizarDerivacionSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
@@ -805,7 +809,16 @@ export async function actualizarDerivacionExterna(
   // esa OT, para que nadie pueda tocar la derivación de otra empresa u otra
   // orden de trabajo adivinando el id.
   try {
-    await prisma.ordenDeTrabajo.findUniqueOrThrow({ where: { id: otId } });
+    const ot = await prisma.ordenDeTrabajo.findUniqueOrThrow({ where: { id: otId } });
+    const puedeEditar =
+      ot.estado === "CANCELADA"
+        ? false
+        : ot.estado === "COMPLETADA"
+          ? user.rol === "ADMIN" || user.rol === "GERENTE"
+          : ROLES_ADMIN_MANTENIMIENTO.includes(user.rol);
+    if (!puedeEditar) {
+      return { error: "No podés modificar la derivación de esta orden de trabajo." };
+    }
     const derivacion = await prisma.oTDerivacionExterna.findUniqueOrThrow({ where: { id: derivacionId } });
     if (derivacion.ordenDeTrabajoId !== otId) {
       return { error: "Esta derivación no pertenece a la orden de trabajo indicada." };
@@ -840,9 +853,7 @@ export async function agregarRepuesto(
   const { user, prisma } = await requireSession();
 
   const ot = await prisma.ordenDeTrabajo.findUniqueOrThrow({ where: { id: otId } });
-  const puedeGestionar = user.rol === "ADMIN" || user.rol === "ENCARGADO_MANTENIMIENTO";
-  const puedeAccionar = puedeGestionar || (user.rol === "MECANICO_INTERNO" && puedeMecanicoAccionar(ot, user.id));
-  if (!puedeAccionar || ot.estado === "COMPLETADA" || ot.estado === "CANCELADA") {
+  if (!puedeModificarOT(ot, user)) {
     throw new AutorizacionError("No podés modificar los repuestos de esta orden de trabajo.");
   }
 
@@ -901,9 +912,7 @@ export async function eliminarRepuestoUsado(otId: string, repuestoId: string) {
   if (repuesto.ordenDeTrabajoId !== otId) throw new AutorizacionError();
 
   const ot = await prisma.ordenDeTrabajo.findUniqueOrThrow({ where: { id: otId } });
-  const puedeGestionar = user.rol === "ADMIN" || user.rol === "ENCARGADO_MANTENIMIENTO";
-  const puedeAccionar = puedeGestionar || (user.rol === "MECANICO_INTERNO" && puedeMecanicoAccionar(ot, user.id));
-  if (!puedeAccionar || ot.estado === "COMPLETADA" || ot.estado === "CANCELADA") {
+  if (!puedeModificarOT(ot, user)) {
     throw new AutorizacionError("No podés modificar los repuestos de esta orden de trabajo.");
   }
 
@@ -946,9 +955,7 @@ export async function completarItemsPreventivos(
   const { user, prisma } = await requireSession();
 
   const ot = await prisma.ordenDeTrabajo.findUniqueOrThrow({ where: { id: otId } });
-  const puedeGestionar = user.rol === "ADMIN" || user.rol === "ENCARGADO_MANTENIMIENTO";
-  const puedeAccionar = puedeGestionar || (user.rol === "MECANICO_INTERNO" && puedeMecanicoAccionar(ot, user.id));
-  if (!puedeAccionar || ot.estado === "COMPLETADA" || ot.estado === "CANCELADA") {
+  if (!puedeModificarOT(ot, user)) {
     throw new AutorizacionError("No podés modificar los ítems de esta orden de trabajo.");
   }
 

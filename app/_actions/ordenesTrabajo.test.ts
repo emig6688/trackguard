@@ -45,6 +45,7 @@ describe("app/_actions/ordenesTrabajo.ts", () => {
   let vehiculoId: string;
   let tallerExternoId: string;
   let admin: { id: string };
+  let gerente: { id: string };
   let encargadoMantenimiento: { id: string };
   let mecanico1: { id: string };
   let mecanico2: { id: string };
@@ -56,6 +57,7 @@ describe("app/_actions/ordenesTrabajo.ts", () => {
     prisma = empresa.prisma;
 
     admin = await crearUsuarioDePrueba(empresaId, "ADMIN");
+    gerente = await crearUsuarioDePrueba(empresaId, "GERENTE");
     encargadoMantenimiento = await crearUsuarioDePrueba(empresaId, "ENCARGADO_MANTENIMIENTO");
     mecanico1 = await crearUsuarioDePrueba(empresaId, "MECANICO_INTERNO");
     mecanico2 = await crearUsuarioDePrueba(empresaId, "MECANICO_INTERNO");
@@ -765,6 +767,32 @@ describe("app/_actions/ordenesTrabajo.ts", () => {
         actualizarDerivacionExterna(derivacion.id, ot.id, undefined, formData({ estadoExterno: "EN_REPARACION" }))
       ).rejects.toThrow(AutorizacionError);
     });
+
+    it("GERENTE sí puede actualizar el seguimiento de una OT ya COMPLETADA", async () => {
+      const { ot, derivacion } = await crearDerivacion();
+      await prisma.ordenDeTrabajo.update({ where: { id: ot.id }, data: { estado: "COMPLETADA" } });
+      mockearSesion({ id: gerente.id, rol: "GERENTE", empresaId });
+      const resultado = await actualizarDerivacionExterna(
+        derivacion.id,
+        ot.id,
+        undefined,
+        formData({ estadoExterno: "COMPLETADO", resultado: "Corregido después del cierre" })
+      );
+      expect(resultado?.error).toBeUndefined();
+    });
+
+    it("ENCARGADO_MANTENIMIENTO ya NO puede actualizar el seguimiento una vez COMPLETADA", async () => {
+      const { ot, derivacion } = await crearDerivacion();
+      await prisma.ordenDeTrabajo.update({ where: { id: ot.id }, data: { estado: "COMPLETADA" } });
+      mockearSesion({ id: encargadoMantenimiento.id, rol: "ENCARGADO_MANTENIMIENTO", empresaId });
+      const resultado = await actualizarDerivacionExterna(
+        derivacion.id,
+        ot.id,
+        undefined,
+        formData({ estadoExterno: "COMPLETADO" })
+      );
+      expect(resultado?.error).toMatch(/no podés modificar/i);
+    });
   });
 
   describe("agregarRepuesto", () => {
@@ -823,6 +851,25 @@ describe("app/_actions/ordenesTrabajo.ts", () => {
       await expect(
         agregarRepuesto(ot.id, undefined, formData({ descripcion: "Filtro" }))
       ).rejects.toThrow(AutorizacionError);
+    });
+
+    it("tampoco puede ENCARGADO_MANTENIMIENTO agregar repuestos a una OT COMPLETADA", async () => {
+      const ot = await crearOT({ estado: "COMPLETADA" });
+      mockearSesion({ id: encargadoMantenimiento.id, rol: "ENCARGADO_MANTENIMIENTO", empresaId });
+      await expect(
+        agregarRepuesto(ot.id, undefined, formData({ descripcion: "Filtro" }))
+      ).rejects.toThrow(AutorizacionError);
+    });
+
+    it("ADMIN y GERENTE sí pueden agregar repuestos a una OT COMPLETADA (corrección post-cierre)", async () => {
+      const ot = await crearOT({ estado: "COMPLETADA" });
+      mockearSesion({ id: admin.id, rol: "ADMIN", empresaId });
+      const resultadoAdmin = await agregarRepuesto(ot.id, undefined, formData({ descripcion: "Filtro admin" }));
+      expect(resultadoAdmin?.error).toBeUndefined();
+
+      mockearSesion({ id: gerente.id, rol: "GERENTE", empresaId });
+      const resultadoGerente = await agregarRepuesto(ot.id, undefined, formData({ descripcion: "Filtro gerente" }));
+      expect(resultadoGerente?.error).toBeUndefined();
     });
 
     it("un mecánico no asignado a la OT no puede agregar repuestos", async () => {
@@ -889,6 +936,22 @@ describe("app/_actions/ordenesTrabajo.ts", () => {
       mockearSesion({ id: mecanico1.id, rol: "MECANICO_INTERNO", empresaId });
       await expect(eliminarRepuestoUsado(ot.id, repuesto.id)).rejects.toThrow(AutorizacionError);
     });
+
+    it("ni ADMIN ni GERENTE pueden eliminar repuestos de una OT CANCELADA", async () => {
+      const ot = await crearOT({ estado: "CANCELADA" });
+      const repuesto = await crearRepuesto(ot.id);
+      mockearSesion({ id: admin.id, rol: "ADMIN", empresaId });
+      await expect(eliminarRepuestoUsado(ot.id, repuesto.id)).rejects.toThrow(AutorizacionError);
+    });
+
+    it("GERENTE sí puede eliminar un repuesto de una OT COMPLETADA (corrección post-cierre)", async () => {
+      const ot = await crearOT({ estado: "COMPLETADA" });
+      const repuesto = await crearRepuesto(ot.id);
+      mockearSesion({ id: gerente.id, rol: "GERENTE", empresaId });
+      await eliminarRepuestoUsado(ot.id, repuesto.id);
+      const actualizado = await prisma.oTRepuesto.findUniqueOrThrow({ where: { id: repuesto.id } });
+      expect(actualizado.eliminadoEn).not.toBeNull();
+    });
   });
 
   describe("completarItemsPreventivos", () => {
@@ -954,6 +1017,22 @@ describe("app/_actions/ordenesTrabajo.ts", () => {
           formData({ [`resultado_${item1.id}`]: "PENDIENTE", [`resultado_${item2.id}`]: "PENDIENTE" })
         )
       ).rejects.toThrow(AutorizacionError);
+    });
+
+    it("GERENTE sí puede modificar ítems de una OT ya COMPLETADA (corrección post-cierre)", async () => {
+      const { ot, item1, item2 } = await crearOTConItems();
+      await prisma.ordenDeTrabajo.update({ where: { id: ot.id }, data: { estado: "COMPLETADA" } });
+      mockearSesion({ id: gerente.id, rol: "GERENTE", empresaId });
+      const resultado = await completarItemsPreventivos(
+        ot.id,
+        undefined,
+        formData({
+          [`resultado_${item1.id}`]: "OK",
+          [`observacion_${item1.id}`]: "Corregido después del cierre",
+          [`resultado_${item2.id}`]: "PENDIENTE",
+        })
+      );
+      expect(resultado?.error).toBeUndefined();
     });
 
     it("un rol sin relación con la OT (ej. CHOFER) no puede modificar los ítems", async () => {

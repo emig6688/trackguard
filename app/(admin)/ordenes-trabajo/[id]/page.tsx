@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/back-button";
 import { EliminarButton } from "@/components/eliminar-button";
 import { AREA_REPARACION_LABEL } from "@/lib/clasificador-averias";
-import { otEstaAtrasada, puedeMecanicoAccionar } from "@/lib/ot";
+import { otEstaAtrasada, puedeMecanicoAccionar, puedeModificarOT } from "@/lib/ot";
 import { formatearFechaHora } from "@/lib/fecha";
 import { vehiculosEnTallerExterno } from "@/lib/disponibilidad";
 import { DisponibilidadToggle } from "@/components/vehiculos/disponibilidad-toggle";
@@ -157,6 +157,15 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
   // asignada — no de cualquiera (esGestor no tiene esa restricción).
   const puedeGenerarOC = esGestor || (session.rol === "MECANICO_INTERNO" && puedeMecanicoAccionar(ot, session.id));
   const puedeCerrarOT = ot.estado === "EN_PROGRESO" && (esGestor || puedeMecanicoAccionar(ot, session.id));
+  // Una vez COMPLETADA, la OT queda congelada para auditoría salvo para
+  // GERENTE/ADMIN (ver lib/ot.ts) — reemplaza a soloLectura en las secciones
+  // que modifican el contenido de la OT (repuestos, ítems preventivos). La
+  // derivación externa tiene su propio set de roles permitidos de siempre
+  // (ROLES_ADMIN_MANTENIMIENTO, no incluye al mecánico asignado), así que
+  // usa un cálculo aparte que espeja exactamente actualizarDerivacionExterna.
+  const puedeEditarOT = puedeModificarOT(ot, session);
+  const puedeEditarDerivacion =
+    ot.estado === "CANCELADA" ? false : ot.estado === "COMPLETADA" ? session.rol === "ADMIN" || session.rol === "GERENTE" : esGestor;
 
   const atrasada = otEstaAtrasada(ot);
 
@@ -323,6 +332,7 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
           puedeGenerarOC={puedeGenerarOC}
           articulosPanol={articulosPanol}
           montoAutorizacionCompra={empresa.montoAutorizacionCompra?.toString() ?? null}
+          soloLectura={!puedeEditarOT}
         />
       )}
 
@@ -336,7 +346,7 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
               ? ` · Presupuesto: $${ot.derivacionExterna.presupuestoMonto}`
               : ""}
           </p>
-          {!soloLectura && (
+          {puedeEditarDerivacion && (
             <DerivacionForm
               derivacionId={ot.derivacionExterna.id}
               otId={ot.id}
@@ -356,7 +366,7 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
               </span>
               <div className="flex items-center gap-2">
                 {r.costoUnitario && <span>${r.costoUnitario.toString()}</span>}
-                {!soloLectura && <EliminarRepuestoButton otId={ot.id} repuestoId={r.id} />}
+                {puedeEditarOT && <EliminarRepuestoButton otId={ot.id} repuestoId={r.id} />}
               </div>
             </div>
           ))}
@@ -364,7 +374,7 @@ export default async function OTDetallePage({ params }: { params: Promise<{ id: 
             <p className="text-sm text-muted-foreground">Sin repuestos cargados.</p>
           )}
         </div>
-        {!soloLectura && (
+        {puedeEditarOT && (
           <div className="flex flex-wrap items-start gap-4">
             <div className="min-w-64 flex-1">
               <RepuestoForm otId={ot.id} articulos={articulosPanol} />

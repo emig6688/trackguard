@@ -57,6 +57,7 @@ function ItemPreventivoRow({
   puedeGenerarOC,
   articulosPanol,
   montoAutorizacionCompra,
+  soloLectura,
 }: {
   numero: number;
   otId: string;
@@ -68,6 +69,7 @@ function ItemPreventivoRow({
   puedeGenerarOC: boolean;
   articulosPanol: ArticuloOpcion[];
   montoAutorizacionCompra: string | null;
+  soloLectura: boolean;
 }) {
   const [dialogAbierto, setDialogAbierto] = useState(false);
   const [dialogPanolAbierto, setDialogPanolAbierto] = useState(false);
@@ -98,6 +100,7 @@ function ItemPreventivoRow({
           type="button"
           size="xs"
           variant="outline"
+          disabled={soloLectura}
           className={resultado === "OK" ? "border-success bg-success text-success-foreground hover:bg-success/90" : ""}
           onClick={() => onResultadoChange(resultado === "OK" ? "PENDIENTE" : "OK")}
         >
@@ -107,6 +110,7 @@ function ItemPreventivoRow({
           type="button"
           size="xs"
           variant="outline"
+          disabled={soloLectura}
           className={
             resultado === "REPARADO" ? "border-warning bg-warning text-warning-foreground hover:bg-warning/90" : ""
           }
@@ -122,9 +126,12 @@ function ItemPreventivoRow({
         defaultValue={item.observacion ?? ""}
         rows={2}
         className="text-sm"
+        disabled={soloLectura}
       />
       <div className="flex flex-wrap items-center gap-2">
-        <Input name={`foto_${item.id}`} type="file" accept="image/*" capture="environment" className="max-w-56 text-xs" />
+        {!soloLectura && (
+          <Input name={`foto_${item.id}`} type="file" accept="image/*" capture="environment" className="max-w-56 text-xs" />
+        )}
         {item.archivo && (
           <a
             href={item.archivo.url}
@@ -156,7 +163,7 @@ function ItemPreventivoRow({
         </div>
       )}
 
-      {resultado === "REPARADO" && (
+      {resultado === "REPARADO" && !soloLectura && (
         <div className="flex flex-wrap gap-2">
           <Dialog open={dialogPanolAbierto} onOpenChange={setDialogPanolAbierto}>
             <DialogTrigger render={<Button type="button" size="xs" variant="outline" />}>
@@ -207,12 +214,14 @@ export function ItemsPreventivosForm({
   puedeGenerarOC,
   articulosPanol,
   montoAutorizacionCompra,
+  soloLectura = false,
 }: {
   otId: string;
   items: ItemPreventivo[];
   puedeGenerarOC: boolean;
   articulosPanol: ArticuloOpcion[];
   montoAutorizacionCompra: string | null;
+  soloLectura?: boolean;
 }) {
   const [resultados, setResultados] = useState<Record<string, Resultado>>(() =>
     Object.fromEntries(items.map((i) => [i.id, i.resultado]))
@@ -255,13 +264,16 @@ export function ItemsPreventivosForm({
             puedeGenerarOC={puedeGenerarOC}
             articulosPanol={articulosPanol}
             montoAutorizacionCompra={montoAutorizacionCompra}
+            soloLectura={soloLectura}
           />
         ))}
 
         {state?.error && <p className="text-sm font-medium text-destructive">{state.error}</p>}
-        <Button type="submit" disabled={pending}>
-          {pending ? "Guardando..." : "Guardar"}
-        </Button>
+        {!soloLectura && (
+          <Button type="submit" disabled={pending}>
+            {pending ? "Guardando..." : "Guardar"}
+          </Button>
+        )}
       </form>
     </div>
   );

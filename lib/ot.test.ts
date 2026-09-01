@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { otEstaAtrasada, puedeMecanicoAccionar, fechaReferenciaAtraso } from "@/lib/ot";
+import { otEstaAtrasada, puedeMecanicoAccionar, puedeModificarOT, fechaReferenciaAtraso } from "@/lib/ot";
 
 describe("puedeMecanicoAccionar", () => {
   it("permite al mecánico asignado", () => {
@@ -30,6 +30,31 @@ describe("puedeMecanicoAccionar", () => {
   it("no permite tomar una OT sin asignar ya completada", () => {
     const ot = { asignadoAId: null, estado: "COMPLETADA" as const };
     expect(puedeMecanicoAccionar(ot, "mec-cualquiera")).toBe(false);
+  });
+});
+
+describe("puedeModificarOT", () => {
+  it("una OT COMPLETADA solo la puede modificar ADMIN o GERENTE", () => {
+    const ot = { asignadoAId: "mec-1", estado: "COMPLETADA" as const };
+    expect(puedeModificarOT(ot, { rol: "ADMIN", id: "admin-1" })).toBe(true);
+    expect(puedeModificarOT(ot, { rol: "GERENTE", id: "ger-1" })).toBe(true);
+    expect(puedeModificarOT(ot, { rol: "ENCARGADO_MANTENIMIENTO", id: "enc-1" })).toBe(false);
+    expect(puedeModificarOT(ot, { rol: "MECANICO_INTERNO", id: "mec-1" })).toBe(false);
+  });
+
+  it("una OT CANCELADA no la puede modificar nadie, ni ADMIN ni GERENTE", () => {
+    const ot = { asignadoAId: null, estado: "CANCELADA" as const };
+    expect(puedeModificarOT(ot, { rol: "ADMIN", id: "admin-1" })).toBe(false);
+    expect(puedeModificarOT(ot, { rol: "GERENTE", id: "ger-1" })).toBe(false);
+  });
+
+  it("en un estado activo rige el criterio de siempre: gestión o el mecánico asignado", () => {
+    const ot = { asignadoAId: "mec-1", estado: "EN_PROGRESO" as const };
+    expect(puedeModificarOT(ot, { rol: "ADMIN", id: "admin-1" })).toBe(true);
+    expect(puedeModificarOT(ot, { rol: "ENCARGADO_MANTENIMIENTO", id: "enc-1" })).toBe(true);
+    expect(puedeModificarOT(ot, { rol: "MECANICO_INTERNO", id: "mec-1" })).toBe(true);
+    expect(puedeModificarOT(ot, { rol: "MECANICO_INTERNO", id: "mec-2" })).toBe(false);
+    expect(puedeModificarOT(ot, { rol: "GERENTE", id: "ger-1" })).toBe(false);
   });
 });
 
