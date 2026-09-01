@@ -240,22 +240,52 @@ export async function crearOTDesdePlan(planId: string, redirectPath: string) {
   return ot.id;
 }
 
-const aprobarSchema = z.object({
-  prioridad: z.enum(["BAJA", "MEDIA", "ALTA", "URGENTE"]),
-  areaReparacion: z.enum(["FRENOS", "SUSPENSION", "ESTRUCTURA", "MOTOR", "ELECTRICO", "NEUMATICOS", "EQUIPO_FRIO", "OTRO"]),
-  fechaLimite: z
-    .string()
-    .min(1, "Elegí una fecha límite")
-    .transform((v) => new Date(v)),
-  asignadoAId: z.string().min(1, "Asigná un mecánico"),
-  ordenSecuencia: optionalInt(),
-});
+const aprobarSchema = z
+  .object({
+    prioridad: z.enum(["BAJA", "MEDIA", "ALTA", "URGENTE"]),
+    areaReparacion: z.enum(["FRENOS", "SUSPENSION", "ESTRUCTURA", "MOTOR", "ELECTRICO", "NEUMATICOS", "EQUIPO_FRIO", "OTRO"]),
+    fechaLimite: z
+      .string()
+      .min(1, "Elegí una fecha límite")
+      .transform((v) => new Date(v)),
+    ordenSecuencia: optionalInt(),
+    // Exactamente uno de los dos: se asigna a un mecánico interno (queda
+    // APROBADA) o se deriva directo a un taller externo (queda
+    // DERIVADA_EXTERNO) — ver el .superRefine de abajo y el toggle en
+    // OTAcciones (app/(admin)/ordenes-trabajo/[id]/ot-acciones.tsx).
+    asignadoAId: z.string().optional(),
+    tallerExternoId: z.string().optional(),
+    presupuestoMonto: optionalNumber(),
+    fechaEstimadaEntrega: z
+      .string()
+      .optional()
+      .transform((v) => (v ? new Date(v) : undefined)),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.asignadoAId && !data.tallerExternoId) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["asignadoAId"],
+        message: "Asigná un mecánico o derivá a un taller externo.",
+      });
+    }
+    if (data.asignadoAId && data.tallerExternoId) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["tallerExternoId"],
+        message: "Elegí una sola opción: mecánico interno o taller externo.",
+      });
+    }
+  });
 
 export type AprobarOTState = { error?: string; fieldErrors?: Record<string, string[]> } | undefined;
 
 /**
- * No se puede aprobar una OT sin mecánico asignado ni fecha límite: sin eso
- * queda "aprobada" pero nadie sabe quién la tiene que hacer ni para cuándo.
+ * No se puede aprobar una OT sin fecha límite: sin eso queda "aprobada"
+ * pero nadie sabe para cuándo. Además, o se asigna a un mecánico interno
+ * (queda APROBADA) o se deriva directo a un taller externo (queda
+ * DERIVADA_EXTERNO en el mismo paso, sin tener que asignar un mecánico que
+ * en realidad no va a tocar la reparación) — nunca las dos cosas.
  */
 export async function aprobarOT(
   otId: string,
@@ -268,13 +298,67 @@ export async function aprobarOT(
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
-  await transicionarOT(prisma, user, otId, "APROBADA", {
+  const datosComunes = {
     prioridad: parsed.data.prioridad,
     areaReparacion: parsed.data.areaReparacion,
     fechaLimite: parsed.data.fechaLimite,
-    asignadoAId: parsed.data.asignadoAId,
     ordenSecuencia: parsed.data.ordenSecuencia,
     aprobadoPorId: user.id,
+  };
+
+  if (parsed.data.tallerExternoId) {
+    try {
+      await prisma.$transaction(async (tx) => {
+        const ot = await tx.ordenDeTrabajo.findUniqueOrThrow({ where: { id: otId } });
+        // Este salto directo a DERIVADA_EXTERNO es exclusivo de aprobarOT
+        // (fija de una vez prioridad/áreaReparacion/fechaLimite/aprobadoPorId,
+        // igual que el camino a APROBADA) — a propósito NO se agrega a
+        // ot-state-machine.ts, porque esa tabla también gobierna
+        // derivarAExterno() más abajo, que asume esos campos ya están
+        // cargados desde una aprobación previa y no los vuelve a pedir.
+        if (ot.estado !== "PENDIENTE_APROBACION") {
+          throw new Error("No podés realizar esta transición sobre esta orden de trabajo.");
+        }
+
+        await tx.ordenDeTrabajo.update({
+          where: { id: otId },
+          data: { estado: "DERIVADA_EXTERNO", ...datosComunes },
+        });
+        await tx.oTHistorialEstado.create({
+          data: {
+            ordenDeTrabajoId: otId,
+            actorId: user.id,
+            estadoAnterior: ot.estado,
+            estadoNuevo: "DERIVADA_EXTERNO",
+          },
+        });
+        await tx.oTDerivacionExterna.upsert({
+          where: { ordenDeTrabajoId: otId },
+          create: {
+            ordenDeTrabajoId: otId,
+            tallerExternoId: parsed.data.tallerExternoId!,
+            presupuestoMonto: parsed.data.presupuestoMonto,
+            fechaEstimadaEntrega: parsed.data.fechaEstimadaEntrega,
+          },
+          update: {
+            tallerExternoId: parsed.data.tallerExternoId!,
+            presupuestoMonto: parsed.data.presupuestoMonto,
+            fechaEstimadaEntrega: parsed.data.fechaEstimadaEntrega,
+            estadoExterno: "ENVIADO",
+          },
+        });
+      });
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "No se pudo derivar la orden de trabajo." };
+    }
+    revalidatePath("/ordenes-trabajo");
+    revalidatePath(`/ordenes-trabajo/${otId}`);
+    return;
+  }
+
+  await transicionarOT(prisma, user, otId, "APROBADA", {
+    ...datosComunes,
+    asignadoAId: parsed.data.asignadoAId,
   });
 }
 

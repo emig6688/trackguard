@@ -258,10 +258,14 @@ describe("app/_actions/ordenesTrabajo.ts", () => {
     it("rechaza sin fecha límite ni mecánico asignado (fieldErrors)", async () => {
       const ot = await crearOT({ estado: "PENDIENTE_APROBACION" });
       mockearSesion({ id: admin.id, rol: "ADMIN", empresaId });
+      // fechaLimite="" (no ausente): así llega siempre desde el form real,
+      // que la manda vacía en vez de omitir la clave — con la clave
+      // directamente ausente, Zod corta el parseo en ese campo requerido
+      // antes de llegar al superRefine que valida mecánico/taller.
       const resultado = await aprobarOT(
         ot.id,
         undefined,
-        formData({ prioridad: "BAJA", areaReparacion: "MOTOR" })
+        formData({ prioridad: "BAJA", areaReparacion: "MOTOR", fechaLimite: "" })
       );
       expect(resultado?.fieldErrors?.fechaLimite).toBeDefined();
       expect(resultado?.fieldErrors?.asignadoAId).toBeDefined();
@@ -289,6 +293,58 @@ describe("app/_actions/ordenesTrabajo.ts", () => {
           formData({ prioridad: "BAJA", areaReparacion: "MOTOR", fechaLimite: "2026-12-31", asignadoAId: mecanico1.id })
         )
       ).rejects.toThrow(/no podés realizar esta transición/i);
+    });
+
+    it("aprueba y deriva a taller externo en el mismo paso, sin asignar mecánico", async () => {
+      const ot = await crearOT({ estado: "PENDIENTE_APROBACION" });
+      mockearSesion({ id: admin.id, rol: "ADMIN", empresaId });
+      const resultado = await aprobarOT(
+        ot.id,
+        undefined,
+        formData({
+          prioridad: "MEDIA",
+          areaReparacion: "MOTOR",
+          fechaLimite: "2026-12-31",
+          tallerExternoId,
+          presupuestoMonto: "50000",
+        })
+      );
+      expect(resultado?.error).toBeUndefined();
+      const actualizada = await prisma.ordenDeTrabajo.findUniqueOrThrow({ where: { id: ot.id } });
+      expect(actualizada.estado).toBe("DERIVADA_EXTERNO");
+      expect(actualizada.asignadoAId).toBeNull();
+      expect(actualizada.aprobadoPorId).toBe(admin.id);
+      const derivacion = await prisma.oTDerivacionExterna.findUnique({ where: { ordenDeTrabajoId: ot.id } });
+      expect(derivacion?.tallerExternoId).toBe(tallerExternoId);
+      expect(derivacion?.presupuestoMonto?.toString()).toBe("50000");
+    });
+
+    it("rechaza si no se elige ni mecánico ni taller externo", async () => {
+      const ot = await crearOT({ estado: "PENDIENTE_APROBACION" });
+      mockearSesion({ id: admin.id, rol: "ADMIN", empresaId });
+      const resultado = await aprobarOT(
+        ot.id,
+        undefined,
+        formData({ prioridad: "BAJA", areaReparacion: "MOTOR", fechaLimite: "2026-12-31" })
+      );
+      expect(resultado?.fieldErrors?.asignadoAId).toBeDefined();
+    });
+
+    it("rechaza si se eligen mecánico y taller externo a la vez", async () => {
+      const ot = await crearOT({ estado: "PENDIENTE_APROBACION" });
+      mockearSesion({ id: admin.id, rol: "ADMIN", empresaId });
+      const resultado = await aprobarOT(
+        ot.id,
+        undefined,
+        formData({
+          prioridad: "BAJA",
+          areaReparacion: "MOTOR",
+          fechaLimite: "2026-12-31",
+          asignadoAId: mecanico1.id,
+          tallerExternoId,
+        })
+      );
+      expect(resultado?.fieldErrors?.tallerExternoId).toBeDefined();
     });
   });
 
