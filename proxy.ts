@@ -31,10 +31,10 @@ export default auth((req) => {
   if (session.user.rol === "GUARDIA" && !esRutaGuardia) {
     return NextResponse.redirect(new URL("/guardia", nextUrl));
   }
-  // ADMIN y GERENTE también pueden entrar a /guardia (ven lo mismo que el
-  // guardia sin loguearse con ese usuario — ver lib/permisos.ts ROLES_GUARDIA),
-  // sin quedar forzados ahí como el propio guardia.
-  const puedeVerGuardia = ["GUARDIA", "ADMIN", "GERENTE"].includes(session.user.rol);
+  // ADMIN, GERENTE y ENCARGADO_LOGISTICA también pueden entrar a /guardia
+  // (ven lo mismo que el guardia sin loguearse con ese usuario — ver
+  // lib/permisos.ts ROLES_GUARDIA), sin quedar forzados ahí como el propio guardia.
+  const puedeVerGuardia = ["GUARDIA", "ADMIN", "GERENTE", "ENCARGADO_LOGISTICA"].includes(session.user.rol);
   if (!puedeVerGuardia && esRutaGuardia) {
     return NextResponse.redirect(new URL(homeForRol(session.user.rol), nextUrl));
   }

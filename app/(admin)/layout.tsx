@@ -81,6 +81,19 @@ function navItemsPorRol(rol: Rol): NavEntry[] {
       grupoCostos,
       { href: "/reportes/estadisticas", label: "Estadísticas", icon: "estadisticas" }
     );
+  } else if (rol === "ENCARGADO_LOGISTICA") {
+    items.push(
+      {
+        label: "Mantenedor",
+        icon: "mantenimiento",
+        items: [
+          { href: "/vehiculos", label: "Vehículos", icon: "vehiculos" },
+          { href: "/choferes", label: "Choferes", icon: "choferes" },
+        ],
+      },
+      { href: "/documentos", label: "Documentación", icon: "documentos" },
+      grupoGuardia
+    );
   } else if (rol === "GERENTE") {
     // GERENTE: mismo criterio de solo lectura que CONTADOR (ve Compras pero
     // sin botones de gestión), más el módulo de Autorizaciones (ver
