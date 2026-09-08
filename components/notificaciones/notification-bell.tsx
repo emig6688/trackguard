@@ -10,6 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   obtenerNotificaciones,
   obtenerNotificacionesPendientesDePopup,
   marcarNotificacionLeida,
@@ -24,6 +32,7 @@ export function NotificationBell() {
   const [notificaciones, setNotificaciones] = useState<NotificacionResumen[]>([]);
   const [noLeidas, setNoLeidas] = useState(0);
   const [abierto, setAbierto] = useState(false);
+  const [notificacionAbierta, setNotificacionAbierta] = useState<NotificacionResumen | null>(null);
   const mostradasEnToast = useRef(new Set<string>());
 
   const refrescarLista = useCallback(async () => {
@@ -73,6 +82,12 @@ export function NotificationBell() {
     if (abierto) refrescarLista();
   }, [abierto, refrescarLista]);
 
+  // Antes navegaba directo al href — pero el destino nunca muestra el texto
+  // de la notificación (ni la propia lista, con el mensaje cortado a 2
+  // líneas), así que el clic parecía "no hacer nada" cuando el href
+  // coincidía con la página actual, o cuando el usuario solo quería leer el
+  // mensaje completo sin ir a ningún lado. Ahora primero muestra el detalle
+  // completo en un diálogo, y desde ahí, si corresponde, se navega.
   async function abrirNotificacion(n: NotificacionResumen) {
     if (!n.leida) {
       setNotificaciones((prev) => prev.map((x) => (x.id === n.id ? { ...x, leida: true } : x)));
@@ -80,7 +95,12 @@ export function NotificationBell() {
       await marcarNotificacionLeida(n.id);
     }
     setAbierto(false);
-    if (n.href) router.push(n.href);
+    setNotificacionAbierta(n);
+  }
+
+  function irARelacionada() {
+    if (notificacionAbierta?.href) router.push(notificacionAbierta.href);
+    setNotificacionAbierta(null);
   }
 
   async function marcarTodas() {
@@ -90,61 +110,94 @@ export function NotificationBell() {
   }
 
   return (
-    <Popover open={abierto} onOpenChange={setAbierto}>
-      <PopoverTrigger
-        render={
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="size-5" />
+    <>
+      <Popover open={abierto} onOpenChange={setAbierto}>
+        <PopoverTrigger
+          render={
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="size-5" />
+              {noLeidas > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 h-4 min-w-4 justify-center rounded-full px-1 text-[10px] tabular-nums"
+                >
+                  {noLeidas > 9 ? "9+" : noLeidas}
+                </Badge>
+              )}
+              <span className="sr-only">Notificaciones</span>
+            </Button>
+          }
+        />
+        <PopoverContent align="end">
+          <div className="flex items-center justify-between border-b px-3 py-2.5">
+            <p className="font-medium">Notificaciones</p>
             {noLeidas > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-4 min-w-4 justify-center rounded-full px-1 text-[10px] tabular-nums"
+              <button
+                type="button"
+                onClick={marcarTodas}
+                className="text-xs text-muted-foreground hover:text-foreground"
               >
-                {noLeidas > 9 ? "9+" : noLeidas}
-              </Badge>
+                Marcar todas como leídas
+              </button>
             )}
-            <span className="sr-only">Notificaciones</span>
-          </Button>
-        }
-      />
-      <PopoverContent align="end">
-        <div className="flex items-center justify-between border-b px-3 py-2.5">
-          <p className="font-medium">Notificaciones</p>
-          {noLeidas > 0 && (
-            <button
-              type="button"
-              onClick={marcarTodas}
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              Marcar todas como leídas
-            </button>
+          </div>
+          <div className="max-h-80 overflow-y-auto">
+            {notificaciones.length === 0 && (
+              <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                No tenés notificaciones.
+              </p>
+            )}
+            {notificaciones.map((n) => (
+              <button
+                key={n.id}
+                type="button"
+                onClick={() => abrirNotificacion(n)}
+                className="flex w-full items-start gap-2 border-b px-3 py-2.5 text-left last:border-b-0 hover:bg-muted/50"
+              >
+                {!n.leida && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />}
+                <div className={n.leida ? "ml-4 flex-1 space-y-0.5" : "flex-1 space-y-0.5"}>
+                  <p className="text-sm font-medium">{n.titulo}</p>
+                  <p className="text-xs text-muted-foreground">{n.mensaje}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: es })}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      <Dialog
+        open={notificacionAbierta != null}
+        onOpenChange={(open) => {
+          if (!open) setNotificacionAbierta(null);
+        }}
+      >
+        <DialogContent>
+          {notificacionAbierta && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{notificacionAbierta.titulo}</DialogTitle>
+                <DialogDescription className="text-[11px]">
+                  {formatDistanceToNow(new Date(notificacionAbierta.createdAt), {
+                    addSuffix: true,
+                    locale: es,
+                  })}
+                </DialogDescription>
+              </DialogHeader>
+              <p className="text-sm whitespace-pre-line">{notificacionAbierta.mensaje}</p>
+              {notificacionAbierta.href && (
+                <DialogFooter>
+                  <Button type="button" onClick={irARelacionada}>
+                    Ir
+                  </Button>
+                </DialogFooter>
+              )}
+            </>
           )}
-        </div>
-        <div className="max-h-80 overflow-y-auto">
-          {notificaciones.length === 0 && (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-              No tenés notificaciones.
-            </p>
-          )}
-          {notificaciones.map((n) => (
-            <button
-              key={n.id}
-              type="button"
-              onClick={() => abrirNotificacion(n)}
-              className="flex w-full items-start gap-2 border-b px-3 py-2.5 text-left last:border-b-0 hover:bg-muted/50"
-            >
-              {!n.leida && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />}
-              <div className={n.leida ? "ml-4 flex-1 space-y-0.5" : "flex-1 space-y-0.5"}>
-                <p className="text-sm font-medium">{n.titulo}</p>
-                <p className="line-clamp-2 text-xs text-muted-foreground">{n.mensaje}</p>
-                <p className="text-[11px] text-muted-foreground">
-                  {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: es })}
-                </p>
-              </div>
-            </button>
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
