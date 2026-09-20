@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { prisma } from "@/lib/prisma";
+import { scopedPrisma } from "@/lib/tenant-prisma";
 import { enviarWhatsapp } from "@/lib/whatsapp";
 import { enviarEmail } from "@/lib/email";
-import { inicioDeHoy } from "@/lib/checklist";
+import { inicioDeHoy, presalidaVigentePorVehiculo } from "@/lib/checklist";
 import { ReporteGuardiaDiarioDocument } from "@/lib/pdf/reporte-guardia-diario";
 
 export const maxDuration = 60;
@@ -72,11 +73,14 @@ export async function GET(request: Request) {
 
       // ChecklistRealizado no tiene empresaId propio (se escopea vía
       // vehiculoId/choferId) — filtra por los vehículos ya traídos arriba.
-      const [checklists, eventos, diasNoOperados, devoluciones] = await Promise.all([
-        prisma.checklistRealizado.findMany({
-          where: { vehiculoId: { in: vehiculoIds }, momento: "PRESALIDA", fechaHora: { gte: hoy } },
-          select: { vehiculoId: true },
-        }),
+      // presalidaVigentePorVehiculo (no un simple "hecho hoy") para no
+      // marcar como "sin checklist pre-salida" a un vehículo cuyo reparto
+      // arrancó el día calendario anterior y todavía sigue en curso. Pide
+      // un cliente scopeado (lib/checklist.ts trabaja siempre con
+      // ScopedPrismaClient) solo para esta llamada, ya que este cron itera
+      // varias empresas con el cliente sin escopear.
+      const [checklistsVigentes, eventos, diasNoOperados, devoluciones] = await Promise.all([
+        presalidaVigentePorVehiculo(scopedPrisma(regla.empresaId), vehiculoIds),
         prisma.eventoRuta.findMany({
           where: { empresaId: regla.empresaId, fechaHora: { gte: hoy } },
           select: { vehiculoId: true, tanqueLleno: true },
@@ -91,7 +95,7 @@ export async function GET(request: Request) {
         }),
       ]);
 
-      const vehiculosConPresalida = new Set(checklists.map((c) => c.vehiculoId));
+      const vehiculosConPresalida = new Set(checklistsVigentes.keys());
       const vehiculosConCierre = new Set(eventos.map((e) => e.vehiculoId));
       const vehiculosNoOperados = new Set(diasNoOperados.map((d) => d.vehiculoId));
       const tanqueLlenoPorVehiculo = new Map<string, boolean | null>();

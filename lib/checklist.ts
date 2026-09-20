@@ -40,12 +40,6 @@ export function inicioDeHoy(): Date {
   return new Date(medianocheUTC + HORAS_DESFASE_ARGENTINA * 60 * 60 * 1000);
 }
 
-/** Clave "YYYY-MM-DD" del día calendario en Argentina para una fecha dada. */
-function diaArgentina(fecha: Date): string {
-  const argentina = new Date(fecha.getTime() - HORAS_DESFASE_ARGENTINA * 60 * 60 * 1000);
-  return argentina.toISOString().slice(0, 10);
-}
-
 // Antes, "¿ya hizo el checklist?" se resolvía comparando contra el inicio
 // del día calendario en Argentina (inicioDeHoy()). Eso se rompe con
 // cualquier reparto que arranca antes de medianoche y sigue después: al
@@ -164,6 +158,52 @@ export async function vehiculoDelChecklistDeHoy(
   return checklist?.vehiculo ?? null;
 }
 
+export type PresalidaVigente = {
+  id: string;
+  fechaHora: Date;
+  choferId: string;
+  chofer: { nombre: string };
+};
+
+/**
+ * Por vehículo (de la lista dada, sin importar el chofer), su pre-salida
+ * vigente: la de hoy si la hizo, o si no la más reciente que sigue sin
+ * cerrar (mismo criterio "reparto abierto" que choferHizoChecklistHoy).
+ * Usado en el panel de guardia y en el resumen diario por PDF/notificación:
+ * antes ambos comparaban solo contra "hoy" y marcaban como "sin checklist"
+ * a un vehículo que en realidad ya lo hizo, solo que su reparto arrancó el
+ * día calendario anterior y todavía sigue en curso — una alerta falsa que
+ * se mandaba de verdad a gerencia todos los días.
+ */
+export async function presalidaVigentePorVehiculo(
+  prisma: ScopedPrismaClient,
+  vehiculoIds: string[]
+): Promise<Map<string, PresalidaVigente>> {
+  if (vehiculoIds.length === 0) return new Map();
+
+  const presalidas = await prisma.checklistRealizado.findMany({
+    where: {
+      vehiculoId: { in: vehiculoIds },
+      momento: "PRESALIDA",
+      fechaHora: { gte: inicioVentanaRepartoAbierto() },
+    },
+    orderBy: { fechaHora: "desc" },
+    include: { chofer: { select: { nombre: true } } },
+  });
+
+  const hoy = inicioDeHoy();
+  const resueltos = new Set<string>();
+  const vigentes = new Map<string, PresalidaVigente>();
+  for (const p of presalidas) {
+    if (resueltos.has(p.vehiculoId)) continue; // ya se decidió con su pre-salida más reciente
+    resueltos.add(p.vehiculoId);
+    if (p.fechaHora >= hoy || !(await hayCierrePosterior(prisma, p.choferId, p.vehiculoId, p.fechaHora))) {
+      vigentes.set(p.vehiculoId, p);
+    }
+  }
+  return vigentes;
+}
+
 /**
  * true si la empresa tiene activada la regla de checklist obligatorio,
  * independientemente de si el chofer ya lo hizo hoy o no — a diferencia de
@@ -239,13 +279,17 @@ export async function registrarHorasEquipoFrioSiCorresponde(
  * Recalcula, para el reporte de trazabilidad, las horas de equipo de frío
  * acumuladas en un período — Vehiculo.horasEquipoFrio es un total corrido
  * sin desglose por fecha, así que para un período arbitrario hay que
- * volver a armar los pares pre-salida/cierre (por día+chofer) a partir de
- * los checklists y los cierres de ruta de esa ventana. El cierre de cada
- * jornada puede venir de un checklist de cierre (períodos viejos, antes de
- * que se sacara esa pantalla) o de un EventoRuta (períodos nuevos) — se usa
- * lo que exista. Mismo criterio de descarte que
- * registrarHorasEquipoFrioSiCorresponde: sin pre-salida y cierre del día,
- * esa jornada no suma.
+ * volver a armar los pares pre-salida/cierre a partir de los checklists y
+ * los cierres de ruta de esa ventana. El cierre de cada reparto puede venir
+ * de un checklist de cierre (períodos viejos, antes de que se sacara esa
+ * pantalla) o de un EventoRuta (períodos nuevos) — se usa lo que exista.
+ *
+ * Antes emparejaba por "mismo día calendario + chofer", igual que el bug de
+ * choferHizoChecklistHoy: un reparto que cruza medianoche quedaba con el
+ * pre-salida en un día y el cierre en el siguiente, en buckets distintos, y
+ * esas horas de frío se perdían del reporte. Ahora arma una única línea de
+ * tiempo por chofer y empareja cada pre-salida con el primer cierre
+ * cronológico que le sigue, sin importar si cae en otro día calendario.
  */
 export async function horasEquipoFrioEnPeriodo(
   prisma: ScopedPrismaClient,
@@ -256,37 +300,39 @@ export async function horasEquipoFrioEnPeriodo(
   const [checklists, eventos] = await Promise.all([
     prisma.checklistRealizado.findMany({
       where: { vehiculoId, fechaHora: { gte: desde, lte: hasta } },
-      orderBy: { fechaHora: "asc" },
       select: { momento: true, fechaHora: true, choferId: true },
     }),
     prisma.eventoRuta.findMany({
       where: { vehiculoId, fechaHora: { gte: desde, lte: hasta } },
-      orderBy: { fechaHora: "asc" },
       select: { fechaHora: true, choferId: true },
     }),
   ]);
 
-  const porDiaChofer = new Map<string, { presalida?: Date; cierre?: Date }>();
+  type EventoLinea = { fechaHora: Date; tipo: "PRESALIDA" | "CIERRE" };
+  const lineaPorChofer = new Map<string, EventoLinea[]>();
+  const agregar = (choferId: string, evento: EventoLinea) => {
+    const lista = lineaPorChofer.get(choferId);
+    if (lista) lista.push(evento);
+    else lineaPorChofer.set(choferId, [evento]);
+  };
   for (const c of checklists) {
-    const dia = diaArgentina(c.fechaHora);
-    const clave = `${dia}_${c.choferId}`;
-    const entrada = porDiaChofer.get(clave) ?? {};
-    if (c.momento === "PRESALIDA" && !entrada.presalida) entrada.presalida = c.fechaHora;
-    if (c.momento === "CIERRE" && !entrada.cierre) entrada.cierre = c.fechaHora;
-    porDiaChofer.set(clave, entrada);
+    agregar(c.choferId, { fechaHora: c.fechaHora, tipo: c.momento === "PRESALIDA" ? "PRESALIDA" : "CIERRE" });
   }
   for (const e of eventos) {
-    const dia = diaArgentina(e.fechaHora);
-    const clave = `${dia}_${e.choferId}`;
-    const entrada = porDiaChofer.get(clave) ?? {};
-    if (!entrada.cierre) entrada.cierre = e.fechaHora;
-    porDiaChofer.set(clave, entrada);
+    agregar(e.choferId, { fechaHora: e.fechaHora, tipo: "CIERRE" });
   }
 
   let totalHoras = 0;
-  for (const { presalida, cierre } of porDiaChofer.values()) {
-    if (presalida && cierre && cierre > presalida) {
-      totalHoras += (cierre.getTime() - presalida.getTime()) / (1000 * 60 * 60);
+  for (const linea of lineaPorChofer.values()) {
+    linea.sort((a, b) => a.fechaHora.getTime() - b.fechaHora.getTime());
+    let presalidaAbierta: Date | null = null;
+    for (const evento of linea) {
+      if (evento.tipo === "PRESALIDA") {
+        presalidaAbierta = evento.fechaHora;
+      } else if (presalidaAbierta) {
+        totalHoras += (evento.fechaHora.getTime() - presalidaAbierta.getTime()) / (1000 * 60 * 60);
+        presalidaAbierta = null;
+      }
     }
   }
   return Math.round(totalHoras);

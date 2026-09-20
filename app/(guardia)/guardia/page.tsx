@@ -1,12 +1,21 @@
 import Link from "next/link";
 import { requireEmpresa, ROLES_GUARDIA } from "@/lib/permisos";
-import { inicioDeHoy } from "@/lib/checklist";
-import { formatearHora as hora } from "@/lib/fecha";
+import { inicioDeHoy, presalidaVigentePorVehiculo } from "@/lib/checklist";
+import { formatearHora as hora, formatearFechaHora } from "@/lib/fecha";
 import { Badge } from "@/components/ui/badge";
 import { ObservacionCell } from "@/components/guardia/observacion-cell";
 import { DiaNoOperadoControl } from "@/components/guardia/dia-no-operado-control";
 
 type FiltroEstado = "PENDIENTE" | "HECHO";
+
+// Un pre-salida "vigente" puede venir de un día calendario anterior (reparto
+// que cruza medianoche) — en ese caso, mostrar solo la hora sería engañoso
+// (parecería de hoy), así que se agrega la fecha completa.
+function etiquetaPresalida(fechaChecklist: Date, inicioHoy: Date): string {
+  return fechaChecklist >= inicioHoy
+    ? `Hecho a las ${hora(fechaChecklist)}`
+    : `Hecho el ${formatearFechaHora(fechaChecklist)} (reparto en curso)`;
+}
 
 export default async function GuardiaPage({
   searchParams,
@@ -19,15 +28,10 @@ export default async function GuardiaPage({
   const filtroEstado: FiltroEstado | undefined =
     estado === "PENDIENTE" || estado === "HECHO" ? estado : undefined;
 
-  const [vehiculos, checklists, eventos, observaciones, diasNoOperados] = await Promise.all([
+  const [vehiculos, eventos, observaciones, diasNoOperados] = await Promise.all([
     prisma.vehiculo.findMany({
       where: { activo: true, eliminadoEn: null },
       orderBy: { patente: "asc" },
-    }),
-    prisma.checklistRealizado.findMany({
-      where: { fechaHora: { gte: fecha } },
-      orderBy: { fechaHora: "desc" },
-      include: { chofer: { select: { nombre: true } } },
     }),
     prisma.eventoRuta.findMany({
       where: { fechaHora: { gte: fecha } },
@@ -37,10 +41,10 @@ export default async function GuardiaPage({
     prisma.diaNoOperado.findMany({ where: { fecha }, include: { chofer: { select: { nombre: true } } } }),
   ]);
 
-  const checklistPorVehiculo = new Map<string, (typeof checklists)[number]>();
-  for (const c of checklists) {
-    if (!checklistPorVehiculo.has(c.vehiculoId)) checklistPorVehiculo.set(c.vehiculoId, c);
-  }
+  // Incluye pre-salidas de días anteriores que siguen en curso (reparto que
+  // cruza medianoche) — no solo las de hoy, para no marcar "Pendiente" a un
+  // vehículo que ya hizo su checklist antes de las 00:00 y sigue en ruta.
+  const checklistPorVehiculo = await presalidaVigentePorVehiculo(prisma, vehiculos.map((v) => v.id));
 
   const eventoPorVehiculo = new Map<string, (typeof eventos)[number]>();
   for (const e of eventos) {
@@ -117,7 +121,7 @@ export default async function GuardiaPage({
                     <p className="text-xs font-medium text-muted-foreground">Checklist pre-salida</p>
                     <div className="flex flex-wrap items-center gap-2">
                       {checklist ? (
-                        <Badge variant="success">Hecho a las {hora(checklist.fechaHora)}</Badge>
+                        <Badge variant="success">{etiquetaPresalida(checklist.fechaHora, fecha)}</Badge>
                       ) : noOperado ? (
                         <Badge variant="outline">No operó</Badge>
                       ) : (
@@ -184,7 +188,7 @@ export default async function GuardiaPage({
 
                       <td className="p-3">
                         {checklist ? (
-                          <Badge variant="success">Hecho a las {hora(checklist.fechaHora)}</Badge>
+                          <Badge variant="success">{etiquetaPresalida(checklist.fechaHora, fecha)}</Badge>
                         ) : noOperado ? (
                           <Badge variant="outline">No operó</Badge>
                         ) : (

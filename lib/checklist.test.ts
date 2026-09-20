@@ -4,6 +4,8 @@ import {
   vehiculoActivoParaCierre,
   vehiculoDelChecklistDeHoy,
   registrarHorasEquipoFrioSiCorresponde,
+  horasEquipoFrioEnPeriodo,
+  presalidaVigentePorVehiculo,
 } from "@/lib/checklist";
 import { crearEmpresaDePrueba, crearUsuarioDePrueba, borrarEmpresaDePrueba } from "@/lib/test-fixtures";
 import type { ScopedPrismaClient } from "@/lib/tenant-prisma";
@@ -190,6 +192,74 @@ describe("lib/checklist.ts", () => {
 
       const vehiculoActualizado = await prisma.vehiculo.findUniqueOrThrow({ where: { id: vehiculo.id } });
       expect(vehiculoActualizado.horasEquipoFrio).toBeNull();
+    });
+  });
+
+  describe("horasEquipoFrioEnPeriodo", () => {
+    it("REGRESIÓN: suma un reparto que cruza medianoche aunque pre-salida y cierre caigan en días de calendario distintos", async () => {
+      const chofer = await crearChofer();
+      const vehiculo = await crearVehiculo();
+      await crearPresalida(chofer.id, vehiculo.id, 16);
+      await crearCierre(chofer.id, vehiculo.id, 0);
+
+      const desde = new Date(Date.now() - 30 * 24 * HORA_MS);
+      const hasta = new Date(Date.now() + HORA_MS);
+      expect(await horasEquipoFrioEnPeriodo(prisma, vehiculo.id, desde, hasta)).toBe(16);
+    });
+
+    it("con varios repartos en el período, empareja cada pre-salida con su propio cierre", async () => {
+      const chofer = await crearChofer();
+      const vehiculo = await crearVehiculo();
+      await crearPresalida(chofer.id, vehiculo.id, 30);
+      await crearCierre(chofer.id, vehiculo.id, 25); // reparto 1: 5hs
+      await crearPresalida(chofer.id, vehiculo.id, 10);
+      await crearCierre(chofer.id, vehiculo.id, 7); // reparto 2: 3hs
+
+      const desde = new Date(Date.now() - 40 * HORA_MS);
+      const hasta = new Date();
+      expect(await horasEquipoFrioEnPeriodo(prisma, vehiculo.id, desde, hasta)).toBe(8);
+    });
+
+    it("un pre-salida sin cierre todavía no suma horas", async () => {
+      const chofer = await crearChofer();
+      const vehiculo = await crearVehiculo();
+      await crearPresalida(chofer.id, vehiculo.id, 4);
+
+      const desde = new Date(Date.now() - 24 * HORA_MS);
+      const hasta = new Date();
+      expect(await horasEquipoFrioEnPeriodo(prisma, vehiculo.id, desde, hasta)).toBe(0);
+    });
+  });
+
+  describe("presalidaVigentePorVehiculo", () => {
+    it("REGRESIÓN: un vehículo con pre-salida de ayer sin cerrar todavía figura vigente (no 'sin checklist')", async () => {
+      const chofer = await crearChofer();
+      const vehiculo = await crearVehiculo();
+      await crearPresalida(chofer.id, vehiculo.id, 16);
+
+      const vigentes = await presalidaVigentePorVehiculo(prisma, [vehiculo.id]);
+      expect(vigentes.has(vehiculo.id)).toBe(true);
+      expect(vigentes.get(vehiculo.id)?.choferId).toBe(chofer.id);
+    });
+
+    it("un vehículo sin ningún pre-salida no figura vigente", async () => {
+      const vehiculo = await crearVehiculo();
+      const vigentes = await presalidaVigentePorVehiculo(prisma, [vehiculo.id]);
+      expect(vigentes.has(vehiculo.id)).toBe(false);
+    });
+
+    it("un vehículo que ya cerró su reparto de ayer y no salió hoy no figura vigente", async () => {
+      const chofer = await crearChofer();
+      const vehiculo = await crearVehiculo();
+      await crearPresalida(chofer.id, vehiculo.id, 30);
+      await crearCierre(chofer.id, vehiculo.id, 25);
+
+      const vigentes = await presalidaVigentePorVehiculo(prisma, [vehiculo.id]);
+      expect(vigentes.has(vehiculo.id)).toBe(false);
+    });
+
+    it("lista vacía de vehículos no hace ninguna consulta y devuelve un mapa vacío", async () => {
+      expect((await presalidaVigentePorVehiculo(prisma, [])).size).toBe(0);
     });
   });
 });
