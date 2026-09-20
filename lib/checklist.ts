@@ -46,64 +46,107 @@ function diaArgentina(fecha: Date): string {
   return argentina.toISOString().slice(0, 10);
 }
 
+// Antes, "¿ya hizo el checklist?" se resolvía comparando contra el inicio
+// del día calendario en Argentina (inicioDeHoy()). Eso se rompe con
+// cualquier reparto que arranca antes de medianoche y sigue después: al
+// cambiar el día calendario, el chofer perdía su pre-salida en plena ruta y
+// quedaba bloqueado (cerrar ruta, cargar combustible, cargar gasto) aunque
+// sí había hecho el checklist unas horas antes — pasó exactamente esto con
+// PERALTA, Jonatan Ezequiel (checklist del 18/9 11:38, bloqueado de
+// madrugada ya en el día siguiente). La pregunta correcta no es "¿fue hoy?"
+// sino "¿el reparto que abrió ese checklist ya se cerró?" — así que ahora
+// un pre-salida sigue vigente hasta que hay un cierre posterior (EventoRuta,
+// o un checklist de cierre — quedan de antes de que existiera EventoRuta),
+// sin importar cuántos días calendario pasen en el medio.
+//
+// VENTANA_REPARTO_ABIERTO_DIAS acota igual las consultas que buscan "el
+// último pre-salida" — no por una regla de negocio (un reparto puede durar
+// lo que dure), sino para no escanear el historial completo de checklists
+// de un chofer con antigüedad cada vez que se pide la pantalla de inicio
+// mobile. 30 días es muchísimo más que cualquier reparto real; si algún día
+// hace falta un reparto más largo, hay que subir este número, no sacarlo.
+const VENTANA_REPARTO_ABIERTO_DIAS = 30;
+
+function inicioVentanaRepartoAbierto(): Date {
+  return new Date(Date.now() - VENTANA_REPARTO_ABIERTO_DIAS * 24 * 60 * 60 * 1000);
+}
+
+async function hayCierrePosterior(
+  prisma: ScopedPrismaClient,
+  choferId: string,
+  vehiculoId: string,
+  desde: Date
+): Promise<boolean> {
+  const [eventoRuta, checklistCierre] = await Promise.all([
+    prisma.eventoRuta.findFirst({ where: { choferId, vehiculoId, fechaHora: { gt: desde } } }),
+    prisma.checklistRealizado.findFirst({
+      where: { choferId, vehiculoId, momento: "CIERRE", fechaHora: { gt: desde } },
+    }),
+  ]);
+  return eventoRuta != null || checklistCierre != null;
+}
+
 /**
- * vehiculoId es opcional a propósito: sin él, chequea "hizo algún checklist
- * hoy con cualquier vehículo" (usado como pista general en pantallas que
+ * vehiculoId es opcional a propósito: sin él, chequea "tiene algún reparto
+ * abierto con cualquier vehículo" (usado como pista general en pantallas que
  * todavía no saben con qué camión va a trabajar el chofer). Pasándolo,
- * chequea el checklist de ESE vehículo puntual — es el chequeo que hay que
+ * chequea el reparto de ESE vehículo puntual — es el chequeo que hay que
  * usar antes de dejar cargar combustible/cerrar ruta/cargar gasto de un
  * vehículo específico, para no dar por hecho que el checklist de otro
- * camión (hecho más temprano el mismo día) también cubre a este.
+ * camión también cubre a este.
  */
 export async function choferHizoChecklistHoy(
   prisma: ScopedPrismaClient,
   choferId: string,
   vehiculoId?: string
 ): Promise<boolean> {
-  const checklist = await prisma.checklistRealizado.findFirst({
+  const presalidas = await prisma.checklistRealizado.findMany({
     where: {
       choferId,
       momento: "PRESALIDA",
-      fechaHora: { gte: inicioDeHoy() },
+      fechaHora: { gte: inicioVentanaRepartoAbierto() },
       ...(vehiculoId ? { vehiculoId } : {}),
     },
+    orderBy: { fechaHora: "desc" },
+    select: { vehiculoId: true, fechaHora: true },
   });
-  return checklist != null;
+
+  for (const p of presalidas) {
+    if (!(await hayCierrePosterior(prisma, choferId, p.vehiculoId, p.fechaHora))) return true;
+  }
+  return false;
 }
 
 /**
- * El vehículo del "reparto abierto" de hoy para este chofer: el más
- * reciente que tiene checklist pre-salida hecho hoy pero todavía no tiene
- * un cierre de ruta (EventoRuta) hoy. Es la patente correcta para cerrar
- * ruta — un chofer no debería poder elegir cualquier vehículo activo de la
- * empresa al cerrar, solo el que efectivamente usó en el pre-salida.
+ * El vehículo del "reparto abierto" para este chofer: el pre-salida más
+ * reciente que todavía no tiene un cierre posterior (EventoRuta o checklist
+ * de cierre). Es la patente correcta para cerrar ruta — un chofer no
+ * debería poder elegir cualquier vehículo activo de la empresa al cerrar,
+ * solo el que efectivamente usó en el pre-salida.
  *
- * Devuelve null si no hay ningún reparto abierto (no hizo ningún checklist
- * hoy, o ya cerró todos los que hizo) — en ese caso quien llama debe caer
+ * Devuelve null si no hay ningún reparto abierto (no hizo ningún checklist,
+ * o ya cerró todos los que hizo) — en ese caso quien llama debe caer
  * a un selector libre o bloquear, según si el checklist es obligatorio.
  */
 export async function vehiculoActivoParaCierre(
   prisma: ScopedPrismaClient,
   choferId: string
 ): Promise<{ id: string; patente: string } | null> {
-  const checklistsHoy = await prisma.checklistRealizado.findMany({
-    where: { choferId, momento: "PRESALIDA", fechaHora: { gte: inicioDeHoy() } },
+  const presalidas = await prisma.checklistRealizado.findMany({
+    where: { choferId, momento: "PRESALIDA", fechaHora: { gte: inicioVentanaRepartoAbierto() } },
     orderBy: { fechaHora: "desc" },
-    select: { vehiculoId: true, vehiculo: { select: { id: true, patente: true } } },
+    select: { vehiculoId: true, fechaHora: true, vehiculo: { select: { id: true, patente: true } } },
   });
 
-  for (const c of checklistsHoy) {
-    const yaCerro = await prisma.eventoRuta.findFirst({
-      where: { choferId, vehiculoId: c.vehiculoId, fechaHora: { gte: inicioDeHoy() } },
-    });
-    if (!yaCerro) return c.vehiculo;
+  for (const p of presalidas) {
+    if (!(await hayCierrePosterior(prisma, choferId, p.vehiculoId, p.fechaHora))) return p.vehiculo;
   }
   return null;
 }
 
 /**
- * El vehículo del checklist pre-salida más reciente de hoy para este
- * chofer, sin importar si ya cerró ruta con él o no — a diferencia de
+ * El vehículo del checklist pre-salida más reciente de este chofer, sin
+ * importar si ya cerró ruta con él o no — a diferencia de
  * vehiculoActivoParaCierre (pensado solo para cerrar ruta), este se usa
  * para fijar la patente al cargar combustible o un gasto: un chofer puede
  * necesitar cargar combustible antes de cerrar la ruta, o incluso después
@@ -114,7 +157,7 @@ export async function vehiculoDelChecklistDeHoy(
   choferId: string
 ): Promise<{ id: string; patente: string } | null> {
   const checklist = await prisma.checklistRealizado.findFirst({
-    where: { choferId, momento: "PRESALIDA", fechaHora: { gte: inicioDeHoy() } },
+    where: { choferId, momento: "PRESALIDA", fechaHora: { gte: inicioVentanaRepartoAbierto() } },
     orderBy: { fechaHora: "desc" },
     select: { vehiculo: { select: { id: true, patente: true } } },
   });
@@ -137,12 +180,16 @@ export async function checklistObligatorioActivo(
 }
 
 /**
- * Suma a Vehiculo.horasEquipoFrio la duración entre el checklist pre-salida
- * de hoy y el cierre de ruta (con o sin novedades) que se acaba de
- * completar, para el mismo chofer+vehículo. Si falta el pre-salida de hoy,
- * o si ya se sumó un cierre hoy (evita doble conteo si el chofer cierra la
- * ruta más de una vez), la medición se descarta sin sumar nada — nunca se
- * adivina un valor.
+ * Suma a Vehiculo.horasEquipoFrio la duración entre el pre-salida que abrió
+ * el reparto y el cierre de ruta (con o sin novedades) que se acaba de
+ * completar, para el mismo chofer+vehículo. Antes buscaba el pre-salida
+ * "de hoy" — se rompía en repartos que cruzan medianoche (el pre-salida
+ * queda "de ayer" y esto descartaba la medición en silencio, perdiendo las
+ * horas de frío de esa jornada). Ahora toma el pre-salida vigente más
+ * reciente (ver hayCierrePosterior), sin importar el día calendario. Si no
+ * hay pre-salida vigente, o si ya hubo otro cierre entre medio (evita doble
+ * conteo si el chofer cierra la ruta más de una vez), la medición se
+ * descarta sin sumar nada — nunca se adivina un valor.
  */
 export async function registrarHorasEquipoFrioSiCorresponde(
   prisma: ScopedPrismaClient,
@@ -151,19 +198,24 @@ export async function registrarHorasEquipoFrioSiCorresponde(
   const { vehiculoId, choferId, eventoRutaId, cierreFechaHora } = params;
 
   const presalida = await prisma.checklistRealizado.findFirst({
-    where: { choferId, vehiculoId, momento: "PRESALIDA", fechaHora: { gte: inicioDeHoy() } },
-    orderBy: { fechaHora: "asc" },
+    where: { choferId, vehiculoId, momento: "PRESALIDA", fechaHora: { lte: cierreFechaHora } },
+    orderBy: { fechaHora: "desc" },
   });
   if (!presalida) {
-    console.log(`[horasEquipoFrio] descartada: sin checklist pre-salida hoy (chofer=${choferId}, vehiculo=${vehiculoId})`);
+    console.log(`[horasEquipoFrio] descartada: sin checklist pre-salida vigente (chofer=${choferId}, vehiculo=${vehiculoId})`);
     return;
   }
 
-  const otroCierreHoy = await prisma.eventoRuta.findFirst({
-    where: { choferId, vehiculoId, fechaHora: { gte: inicioDeHoy() }, id: { not: eventoRutaId } },
+  const otroCierreEnElMedio = await prisma.eventoRuta.findFirst({
+    where: {
+      choferId,
+      vehiculoId,
+      fechaHora: { gt: presalida.fechaHora, lte: cierreFechaHora },
+      id: { not: eventoRutaId },
+    },
   });
-  if (otroCierreHoy) {
-    console.log(`[horasEquipoFrio] descartada: ya se registró un cierre de ruta hoy (chofer=${choferId}, vehiculo=${vehiculoId})`);
+  if (otroCierreEnElMedio) {
+    console.log(`[horasEquipoFrio] descartada: ya se registró un cierre de ruta para ese pre-salida (chofer=${choferId}, vehiculo=${vehiculoId})`);
     return;
   }
 
