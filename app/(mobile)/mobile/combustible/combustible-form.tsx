@@ -73,7 +73,12 @@ export function CombustibleForm({
       const resultado = await leerTicketCombustibleAction(datosArchivo);
       if (resultado.leido) {
         const { litros, monto, proveedor, kmOdometro } = resultado.datos;
-        if (litros != null) setLitros(String(litros));
+        // El surtidor puede medir con 3 decimales (39.526) pero el campo
+        // solo acepta 2 (step="0.01", igual que se guarda en la base) — sin
+        // este redondeo, un valor de 3 decimales no cumple el step y el
+        // navegador bloquea el envío del formulario en silencio, sin avisar
+        // por qué "no toma" el número.
+        if (litros != null) setLitros(String(Math.round((litros + Number.EPSILON) * 100) / 100));
         if (monto != null) setMonto(String(monto));
         if (proveedor) setEstacionServicio(proveedor);
         if (kmOdometro != null) setKmOdometro(String(kmOdometro));
