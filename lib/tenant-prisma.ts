@@ -33,6 +33,9 @@ export const MODELOS_CON_EMPRESA = new Set([
   "ObservacionGuardia",
   "Devolucion",
   "DiaNoOperado",
+  "SensorFrio",
+  "LecturaFrio",
+  "AlertaFrio",
 ]);
 
 /**

@@ -18,6 +18,7 @@ export const AREAS_PARAMETROS = {
   OT: { label: "Órdenes de trabajo", orden: 2 },
   CHECKLIST_VEHICULOS: { label: "Checklist y vehículos", orden: 3 },
   GUARDIA: { label: "Guardia", orden: 4 },
+  FRIO: { label: "Calidad y frío", orden: 5 },
 } as const;
 export type AreaParametro = keyof typeof AREAS_PARAMETROS;
 
@@ -146,6 +147,16 @@ export const CATALOGO_NOTIFICACIONES: Partial<Record<TipoNotificacion, InfoTipoN
     destinatarioFijo: null,
     usaDiasAviso: false,
     area: "GUARDIA",
+  },
+
+  // --- Calidad y frío ---
+  TEMPERATURA_FUERA_DE_RANGO: {
+    label: "Temperatura fuera de rango",
+    disparador:
+      "Cuando el sensor de frío de un vehículo reporta una temperatura fuera del rango configurado abajo. Se avisa una sola vez al abrirse la excursión, no en cada lectura mientras sigue fuera de rango — el detalle completo queda en Calidad.",
+    destinatarioFijo: null,
+    usaDiasAviso: false,
+    area: "FRIO",
   },
 };
 

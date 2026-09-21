@@ -171,6 +171,7 @@ enum TipoNotificacion {
   PRESUPUESTO_SUBIDO
   COMPRA_AUTORIZADA
   COMPRA_MECANICO_PENDIENTE_AUTORIZACION
+  TEMPERATURA_FUERA_DE_RANGO
 }
 
 enum CanalNotificacion {
@@ -208,6 +209,13 @@ model Empresa {
   // asigne. No cambia el comportamiento de las preventivas, que ya se
   // auto-aprueban siempre.
   autoAprobacionMecanicosActiva   Boolean  @default(false)
+  // Rango de temperatura aceptable para vehículos con sensor de frío
+  // (Vehiculo.tieneSensorFrio) — fuera de este rango dispara
+  // TEMPERATURA_FUERA_DE_RANGO (ver lib/frio.ts). null en cualquiera de los
+  // dos = sin límite de ese lado (mismo criterio "null = desactivado" que
+  // montoAutorizacionCompra).
+  temperaturaMinimaFrio           Decimal? @db.Decimal(5, 2)
+  temperaturaMaximaFrio           Decimal? @db.Decimal(5, 2)
   createdAt                       DateTime @default(now())
   updatedAt                       DateTime @updatedAt
 
@@ -237,6 +245,9 @@ model Empresa {
   observacionesGuardia        ObservacionGuardia[]
   diasNoOperados              DiaNoOperado[]
   devoluciones                Devolucion[]
+  sensoresFrio                SensorFrio[]
+  lecturasFrio                LecturaFrio[]
+  alertasFrio                 AlertaFrio[]
 }
 
 // Mantenedor de notificaciones: cada empresa decide qué roles reciben cada
@@ -435,6 +446,10 @@ model Vehiculo {
   horasEquipoFrio            Int?
   tipoCarroceria             String?
   equipoFrioTipo             String?
+  // true una vez que se instala un sensor Rinho (ver SensorFrio) — habilita
+  // la sección Calidad y el monitoreo de temperatura/horas reales de frío.
+  // No todos los vehículos de la flota lo tienen a la vez (piloto primero).
+  tieneSensorFrio            Boolean      @default(false)
   activo                     Boolean      @default(true)
   observacionBaja            String?
   fechaBaja                  DateTime?
@@ -458,6 +473,9 @@ model Vehiculo {
   observacionesGuardia    ObservacionGuardia[]
   diasNoOperados          DiaNoOperado[]
   ordenesCompra           OrdenCompra[]
+  sensorFrio              SensorFrio?
+  lecturasFrio            LecturaFrio[]
+  alertasFrio             AlertaFrio[]
 
   @@index([activo])
   @@index([empresaId])
@@ -479,6 +497,78 @@ model DisponibilidadSnapshot {
 
   @@unique([vehiculoId, fecha])
   @@index([empresaId, fecha])
+}
+
+// ---------------------------------------------------------------------------
+// Sensor de frío (Rinho Zero IoT + L02S vía Flespi) — ver plan-sensor-frio-rinho.md
+// ---------------------------------------------------------------------------
+
+// Un sensor por vehículo (piloto primero, no toda la flota a la vez —
+// Vehiculo.tieneSensorFrio marca cuáles). dispositivoId es el identificador
+// que manda Flespi en cada webhook (ver app/api/telemetria/frio/route.ts)
+// para saber a qué vehículo pertenece la lectura entrante.
+model SensorFrio {
+  id              String    @id @default(cuid())
+  empresaId       String
+  empresa         Empresa   @relation(fields: [empresaId], references: [id])
+  vehiculoId      String    @unique
+  vehiculo        Vehiculo  @relation(fields: [vehiculoId], references: [id])
+  dispositivoId   String    @unique
+  activo          Boolean   @default(true)
+  ultimaLecturaEn DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  lecturas LecturaFrio[]
+  alertas  AlertaFrio[]
+
+  @@index([empresaId])
+}
+
+// Una fila por lectura recibida del webhook de Flespi. Se espera un volumen
+// alto (una lectura cada pocos minutos por vehículo) — sin índice compuesto
+// por vehículo+fecha, listar el historial de un vehículo escanearía toda la
+// tabla.
+model LecturaFrio {
+  id              String     @id @default(cuid())
+  empresaId       String
+  empresa         Empresa    @relation(fields: [empresaId], references: [id])
+  sensorFrioId    String
+  sensorFrio      SensorFrio @relation(fields: [sensorFrioId], references: [id], onDelete: Cascade)
+  vehiculoId      String
+  vehiculo        Vehiculo   @relation(fields: [vehiculoId], references: [id])
+  fechaHora       DateTime   @default(now())
+  temperatura     Decimal?   @db.Decimal(5, 2)
+  equipoEncendido Boolean?
+  latitud         Float?
+  longitud        Float?
+  kmOdometro      Int?
+  createdAt       DateTime   @default(now())
+
+  @@index([vehiculoId, fechaHora])
+  @@index([empresaId])
+}
+
+// Historial de excursiones fuera de rango — se abre una fila al detectar la
+// primera lectura fuera de rango y se marca resuelta con la primera lectura
+// que vuelve a estar dentro (ver lib/frio.ts): evita mandar una notificación
+// por cada lectura mientras la temperatura sigue fuera de rango.
+model AlertaFrio {
+  id           String           @id @default(cuid())
+  empresaId    String
+  empresa      Empresa          @relation(fields: [empresaId], references: [id])
+  sensorFrioId String
+  sensorFrio   SensorFrio       @relation(fields: [sensorFrioId], references: [id], onDelete: Cascade)
+  vehiculoId   String
+  vehiculo     Vehiculo         @relation(fields: [vehiculoId], references: [id])
+  tipo         TipoNotificacion
+  detalle      String?
+  resuelta     Boolean          @default(false)
+  resueltaEn   DateTime?
+  createdAt    DateTime         @default(now())
+
+  @@index([vehiculoId, resuelta])
+  @@index([empresaId])
 }
 
 // ---------------------------------------------------------------------------

@@ -83,3 +83,22 @@ export async function actualizarAutoAprobacionMecanicos(activo: boolean) {
 
   revalidatePath(RUTA);
 }
+
+/**
+ * Rango de temperatura aceptable para vehículos con sensor de frío — cada
+ * límite es independiente (null = sin ese límite, ver Empresa.temperaturaMinimaFrio/
+ * MaximaFrio en el schema). Evaluado en lib/frio.ts en cada lectura entrante.
+ */
+export async function actualizarTemperaturaFrio(minimo: number | null, maximo: number | null) {
+  const { user, prisma } = await requireRole(ROLES_ADMIN_MANTENIMIENTO);
+
+  await prisma.empresa.update({
+    where: { id: user.empresaId! },
+    data: {
+      temperaturaMinimaFrio: minimo,
+      temperaturaMaximaFrio: maximo,
+    },
+  });
+
+  revalidatePath(RUTA);
+}

@@ -67,6 +67,7 @@ function navItemsPorRol(rol: Rol): NavEntry[] {
         : []),
       grupoCostos,
       { href: "/reportes/estadisticas", label: "Estadísticas", icon: "estadisticas" },
+      { href: "/calidad", label: "Calidad", icon: "calidad" },
       ...(rol === "ADMIN" ? [grupoGuardia] : [])
     );
   } else if (rol === "MECANICO_INTERNO") {
@@ -105,6 +106,7 @@ function navItemsPorRol(rol: Rol): NavEntry[] {
       { href: "/autorizaciones", label: "Autorizaciones", icon: "autorizaciones" },
       grupoCostos,
       { href: "/reportes/estadisticas", label: "Estadísticas", icon: "estadisticas" },
+      { href: "/calidad", label: "Calidad", icon: "calidad" },
       grupoGuardia
     );
   } else {

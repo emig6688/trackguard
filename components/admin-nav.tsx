@@ -27,6 +27,7 @@ import {
   ShieldCheck,
   Shield,
   Upload,
+  Thermometer,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -54,6 +55,7 @@ export const ICONOS = {
   autorizaciones: ShieldCheck,
   guardia: Shield,
   importar: Upload,
+  calidad: Thermometer,
 } satisfies Record<string, LucideIcon>;
 
 export type IconKey = keyof typeof ICONOS;

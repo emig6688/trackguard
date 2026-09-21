@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { requireEmpresa } from "@/lib/permisos";
+import { requireEmpresa, ROLES_ADMIN_MANTENIMIENTO } from "@/lib/permisos";
 import { actualizarVehiculo, darDeBajaVehiculo, reactivarVehiculo } from "@/app/_actions/vehiculos";
 import { DocumentosPanel } from "@/components/documentos/documentos-panel";
 import { PlanesPanel } from "@/components/planes-mantenimiento/planes-panel";
@@ -8,13 +8,20 @@ import { BajaPanel } from "@/components/baja-panel";
 import { BackButton } from "@/components/back-button";
 import { EliminarButton } from "@/components/eliminar-button";
 import { DisponibilidadToggle } from "@/components/vehiculos/disponibilidad-toggle";
+import { SensorFrioPanel } from "@/components/vehiculos/sensor-frio-panel";
 import { vehiculosEnTallerExterno } from "@/lib/disponibilidad";
 import { VehiculoForm } from "../nuevo/vehiculo-form";
 
 export default async function VehiculoDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { user, prisma } = await requireEmpresa();
-  const vehiculo = await prisma.vehiculo.findUnique({ where: { id, eliminadoEn: null } });
+  const [vehiculo, sensor] = await Promise.all([
+    prisma.vehiculo.findUnique({ where: { id, eliminadoEn: null } }),
+    prisma.sensorFrio.findUnique({
+      where: { vehiculoId: id },
+      select: { dispositivoId: true, activo: true, ultimaLecturaEn: true },
+    }),
+  ]);
   if (!vehiculo) notFound();
   const enTaller = await vehiculosEnTallerExterno(prisma, [vehiculo.id]);
 
@@ -61,6 +68,10 @@ export default async function VehiculoDetallePage({ params }: { params: Promise<
         </Link>
         .
       </p>
+
+      {ROLES_ADMIN_MANTENIMIENTO.includes(user.rol) && (
+        <SensorFrioPanel vehiculoId={vehiculo.id} sensor={sensor} />
+      )}
 
       <PlanesPanel vehiculoId={vehiculo.id} redirectPath={`/vehiculos/${vehiculo.id}`} />
 

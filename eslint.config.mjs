@@ -30,6 +30,11 @@ const eslintConfig = defineConfig([
     ],
     ignores: [
       "app/api/cron/**",
+      // Igual que los crons: lo llama Flespi, no un usuario logueado, así
+      // que todavía no hay un empresaId por el que scopear cuando arranca
+      // — recién se resuelve buscando el SensorFrio por dispositivoId (ver
+      // app/api/telemetria/frio/route.ts).
+      "app/api/telemetria/**",
       "app/(plataforma)/**",
       // Login todavía no sabe a qué empresa pertenece quien intenta entrar
       // (mismo motivo que auth.ts en la raíz, que hace la misma búsqueda

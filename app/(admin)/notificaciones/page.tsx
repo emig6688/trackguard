@@ -6,6 +6,7 @@ import { MontoAutorizacionForm } from "@/components/notificaciones/monto-autoriz
 import { AutoAprobacionMecanicosForm } from "@/components/notificaciones/auto-aprobacion-mecanicos-form";
 import { actualizarMontoAutorizacionCompraMecanico } from "@/app/_actions/reglasNotificacion";
 import { ChecklistTemplateForm } from "@/components/notificaciones/checklist-template-form";
+import { TemperaturaFrioForm } from "@/components/notificaciones/temperatura-frio-form";
 import { formatearFechaHora } from "@/lib/fecha";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -131,6 +132,24 @@ export default async function NotificacionesPage() {
                   tenían en su momento.
                 </p>
                 <ChecklistTemplateForm itemsIniciales={checklistTemplate?.items.map((i) => i.texto) ?? []} />
+              </CardContent>
+            </Card>
+          )}
+
+          {area === "FRIO" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Rango de temperatura</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-3 text-sm text-muted-foreground">
+                  Si un vehículo con sensor de frío reporta una temperatura fuera de este rango,
+                  dispara la alerta configurada abajo.
+                </p>
+                <TemperaturaFrioForm
+                  minimoInicial={empresa.temperaturaMinimaFrio?.toString() ?? null}
+                  maximoInicial={empresa.temperaturaMaximaFrio?.toString() ?? null}
+                />
               </CardContent>
             </Card>
           )}
