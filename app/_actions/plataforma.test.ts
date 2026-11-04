@@ -95,6 +95,13 @@ describe("app/_actions/plataforma.ts", () => {
         include: { items: true },
       });
       expect(template.items).toHaveLength(9);
+
+      // Sin estos tipos el desplegable "Tipo de documento" queda vacío y no se
+      // puede cargar documentación de vehículos ni de choferes.
+      const tiposDocumento = await prisma.tipoDocumentoConfig.findMany({ where: { empresaId: nuevaEmpresa.id } });
+      expect(tiposDocumento).toHaveLength(8);
+      expect(tiposDocumento.filter((t) => t.aplicaA === "VEHICULO")).toHaveLength(5);
+      expect(tiposDocumento.filter((t) => t.aplicaA === "CHOFER")).toHaveLength(3);
     });
 
     it("rechaza un email ya usado por otro usuario", async () => {

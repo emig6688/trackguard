@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { requireSuperadmin } from "@/lib/permisos";
 import { ITEMS_CHECKLIST_ESTANDAR } from "@/lib/checklist";
 import { CATALOGO_MANTENIMIENTO_ESTANDAR } from "@/lib/catalogo-mantenimiento";
+import { TIPOS_DOCUMENTO_ESTANDAR } from "@/lib/catalogo-tipos-documento";
 
 const crearEmpresaSchema = z.object({
   nombreEmpresa: z.string().trim().min(1, "Nombre de la empresa requerido"),
@@ -79,6 +80,13 @@ export async function crearEmpresa(
       intervaloDias: item.intervaloDias,
       intervaloHoras: item.intervaloHoras,
     })),
+  });
+
+  // Sin esto el desplegable "Tipo de documento" queda vacío en vehículos y
+  // choferes y no se puede cargar ninguna documentación (no hay pantalla
+  // para crear tipos a mano).
+  await prisma.tipoDocumentoConfig.createMany({
+    data: TIPOS_DOCUMENTO_ESTANDAR.map((tipo) => ({ ...tipo, empresaId: nuevaEmpresa.id })),
   });
 
   revalidatePath("/plataforma");

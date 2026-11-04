@@ -1,6 +1,7 @@
 import { PrismaClient } from "../app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
+import { TIPOS_DOCUMENTO_ESTANDAR } from "../lib/catalogo-tipos-documento";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
@@ -31,22 +32,7 @@ async function main() {
     },
   });
 
-  const tiposDocumento: {
-    codigo: string;
-    nombre: string;
-    aplicaA: "VEHICULO" | "CHOFER" | "AMBOS";
-  }[] = [
-    { codigo: "VTV", nombre: "VTV / RTO", aplicaA: "VEHICULO" },
-    { codigo: "SEGURO", nombre: "Seguro", aplicaA: "VEHICULO" },
-    { codigo: "HABILITACION_BROMATOLOGICA", nombre: "Habilitación bromatológica", aplicaA: "VEHICULO" },
-    { codigo: "SENASA_VEHICULO", nombre: "Habilitación SENASA (vehículo)", aplicaA: "VEHICULO" },
-    { codigo: "LICENCIA_TRANSITO", nombre: "Licencia de tránsito", aplicaA: "VEHICULO" },
-    { codigo: "LICENCIA_CONDUCIR", nombre: "Licencia de conducir", aplicaA: "CHOFER" },
-    { codigo: "LIBRETA_SANITARIA", nombre: "Libreta sanitaria", aplicaA: "CHOFER" },
-    { codigo: "SENASA_CHOFER", nombre: "Habilitación SENASA (chofer)", aplicaA: "CHOFER" },
-  ];
-
-  for (const tipo of tiposDocumento) {
+  for (const tipo of TIPOS_DOCUMENTO_ESTANDAR) {
     await prisma.tipoDocumentoConfig.upsert({
       where: { empresaId_codigo: { empresaId: empresa.id, codigo: tipo.codigo } },
       update: {},
