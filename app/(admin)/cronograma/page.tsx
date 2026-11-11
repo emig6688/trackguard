@@ -3,6 +3,7 @@ import { requireEmpresa } from "@/lib/permisos";
 import { Badge } from "@/components/ui/badge";
 import { GenerarOTButton } from "@/components/cronograma/generar-ot-button";
 import { OrigenOTBadge } from "@/components/ordenes-trabajo/origen-ot-badge";
+import { PrioridadOTBadge, PRIORIDAD_ACENTO_CLASS } from "@/components/ordenes-trabajo/prioridad-ot-badge";
 import {
   obtenerCronograma,
   estadoUltimaCorridaCron,
@@ -140,7 +141,9 @@ export default async function CronogramaPage({
               {eventos.map((evento, i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm"
+                  className={`flex items-center justify-between gap-3 rounded-lg border p-3 text-sm ${
+                    evento.tipo === "OT_EXISTENTE" ? PRIORIDAD_ACENTO_CLASS[evento.prioridad] : ""
+                  }`}
                 >
                   <div className="min-w-0 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -153,6 +156,7 @@ export default async function CronogramaPage({
                         </Badge>
                       )}
                       {evento.tipo === "OT_EXISTENTE" && <OrigenOTBadge origen={evento.origen} />}
+                      {evento.tipo === "OT_EXISTENTE" && <PrioridadOTBadge prioridad={evento.prioridad} />}
                     </div>
                     {evento.tipo === "PREVISTO" && (
                       <p className="text-xs text-muted-foreground">{evento.detalle}</p>

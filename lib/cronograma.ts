@@ -1,6 +1,6 @@
 import "server-only";
 import type { ScopedPrismaClient } from "@/lib/tenant-prisma";
-import type { EstadoOT, OrigenOT, Rol } from "@/app/generated/prisma/client";
+import type { EstadoOT, OrigenOT, PrioridadOT, Rol } from "@/app/generated/prisma/client";
 import { condicionVisibleParaMecanico } from "@/lib/ot";
 
 export type VistaCronograma = "DIA" | "SEMANA" | "MES";
@@ -55,6 +55,7 @@ export type EventoOTExistente = {
   otId: string;
   estado: EstadoOT;
   origen: OrigenOT;
+  prioridad: PrioridadOT;
   itemsTotal: number;
   itemsResueltos: number;
 };
@@ -108,6 +109,7 @@ async function otsExistentes(
       otId: ot.id,
       estado: ot.estado,
       origen: ot.origen,
+      prioridad: ot.prioridad,
       itemsTotal: ot.itemsPreventivos.length,
       itemsResueltos: ot.itemsPreventivos.filter((i) => i.resultado !== "PENDIENTE").length,
     }))
